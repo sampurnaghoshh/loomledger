@@ -77,7 +77,8 @@ const real = {
       ),
     subscribe: (onEvent: (e: FloorEvent) => void): (() => void) => {
       const proto = location.protocol === "https:" ? "wss" : "ws";
-      let ws: WebSocket | null = new WebSocket(`${proto}://${location.host}/ws/floor`);
+      const token = encodeURIComponent(getSession()?.token ?? "");
+      let ws: WebSocket | null = new WebSocket(`${proto}://${location.host}/ws/floor?token=${token}`);
       ws.onmessage = (m) => {
         try {
           onEvent(JSON.parse(m.data) as FloorEvent);
