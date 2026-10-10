@@ -55,8 +55,11 @@ def test_register_for_the_demo_day_matches_contract(client, auth):
         assert (w["status"], w["shift_code"]) == expected[w["worker_code"]][S.ANCHOR_DATE] or w["status"] == "present", w
 
 
-def test_register_defaults_to_today(client, auth):
-    assert client.get(REG, headers=auth["owner"]).json()["day"] == today().isoformat()
+def test_register_defaults_to_the_last_working_day(client, auth):
+    expected = q("SELECT last_working_day((now() AT TIME ZONE 'Asia/Kolkata')::date) AS d")[0]["d"]
+    assert client.get(REG, headers=auth["owner"]).json()["day"] == expected.isoformat()
+    sunday_rule = q("SELECT last_working_day(%s) AS d", (date(2026, 10, 11),))[0]["d"]       # a Sunday
+    assert sunday_rule == date(2026, 10, 10)
 
 
 def test_wages_match_contract_and_the_scenario(client, auth):

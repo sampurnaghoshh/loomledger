@@ -125,7 +125,7 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 ### Workforce (attendance + wages)
 | Method & path | Body / query | Response | Owner | Screen |
 |---|---|---|---|---|
-| `GET /api/workforce/attendance` | `?day=YYYY-MM-DD` (default today IST). Role `floor_supervisor` | `workforce_attendance.json`: `{day, shifts[], workers[{worker_code, full_name, skill, status, shift_code}]}` (`status: null` = not marked) | Sampurna | Sampurna |
+| `GET /api/workforce/attendance` | `?day=YYYY-MM-DD` (default: the last working day in IST — a Sunday opens Saturday's register). Role `floor_supervisor` | `workforce_attendance.json`: `{day, shifts[], workers[{worker_code, full_name, skill, status, shift_code}]}` (`status: null` = not marked) | Sampurna | Sampurna |
 | `POST /api/workforce/attendance` | `{day, shift_code, marks: [{worker_code, status: present\|absent\|half_day\|leave}], idempotency_key}` — one transaction; one row per worker per day (marking again corrects it). Role `floor_supervisor` | `201 {batch_id, day, shift_code, marked, marked_at}`; replay → `200` original; `404` unknown shift/worker; `422 ATTENDANCE_FUTURE_DATE` (LL007), `422 WORKER_INACTIVE` (LL008), `422` duplicate worker / empty marks | Sampurna | Sampurna |
 | `GET /api/workforce/wages` | `?from=&to=` (inclusive; default this month to date). Role `accounts` | `workforce_wages.json`: `{from, to, totals{workers, days_worked, shifts_worked, gross_wage}, workers[…]}` — `wages()` (012): a shift pays `hourly_wage` × shift length, half day ½, absent/leave 0 | Sampurna | Sampurna |
 
