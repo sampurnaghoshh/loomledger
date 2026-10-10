@@ -169,11 +169,11 @@ export const mock: Api = {
         const held = req.lot_codes.find((c) => recall.rolls.some((r) => r.lot_code === c));
         if (held) {
           const blocked = await load<{ error: { hint: string } }>(() => import("@mocks/error_lot_quarantined.json"));
-          throw new ApiError("LOT_QUARANTINED", `stock movement blocked: lot ${held} is quarantined`, 409, blocked.error.hint);
+          throw new ApiError("LOT_QUARANTINED", `stock movement blocked: lot ${held} is quarantined`, 409, blocked.error.hint, undefined, "LL001");
         }
       }
       const again = req.lot_codes.find((c) => shippedRolls.has(c));
-      if (again) throw new ApiError("ALREADY_DISPATCHED", "One or more rolls have already been dispatched.", 409);
+      if (again) throw new ApiError("ALREADY_DISPATCHED", "One or more rolls have already been dispatched.", 409, undefined, undefined, "23505");
 
       const stock = await load<StockSnapshot>(() => import("@mocks/inventory_stock_now.json"));
       const inStore = new Map(stock.rows.filter((r) => r.location_code === "FG-STORE").map((r) => [r.lot_code, r.qty]));
