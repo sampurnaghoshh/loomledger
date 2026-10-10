@@ -6,6 +6,7 @@
 import type { Api } from "./client";
 import { ApiError } from "./errors";
 import type {
+  AttendanceRegister,
   BuyerOrderStatus,
   DispatchResponse,
   FindCauseResponse,
@@ -25,6 +26,7 @@ import type {
   RollCost,
   Role,
   StockSnapshot,
+  WageRun,
 } from "./types";
 
 const TOKENS = {
@@ -221,6 +223,18 @@ export const mock: Api = {
       dispatchesByKey.set(req.idempotency_key, result);
       return structuredClone(result);
     },
+  },
+  workforce: {
+    register: () => load<AttendanceRegister>(() => import("@mocks/workforce_attendance.json")),
+    mark: async (req) => {
+      await delay();
+      const fields: Record<string, string> = {};
+      if (!req.marks.length) fields.marks = "Mark at least one worker";
+      if (new Set(req.marks.map((m) => m.worker_code)).size !== req.marks.length) fields.marks = "A worker can only be marked once";
+      if (Object.keys(fields).length) throw new ApiError("VALIDATION_FAILED", "Please correct the highlighted fields.", 422, undefined, fields);
+      return { batch_id: 1, day: req.day, shift_code: req.shift_code, marked: req.marks.length, marked_at: new Date().toISOString() };
+    },
+    wages: () => load<WageRun>(() => import("@mocks/workforce_wages.json")),
   },
   finance: {
     massBalance: () => load<MassBalance>(() => import("@mocks/finance_mass_balance.json")),

@@ -246,6 +246,45 @@ export interface BuyerOrderStatus {
   updates: { at: string; message: string }[]; // newest first
 }
 
+// ---------- workforce
+export type AttendanceStatus = "present" | "absent" | "half_day" | "leave";
+export interface AttendanceRegister {
+  day: string;
+  shifts: { code: string; name: string; starts_at: string; ends_at: string }[];
+  workers: { worker_code: string; full_name: string; skill: MachineStage | null; status: AttendanceStatus | null; shift_code: string | null }[];
+}
+export interface AttendanceRequest {
+  day: string;
+  shift_code: string;
+  marks: { worker_code: string; status: AttendanceStatus }[];
+  idempotency_key: string;
+}
+export interface AttendanceResponse {
+  batch_id: number;
+  day: string;
+  shift_code: string;
+  marked: number;
+  marked_at: string;
+}
+export interface WageRow {
+  worker_code: string;
+  full_name: string;
+  skill: MachineStage | null;
+  hourly_wage: number;
+  days_worked: number;
+  shifts_worked: number;
+  half_days: number;
+  absent_days: number;
+  leave_days: number;
+  gross_wage: number;
+}
+export interface WageRun {
+  from: string;
+  to: string;
+  totals: { workers: number; days_worked: number; shifts_worked: number; gross_wage: number };
+  workers: WageRow[];
+}
+
 // ---------- finance
 export interface MassBalance {
   from: string | null; // null = to date (all runs so far)
