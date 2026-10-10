@@ -56,3 +56,10 @@ def open_state(conn: psycopg.Connection, machine_id: int, state: str, reason: st
     return conn.execute(
         """INSERT INTO machine_state_log (machine_id, state, reason, started_at)
            VALUES (%s, %s, %s, now()) RETURNING started_at""", (machine_id, state, reason)).fetchone()["started_at"]
+
+
+def run_progress(conn: psycopg.Connection, at: datetime | None) -> dict:
+    """Every open run at `at` (default now) with its estimated progress (015 run_progress)."""
+    at = conn.execute("SELECT COALESCE(%s::timestamptz, now()) AS at", (at,)).fetchone()["at"]
+    rows = conn.execute("SELECT *, state::text AS state FROM run_progress(%s)", (at,)).fetchall()
+    return {"at": at, "runs": rows}

@@ -4,8 +4,9 @@ Each test that writes runs inside a transaction that is rolled back, so the modu
 """
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal as D
+from zoneinfo import ZoneInfo
 
 import psycopg
 import pytest
@@ -365,6 +366,32 @@ def test_yarn_requirement_uses_the_weaving_bridge(db):
     rows = db.execute("""SELECT r.unwoven_m, r.required_kg, weaving_yarn_issue_kg(r.product_id, r.unwoven_m) AS bridge
                            FROM sales_order so CROSS JOIN LATERAL order_yarn_requirement(so.id) r""").fetchall()
     assert rows and all(req == bridge for _, req, bridge in rows)
+
+
+# ---------------------------------------------------------------- run progress (015)
+def test_downtime_pauses_run_progress(db):
+    def at(hhmm: str) -> datetime:
+        return datetime.combine(S.ANCHOR_DATE, time.fromisoformat(hhmm), ZoneInfo(S.TIMEZONE))
+    loom = db.execute("SELECT id FROM machine WHERE code = 'LOOM-4'").fetchone()[0]
+    progress = """SELECT state::text, productive_hours, paused_hours, remaining_hours, expected_end
+                    FROM run_progress(%s) WHERE machine_code = 'LOOM-4'"""
+    with db.transaction(force_rollback=True):
+        # running 08:00 -> 09:00, breakdown 09:00 -> 09:20, running again from 09:20
+        db.execute("UPDATE machine_state_log SET ended_at = %s WHERE machine_id = %s AND ended_at IS NULL",
+                   (at("09:00"), loom))
+        db.execute("""INSERT INTO machine_state_log (machine_id, state, reason, started_at, ended_at)
+                      VALUES (%s, 'breakdown', 'test', %s, %s)""", (loom, at("09:00"), at("09:20")))
+        db.execute("INSERT INTO machine_state_log (machine_id, state, started_at) VALUES (%s, 'running', %s)",
+                   (loom, at("09:20")))
+        state, productive, paused, _, end = db.execute(progress, (at("09:10"),)).fetchone()
+        assert (state, productive, paused, end) == ("breakdown", D("1.00"), D("0.17"), None)    # stopped: no ETA
+        planned = S.ROLL_LENGTH_M / (S.ROLL_LENGTH_M / S.WEAVE_HOURS).quantize(D("0.01"))     # 50 m / 8.33 m/h
+        _, productive, paused, remaining, _ = db.execute(progress, (at("09:30"),)).fetchone()
+        assert (productive, paused, remaining) == (D("1.17"), D("0.33"), (planned - D(7) / 6).quantize(D("0.01")))
+        # past the plan: due off the loom 20 min later than its neighbours (08:00 + 6.0024 h + 20 min pause)
+        due = "SELECT machine_code, woven_to_plan_at FROM run_progress(%s) WHERE machine_code IN ('LOOM-1', 'LOOM-4')"
+        assert dict(db.execute(due, (at("16:00"),)).fetchall()) == {"LOOM-1": at("14:00"), "LOOM-4": at("14:20")}
+        assert dict(db.execute(due, (at("13:00"),)).fetchall()) == {"LOOM-1": None, "LOOM-4": None}
 
 
 def test_add_working_days_skips_sundays(db):

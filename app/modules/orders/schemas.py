@@ -32,6 +32,7 @@ class OrderSummary(BaseModel):
     yarn_required_kg: float | None
     yarn_shortfall_kg: float | None
     yarn_short_of: str | None                      # yarn product name(s) it is short of
+    to_weave_m: float | None                       # still to weave, remakes included (014 v_yarn_plan); null = closed
 
 
 class BuyerUpdate(BaseModel):

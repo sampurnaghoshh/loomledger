@@ -121,6 +121,7 @@ PostgreSQL 16 (14+ works). Extensions: `btree_gist`, `pgcrypto`. Session timezon
 | 012_workforce | `attendance_batch` (register submissions, idempotent), attendance guard (future day `LL007`, inactive worker `LL008`), `shift_hours()`, **`wages(from, to)`** |
 | 013_money | buyer `payment` gets `idempotency_key` + `recorded_by`; `supplier_payment` (a goods receipt is the yarn bill); `v_invoice_balance`, `v_bill_balance`; no payment above what is outstanding (`LL009`); **`monthly_pnl(from, to)`**: accrual profit (COGS = `lot_cost` without labour; labour = `wages()` once), cash, receivables, payables, recall exposure (contingent) |
 | 014_yarn_availability | `product.yarn_product_id` (fabric → its yarn, composite FK) + `reorder_level_kg`; `goods_receipt.order_id` (receipt for an open order only, `LL010`); **`order_yarn_requirement(order)`**; `v_yarn_on_hand` (usable vs quarantined), **`v_yarn_plan`** (open orders in due order against usable yarn), `v_yarn_availability`, **`v_yarn_low_stock`** |
+| 015_run_progress | **`run_progress(at)`**: each open run's estimated progress (running time ÷ planned m at rated speed; breakdowns pause it), ETA, `woven_to_plan_at` (due off the loom since) |
 
 Conventions for new migrations:
 - File `db/migrations/00N_short_name.sql`, one concern per file, comment header explaining *why*.

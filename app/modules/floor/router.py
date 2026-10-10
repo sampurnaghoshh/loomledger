@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, Path, Query
 
 from app.auth import Conn, CurrentUser, require_role
 from app.modules.floor import service
-from app.modules.floor.schemas import (FloorAvailability, FloorOutput, MachineNow, StateChangeRequest,
-                                       StateChangeResponse)
+from app.modules.floor.schemas import (FloorAvailability, FloorOutput, FloorProgress, MachineNow,
+                                       StateChangeRequest, StateChangeResponse)
 
 router = APIRouter(prefix="/api/floor", tags=["floor"])
 
@@ -29,6 +29,11 @@ def availability(conn: Conn, user: CurrentUser,
                  from_: Annotated[datetime | None, Query(alias="from")] = None,
                  to: datetime | None = None):
     return service.availability(conn, from_, to)
+
+
+@router.get("/progress", response_model=FloorProgress)
+def progress(conn: Conn, user: CurrentUser, at: datetime | None = None):
+    return service.progress(conn, at)
 
 
 @router.post("/machines/{code}/state", response_model=StateChangeResponse)
