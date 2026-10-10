@@ -291,8 +291,7 @@ function DispatchModal({ order, onClose, onDispatched }: { order: OrderSummary; 
           </dl>
         </div>
       ) : (
-        // The shared Modal has no max height: scroll the body so the footer buttons stay on screen on phones.
-        <div className="-mx-1 grid max-h-[65dvh] gap-4 overflow-y-auto px-1">
+        <div className="grid gap-4">
           <Loadable state={rolls}>
             {(list) => (
               <RollPicker
