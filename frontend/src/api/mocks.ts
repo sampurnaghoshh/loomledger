@@ -18,7 +18,10 @@ import type {
   LoginResponse,
   LotGraph,
   MachineNow,
+  LowStock,
   MassBalance,
+  YarnCheck,
+  ReceiptResponse,
   PaymentResponse,
   Pnl,
   OrderSummary,
@@ -37,9 +40,15 @@ const TOKENS = {
 } as const;
 
 let recallApplied = false;
+const YARN_CHECKS: Record<string, () => Promise<{ default: unknown }>> = {
+  "SO-0398": () => import("@mocks/orders_yarn_check_SO-0398.json"),
+  "SO-0405": () => import("@mocks/orders_yarn_check_SO-0405.json"),
+  "SO-0412": () => import("@mocks/orders_yarn_check_SO-0412.json"),
+  "SO-0419": () => import("@mocks/orders_yarn_check_SO-0419.json"),
+};
 
 // receipt + dispatch mock state (cleared on refresh, like the recall)
-const receiptsByKey = new Map<string, { receipt_code: string; lot_code: string; kg: number; location: string }>();
+const receiptsByKey = new Map<string, ReceiptResponse>();
 const receivedLots = new Set<string>();
 const dispatchesByKey = new Map<string, DispatchResponse>();
 const shippedRolls = new Set<string>();
@@ -93,6 +102,10 @@ export const mock: Api = {
       asOf
         ? load<StockSnapshot>(() => import("@mocks/inventory_stock_as_of.json"))
         : load<StockSnapshot>(() => import("@mocks/inventory_stock_now.json")),
+    lowStock: () =>
+      recallApplied
+        ? load<LowStock[]>(() => import("@mocks/inventory_low_stock_after_recall.json"))
+        : load<LowStock[]>(() => import("@mocks/inventory_low_stock.json")),
     // Mirrors POST /api/inventory/receipts: validation, unknown supplier/product (masters mock), lot code that
     // already exists (stock mock or received this session), and idempotent replay.
     receive: async (req) => {
@@ -110,11 +123,19 @@ export const mock: Api = {
         throw new ApiError("NOT_FOUND", `Supplier ${req.supplier_code} not found.`, 404, undefined, { supplier_code: "unknown supplier" });
       if (req.product_code && !masters.yarn_products.some((p) => p.code === req.product_code))
         throw new ApiError("NOT_FOUND", "Yarn product not found.", 404, undefined, { product_code: "unknown yarn product" });
+      if (req.order_code && !masters.open_orders.some((o) => o.code === req.order_code)) {
+        const orders = await load<OrderSummary[]>(() => import("@mocks/orders.json"));
+        if (orders.some((o) => o.code === req.order_code))
+          throw new ApiError("ORDER_CLOSED", `order ${req.order_code} is dispatched; yarn can only be received for an open order`, 422,
+            "Pick an open order, or leave the order empty.", { order_code: "order is not open" }, "LL010");
+        throw new ApiError("NOT_FOUND", `Order ${req.order_code} not found.`, 404, undefined, { order_code: "unknown order" });
+      }
       const stock = await load<StockSnapshot>(() => import("@mocks/inventory_stock_now.json"));
       if (receivedLots.has(req.lot_code) || stock.rows.some((r) => r.lot_code === req.lot_code))
         throw new ApiError("VALIDATION_FAILED", `Lot ${req.lot_code} already exists.`, 422, undefined, { lot_code: "already exists" }, "23505");
 
-      const result = { receipt_code: `GRN-${req.lot_code}`, lot_code: req.lot_code, kg: req.kg, location: "YARN-STORE" };
+      const result: ReceiptResponse = { receipt_code: `GRN-${req.lot_code}`, lot_code: req.lot_code, kg: req.kg, location: "YARN-STORE",
+        order_code: req.order_code ?? null };
       receivedLots.add(req.lot_code);
       receiptsByKey.set(req.idempotency_key, result);
       return structuredClone(result);
@@ -161,6 +182,15 @@ export const mock: Api = {
   },
   orders: {
     list: () => load<OrderSummary[]>(() => import("@mocks/orders.json")),
+    // Exported after the recall, like orders.json.
+    yarnCheck: async (code) => {
+      const loader = YARN_CHECKS[code];
+      if (!loader) {
+        await delay();
+        throw new ApiError("NOT_FOUND", `Order ${code} not found.`, 404, undefined, { order_code: "not found" });
+      }
+      return load<YarnCheck>(loader);
+    },
     track: async (token) => {
       const order = TOKENS[token as keyof typeof TOKENS];
       if (!order) {

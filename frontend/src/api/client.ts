@@ -19,6 +19,7 @@ import type {
   LatestRejections,
   InspectionResponse,
   LoginResponse,
+  LowStock,
   LotGraph,
   MachineNow,
   MachineState,
@@ -37,6 +38,7 @@ import type {
   StartWeavingResponse,
   StockSnapshot,
   WageRun,
+  YarnCheck,
 } from "./types";
 import { getSession } from "@/lib/auth";
 import { openFloorSocket } from "./floorSocket";
@@ -103,6 +105,7 @@ const real = {
     masters: () => request<InventoryMasters>("GET", "/api/inventory/masters"), // store@ / owner@
     stock: (asOf?: string) => request<StockSnapshot>("GET", `/api/inventory/stock${qs({ as_of: asOf })}`),
     receive: (req: ReceiptRequest) => request<ReceiptResponse>("POST", "/api/inventory/receipts", req),
+    lowStock: () => request<LowStock[]>("GET", "/api/inventory/low-stock"),
   },
   production: {
     startWeaving: (req: StartWeavingRequest) =>
@@ -130,6 +133,7 @@ const real = {
   },
   orders: {
     list: () => request<OrderSummary[]>("GET", "/api/orders"),
+    yarnCheck: (code: string) => request<YarnCheck>("GET", `/api/orders/${encodeURIComponent(code)}/yarn-check`),
     track: (token: string) => request<BuyerOrderStatus>("GET", `/api/track/${encodeURIComponent(token)}`, undefined, false),
     // store@ / owner@. Errors: NOT_FOUND, NOT_QC_PASSED, NOT_IN_ORDER, SHADE_MISMATCH, LOT_QUARANTINED,
     // INSUFFICIENT_STOCK, ALREADY_DISPATCHED, VALIDATION_FAILED (see docs/API_CONTRACT.md)

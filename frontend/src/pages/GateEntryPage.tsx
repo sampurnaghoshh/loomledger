@@ -13,7 +13,15 @@ import { formatINR, formatQty, newIdempotencyKey } from "@/lib/format";
 const ALLOWED_ROLES = ["owner", "store"];
 const LOT_CODE = /^Y-\d{3,}$/;
 
-type FieldName = "supplier_code" | "product_code" | "lot_code" | "kg" | "price_per_kg" | "vehicle_no" | "challan_no";
+type FieldName =
+  | "supplier_code"
+  | "product_code"
+  | "order_code"
+  | "lot_code"
+  | "kg"
+  | "price_per_kg"
+  | "vehicle_no"
+  | "challan_no";
 type Form = Record<FieldName, string>;
 type Errors = Partial<Record<FieldName, string>>;
 
@@ -72,6 +80,7 @@ function emptyForm(m: InventoryMasters): Form {
   return {
     supplier_code: "",
     product_code: m.yarn_products.length === 1 ? m.yarn_products[0].code : "",
+    order_code: "",
     lot_code: "",
     kg: "",
     price_per_kg: "",
@@ -129,6 +138,7 @@ function ReceiptForm({
       price_per_kg: rate,
       vehicle_no: form.vehicle_no.trim() || undefined,
       challan_no: form.challan_no.trim() || undefined,
+      order_code: form.order_code || undefined,
       idempotency_key: idempotencyKey,
     };
     const res = await receive.run(req);
@@ -172,6 +182,17 @@ function ReceiptForm({
               ))}
             </Select>
           </Field>
+          <Field label="For order (optional)" error={errors.order_code} hint="Open orders only; leave empty for general stock">
+            <Select value={form.order_code} onChange={(e) => set("order_code")(e.target.value)} disabled={busy}
+              aria-invalid={!!errors.order_code}>
+              <option value="">General stock</option>
+              {masters.open_orders.map((o) => (
+                <option key={o.code} value={o.code}>
+                  {o.code} · {o.buyer}
+                </option>
+              ))}
+            </Select>
+          </Field>
           <Field label="Lot code" error={errors.lot_code} hint="The supplier's lot number, e.g. Y- and 3+ digits">
             <Input value={form.lot_code} onChange={(e) => set("lot_code")(e.target.value.toUpperCase().trim())} disabled={busy}
               className="font-mono" autoComplete="off" spellCheck={false} aria-invalid={!!errors.lot_code} />
@@ -208,7 +229,7 @@ function ReceiptForm({
   );
 }
 
-const FIELD_NAMES: FieldName[] = ["supplier_code", "product_code", "lot_code", "kg", "price_per_kg", "vehicle_no", "challan_no"];
+const FIELD_NAMES: FieldName[] = ["supplier_code", "product_code", "order_code", "lot_code", "kg", "price_per_kg", "vehicle_no", "challan_no"];
 
 /** Keep only the API field errors that belong to one of this form's inputs. */
 function pickFields(fields: Record<string, string> | undefined): Errors {
@@ -262,9 +283,15 @@ function Receipt({
             <dt className="text-muted">Now in</dt>
             <dd className="font-mono font-medium text-ink">{receipt.location}</dd>
           </div>
-          <div className="col-span-2 sm:col-span-4">
+          <div className="col-span-2">
             <dt className="text-muted">Supplier</dt>
             <dd className="font-medium text-ink">{supplier}</dd>
+          </div>
+          <div className="col-span-2">
+            <dt className="text-muted">For order</dt>
+            <dd className="font-medium text-ink">
+              {receipt.order_code ? <span className="font-mono">{receipt.order_code}</span> : "General stock"}
+            </dd>
           </div>
         </dl>
         <div className="flex flex-wrap gap-2">

@@ -120,8 +120,9 @@ function OrderRow({ order: o, onDispatch }: { order: OrderSummary; onDispatch: (
         </p>
       </div>
 
-      <div>
+      <div className="grid justify-items-start gap-1">
         <Badge tone={statusTone[o.status]}>{humanize(o.status)}</Badge>
+        <YarnStatus order={o} />
       </div>
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
@@ -159,6 +160,26 @@ function OrderRow({ order: o, onDispatch }: { order: OrderSummary; onDispatch: (
         )}
       </div>
     </li>
+  );
+}
+
+/** Is there enough usable yarn to weave what is left (open orders, in due-date order)? Computed in the DB (014). */
+function YarnStatus({ order: o }: { order: OrderSummary }) {
+  if (o.yarn_status == null) return null; // closed order: nothing left to weave
+  if (o.yarn_status === "ok")
+    return (
+      <span className="text-xs text-muted">
+        <Badge tone="ok">Yarn ok</Badge>{" "}
+        <span className="num whitespace-nowrap">{formatQty(o.yarn_required_kg, "kg")} needed</span>
+      </span>
+    );
+  return (
+    <span className="text-xs text-bad">
+      <Badge tone="bad">Yarn short</Badge>{" "}
+      <span className="num">
+        short by {formatQty(o.yarn_shortfall_kg, "kg")} of {o.yarn_short_of}
+      </span>
+    </span>
   );
 }
 
