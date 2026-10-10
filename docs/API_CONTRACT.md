@@ -112,9 +112,9 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 ### Orders, dispatch, buyer portal
 | Method & path | Body | Response | Owner | Screen |
 |---|---|---|---|---|
-| `GET /api/orders` | – | `orders.json` | Sampurna | Dhruva |
-| `POST /api/dispatches` | `{order_code, lot_codes[], vehicle_no, idempotency_key, shade_override_reason?}` — Shade Guard: all rolls of the line from one dye batch, else `409 SHADE_MISMATCH` with `fields.batches` unless an override reason is given | `201 {dispatch_code, invoice_code, amount}` | Nooman (Shade Guard) | Dhruva (stretch) |
-| `GET /api/track/{token}` | public | `track_SO-0412_before.json` / `_after.json`; `404 error_not_found.json` | Sampurna | Dhruva |
+| `GET /api/orders` | – (any signed-in user; `tracking_token` = the order's newest unexpired link) | `orders.json` (exported **after** the recall; before it `revised_promise_date` is null) | Sampurna | Dhruva |
+| `POST /api/dispatches` | `{order_code, lot_codes[], vehicle_no, idempotency_key, shade_override_reason?}` → dispatch `DSP-<order>-<n>`, lines, each roll FG-STORE → CUSTOMERS, lots `dispatched`, invoice `INV-<order>-<n>` (Σ m × line price), order status, buyer update. Role `store`. Guards (DB): `409 NOT_QC_PASSED` (LL004), `422 NOT_IN_ORDER` (LL005), `409 LOT_QUARANTINED`, `422 INSUFFICIENT_STOCK` (not in FG-STORE), `409 ALREADY_DISPATCHED`. Shade Guard (migration 008, Nooman): all rolls of the line from one dye batch, else `409 SHADE_MISMATCH` with `fields.batches` unless an override reason is given — **not yet enforced**; `shade_override_reason` is accepted and ignored until 008 lands | `201 {dispatch_code, invoice_code, amount}`; replay → `200` original; `404` unknown order/roll | Sampurna (flow) + Nooman (Shade Guard) | Dhruva (stretch) |
+| `GET /api/track/{token}` | public, no login (`buyer_order_status(token)`) | `track_SO-0412_before.json` / `_after.json`; malformed, unknown and expired tokens all return the same `404 error_not_found.json` | Sampurna | Dhruva |
 
 ### Finance (month-end)
 | Method & path | Query | Response | Owner | Screen |
