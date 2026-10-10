@@ -181,6 +181,9 @@ Buyer link SO-0412: `/track/4155711b-d0c4-5f02-a2b5-bfd8dd09045d`. Logins: `owne
 - Frontend: `npm run build` passes (no TS errors); checked at 375 px and 1280 px; loading/error/empty states exist.
 - No hardcoded demo numbers; no secrets in code; no console errors.
 - Committed on a feature branch with a conventional message and merged by PR.
+- CI green on the PR (`.github/workflows/ci.yml`): migrate + seed from scratch, `pytest`, **mocks regenerated from
+  the DB equal `docs/api-mocks`** (changed a response shape or the seed? run `python -m scripts.export_mocks` and
+  commit the diff), and the frontend `npm ci && npm run build`.
 
 ## 10. Git workflow
 
