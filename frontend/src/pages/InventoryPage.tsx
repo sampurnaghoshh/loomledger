@@ -3,14 +3,15 @@ import { useMemo, useState } from "react";
 import { api } from "@/api/client";
 import type { LotKind, StockRow } from "@/api/types";
 import { useApi } from "@/hooks/useApi";
+import { formatDateTime, formatQty } from "@/lib/format";
 import {
   Badge,
   Button,
   Card,
-  ErrorBanner,
+  Field,
   Input,
+  Loadable,
   PageHeader,
-  Spinner,
 } from "@/components/ui";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -44,17 +45,6 @@ function toLocalInputValue(timestamp: number) {
   );
   return localDate.toISOString().slice(0, 16);
 }
-
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function locationName(code: string) {
   return (
     LOCATION_NAMES[code] ??
@@ -142,13 +132,7 @@ export default function InventoryPage() {
       >
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <label
-                htmlFor="inventory-as-of"
-                className="block text-sm font-medium text-ink"
-              >
-                As of date and time
-              </label>
+            <Field label="As of date and time">
               <Input
                 type="datetime-local"
                 value={toLocalInputValue(selectedTime)}
@@ -163,7 +147,7 @@ export default function InventoryPage() {
                   }
                 }}
               />
-            </div>
+            </Field>
 
             <div className="flex flex-wrap items-end gap-2">
               <Button
@@ -223,15 +207,9 @@ export default function InventoryPage() {
           </Button>
         </div>
       )}
-
-      {stockState.error && (
-        <ErrorBanner
-          error={stockState.error}
-          onRetry={() => void stockState.reload()}
-        />
-      )}
-
-      <Card title="Stock overview" subtitle={`${rows.length} stock entries`}>
+      <Loadable state={stockState}>
+        {() => (
+          <Card title="Stock overview" subtitle={`${rows.length} stock entries`}>
         <div className="mb-5 flex flex-wrap gap-2">
           {FILTERS.map((item) => {
             const active = filter === item.value;
@@ -254,11 +232,7 @@ export default function InventoryPage() {
           })}
         </div>
 
-        {stockState.loading && !stockState.data ? (
-          <div className="flex justify-center py-12">
-            <Spinner />
-          </div>
-        ) : groupedRows.length === 0 ? (
+        {groupedRows.length === 0 ? (
           <div className="py-10 text-center">
             <p className="font-medium text-ink">No stock entries found</p>
             <p className="mt-1 text-sm text-muted">
@@ -297,7 +271,7 @@ export default function InventoryPage() {
                           key={`${row.location_code}-${row.lot_code}-${index}`}
                           className={
                             isQuarantine(row)
-                              ? "bg-amber-50/60"
+                              ? "bg-hold-soft"
                               : "bg-surface"
                           }
                         >
@@ -320,7 +294,7 @@ export default function InventoryPage() {
                             )}
                           </td>
                           <td className="num px-4 py-3 text-right text-ink">
-                            {row.qty.toLocaleString("en-IN")}
+                            {formatQty(row.qty, row.uom).replace(` ${row.uom}`, "")}
                           </td>
                           <td className="px-4 py-3 text-muted">{row.uom}</td>
                         </tr>
@@ -332,7 +306,9 @@ export default function InventoryPage() {
             ))}
           </div>
         )}
-      </Card>
+          </Card>
+        )}
+      </Loadable>
     </div>
   );
 }
