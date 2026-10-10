@@ -20,6 +20,13 @@ def rejections(conn: psycopg.Connection) -> list[dict]:
     return repo.rejections(conn)
 
 
+def latest_rejections(conn: psycopg.Connection) -> dict:
+    """The rejections of the latest day anything was rejected — by the mill's calendar, not the viewer's clock,
+    so a Sunday presentation still shows Saturday's rejections as the latest."""
+    day = repo.latest_rejection_day(conn)
+    return {"day": day, "rejections": repo.rejections(conn, day) if day else []}
+
+
 def inspect(conn: psycopg.Connection, req: InspectionRequest, user: dict) -> tuple[dict, bool]:
     """Record a QC verdict on a finished roll. A rejected roll is also physically moved from the
     finished-goods store to the reject bay, in the same transaction. Returns (result, created)."""

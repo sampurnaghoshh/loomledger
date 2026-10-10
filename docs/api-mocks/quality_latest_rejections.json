@@ -1,0 +1,29 @@
+{
+  "day": "2026-10-10",
+  "rejections": [
+    {
+      "lot_code": "R-1203",
+      "defect_type": "colour_mismatch",
+      "defect_meters": 50.0,
+      "inspected_at": "2026-10-10T07:55:00+05:30",
+      "inspector": "Kavya Rao",
+      "order_code": "SO-0412"
+    },
+    {
+      "lot_code": "R-1202",
+      "defect_type": "colour_mismatch",
+      "defect_meters": 50.0,
+      "inspected_at": "2026-10-10T07:50:00+05:30",
+      "inspector": "Kavya Rao",
+      "order_code": "SO-0412"
+    },
+    {
+      "lot_code": "R-1201",
+      "defect_type": "colour_mismatch",
+      "defect_meters": 50.0,
+      "inspected_at": "2026-10-10T07:45:00+05:30",
+      "inspector": "Kavya Rao",
+      "order_code": "SO-0412"
+    }
+  ]
+}

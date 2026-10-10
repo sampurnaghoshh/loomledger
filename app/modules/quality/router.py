@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Response
 
 from app.auth import Conn, CurrentUser, require_role
 from app.modules.quality import service
-from app.modules.quality.schemas import InspectionRequest, InspectionResponse, QueueItem, Rejection
+from app.modules.quality.schemas import InspectionRequest, InspectionResponse, LatestRejections, QueueItem, Rejection
 
 router = APIRouter(prefix="/api/quality", tags=["quality"])
 
@@ -13,6 +13,11 @@ router = APIRouter(prefix="/api/quality", tags=["quality"])
 @router.get("/queue", response_model=list[QueueItem])
 def queue(conn: Conn, user: CurrentUser):
     return service.queue(conn)
+
+
+@router.get("/latest-rejections", response_model=LatestRejections)
+def latest_rejections(conn: Conn, user: CurrentUser):
+    return service.latest_rejections(conn)
 
 
 @router.get("/rejections", response_model=list[Rejection])

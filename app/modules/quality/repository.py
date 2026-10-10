@@ -1,6 +1,8 @@
 """Quality SQL. Custody comes from v_roll_custody (facts), the latest result from v_latest_qc."""
 from __future__ import annotations
 
+from datetime import date
+
 import psycopg
 
 FG_STORE = "FG-STORE"
@@ -23,7 +25,15 @@ def queue(conn: psycopg.Connection) -> list[dict]:
             ORDER BY c.lot_code""").fetchall()
 
 
-def rejections(conn: psycopg.Connection) -> list[dict]:
+def latest_rejection_day(conn: psycopg.Connection) -> date | None:
+    """The mill-time date of the most recent rejection (what the Quality banner calls "latest")."""
+    return conn.execute(
+        """SELECT max((inspected_at AT TIME ZONE 'Asia/Kolkata')::date) AS day
+             FROM qc_inspection WHERE result = 'reject'""").fetchone()["day"]
+
+
+def rejections(conn: psycopg.Connection, day: date | None = None) -> list[dict]:
+    """All rejections newest first; with `day`, only those inspected on that mill-time date."""
     return conn.execute(
         """SELECT l.code AS lot_code, q.defect_type, q.defect_meters, q.inspected_at, w.full_name AS inspector,
                   so.code AS order_code
@@ -34,7 +44,8 @@ def rejections(conn: psycopg.Connection) -> list[dict]:
              LEFT JOIN order_line ol  ON ol.id = rs.order_line_id
              LEFT JOIN sales_order so ON so.id = ol.order_id
             WHERE q.result = 'reject'
-            ORDER BY q.inspected_at DESC""").fetchall()
+              AND (%(day)s::date IS NULL OR (q.inspected_at AT TIME ZONE 'Asia/Kolkata')::date = %(day)s::date)
+            ORDER BY q.inspected_at DESC""", {"day": day}).fetchall()
 
 
 def finished_lot(conn: psycopg.Connection, code: str) -> dict | None:

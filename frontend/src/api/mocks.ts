@@ -13,6 +13,7 @@ import type {
   FloorEvent,
   FloorOutput,
   InventoryMasters,
+  LatestRejections,
   LoginResponse,
   LotGraph,
   MachineNow,
@@ -128,6 +129,7 @@ export const mock: Api = {
   quality: {
     queue: () => load<QualityQueueItem[]>(() => import("@mocks/quality_queue.json")),
     rejections: () => load<Rejection[]>(() => import("@mocks/quality_rejections.json")),
+    latestRejections: () => load<LatestRejections>(() => import("@mocks/quality_latest_rejections.json")),
     inspect: async (req) => {
       await delay();
       if (req.result !== "pass" && !req.defect_type) {

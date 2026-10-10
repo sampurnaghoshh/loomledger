@@ -1,7 +1,7 @@
 """Quality schemas. Field names = contract keys (docs/api-mocks/quality_*.json, types.ts InspectionRequest)."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
@@ -26,6 +26,11 @@ class Rejection(BaseModel):
     inspected_at: datetime
     inspector: str
     order_code: str | None
+
+
+class LatestRejections(BaseModel):
+    day: date | None                     # mill-time date of the most recent rejection; null when there are none
+    rejections: list[Rejection]          # that day's rejections, newest first
 
 
 class InspectionRequest(BaseModel):

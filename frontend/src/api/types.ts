@@ -87,6 +87,10 @@ export interface QualityQueueItem {
   dyed_at: string;
   order_code: string | null;
 }
+export interface LatestRejections {
+  day: string | null; // mill-time date of the most recent rejection ("latest", not the viewer's today)
+  rejections: Rejection[]; // that day's rejections, newest first
+}
 export interface Rejection {
   lot_code: string;
   defect_type: string;
