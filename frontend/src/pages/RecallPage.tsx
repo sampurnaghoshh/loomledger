@@ -12,7 +12,8 @@ import { formatDate, formatDateTime, formatINR, formatQty, humanize, newIdempote
 import { custodyLabel, custodyTone } from "@/lib/tones";
 
 // Greige product woven from yarn. No endpoint exposes product codes yet; this is the contract's example
-// for POST /api/production/weaving-runs (docs/API_CONTRACT.md). Replace once a products endpoint exists.
+// for POST /api/production/weaving-runs (docs/API_CONTRACT.md). Only valid for twill lots (poplin yarn weaves
+// GRG-POP). Replace once a products endpoint exists.
 const GREIGE_PRODUCT_CODE = "GRG-TWL";
 
 // Most urgent first: what's already bad, what's already left the building, then what we can still stop.
@@ -23,7 +24,8 @@ const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? on
 
 export default function RecallPage() {
   const { lotCode = "" } = useParams<{ lotCode: string }>();
-  const recall = useApi(() => api.recalls.preview(lotCode), [lotCode]);
+  // No lot in the URL: skip the request entirely.
+  const recall = useApi(() => (lotCode ? api.recalls.preview(lotCode) : Promise.resolve(null)), [lotCode]);
 
   if (!lotCode) {
     return (
@@ -35,7 +37,7 @@ export default function RecallPage() {
 
   return (
     <Loadable state={recall}>
-      {(data) => <RecallView data={data} onApplied={(next) => recall.setData(next)} />}
+      {(data) => data && <RecallView data={data} onApplied={(next) => recall.setData(next)} />}
     </Loadable>
   );
 }
@@ -157,7 +159,7 @@ function RecallGenealogy({ lotCode, applied }: { lotCode: string; applied: boole
           g.nodes.length <= 1 ? (
             <EmptyState title="Nothing has been made from this lot yet" />
           ) : (
-            <LotGraph graph={g} colorBy="custody" />
+            <LotGraph graph={g} colorBy="custody" rootCause={lotCode} rootLabel="Recall source" />
           )
         }
       </Loadable>
@@ -380,6 +382,7 @@ function TryIssuePanel({
   }
 
   const refused = attempt.error?.code === "LOT_QUARANTINED" ? attempt.error : null;
+  const forbidden = attempt.error?.code === "FORBIDDEN";
   const sqlstate = refused ? (refused as ApiError & { sqlstate?: string }).sqlstate : undefined;
 
   return (
@@ -419,7 +422,12 @@ function TryIssuePanel({
             )}
 
             {recheck.error && <ErrorBanner error={recheck.error} onRetry={tryIssue} />}
-            {attempt.error && !refused && <ErrorBanner error={attempt.error} onRetry={tryIssue} />}
+            {forbidden && (
+              <div role="status" className="rounded-lg border border-line bg-idle-soft px-4 py-3 text-sm text-ink">
+                Your role can't start weaving runs. Sign in as owner or floor supervisor to run this check.
+              </div>
+            )}
+            {attempt.error && !refused && !forbidden && <ErrorBanner error={attempt.error} onRetry={tryIssue} />}
 
             {started && (
               <div role="alert" className="rounded-lg border border-warn bg-warn-soft px-4 py-3 text-sm text-warn">
