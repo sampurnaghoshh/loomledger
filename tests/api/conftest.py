@@ -73,6 +73,38 @@ def client(app: FastAPI):
         yield c
 
 
+def assert_same_shape(actual, mock, path: str = "$") -> None:
+    """Contract check: same keys and JSON types, recursively. int/float are both "number";
+    a null on either side matches anything (nullable field). Every list element is checked
+    against the mock's first element."""
+    if actual is None or mock is None:
+        return
+    if isinstance(mock, bool) or isinstance(actual, bool):
+        assert type(actual) is type(mock), f"{path}: {type(actual).__name__} != {type(mock).__name__}"
+    elif isinstance(mock, (int, float)):
+        assert isinstance(actual, (int, float)), f"{path}: expected number, got {type(actual).__name__}"
+    elif isinstance(mock, dict):
+        assert isinstance(actual, dict), f"{path}: expected object"
+        assert set(actual) == set(mock), f"{path}: keys differ: +{set(actual) - set(mock)} -{set(mock) - set(actual)}"
+        for k in mock:
+            assert_same_shape(actual[k], mock[k], f"{path}.{k}")
+    elif isinstance(mock, list):
+        assert isinstance(actual, list), f"{path}: expected array"
+        if mock:
+            for i, item in enumerate(actual):
+                assert_same_shape(item, mock[0], f"{path}[{i}]")
+    else:
+        assert type(actual) is type(mock), f"{path}: {type(actual).__name__} != {type(mock).__name__}"
+
+
+@pytest.fixture(scope="module")
+def reseed_after_module(app):
+    """For modules whose tests write: the ledger is append-only, so restore by reseeding when the module ends.
+    Put read/contract tests first in the module — they run before any write."""
+    yield
+    _fresh().close()
+
+
 def login(client: TestClient, email: str) -> str:
     res = client.post("/api/auth/login", json={"email": email, "password": PASSWORD})
     assert res.status_code == 200, res.text
