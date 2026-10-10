@@ -12,11 +12,11 @@ Core idea: **a factory is two things — a ledger and a family tree.**
 Everything else — inventory, traceability, defect root cause, recall, true cost per roll, delivery delay, buyer portal — is **derived** from those two tables, mostly inside PostgreSQL.
 
 **The demo story (everything we build serves it):**
-1. **Act 1 – Normal day.** Live floor board, machines running, yarn arriving.
+1. **Act 1 – Normal day.** Live floor board: 4 of 6 looms weaving (Looms 1, 4, 5, 6), yarn arriving; Loom 4 breaks down live.
 2. **Act 2 – Something's wrong.** QC rejects 3 rolls (colour mismatch). *Find Cause* walks their ancestry and compares defect rates: **Yarn Lot Y-112 (37.5% vs 4.0% elsewhere) is the root cause; Dye Vat 3 and Night Shift B are coincidental.**
 3. **Act 3 – Contain it.** *Recall* finds 9 more at-risk rolls, **2 already delivered** to a buyer. Apply recall → everything quarantined → trying to issue Y-112 yarn is **refused by PostgreSQL itself** (shown in the UI and in psql).
 4. **Act 4 – Business impact.** 2 orders, 2 buyers, 600 m to remake, **600 ÷ 250 = 2.4 → 3 working days** delay, **₹1,23,640 total exposure**. The buyer's phone shows the new date.
-5. **Close.** Month-end mass balance (1.14% yarn unaccounted — all on Loom 3), true cost per roll, tests passing.
+5. **Close.** Month-end mass balance (1.11% yarn unaccounted — all on Loom 3), true cost per roll, tests passing.
 
 Closing line: *"The factory knew it had a defect. LoomLedger knows where it came from, what it touched, what it cost, and what to do next."*
 
@@ -180,7 +180,8 @@ Rules:
 Find Cause on R-1201..R-1203: Y-112 **3/8 = 37.50%** vs 4/100 = **4.00%** → lift 9.38 → root_cause · Dye Vat 3 3/33 = 9.09% vs 5.33% → coincidental · Night Shift B 3/43 = 6.98% vs 6.15% → coincidental · Loom 2 covers 2 of 3 → partial.
 Recall Y-112: 12 rolls = 3 rejected + 9 at risk (3 passed in store, 3 awaiting QC, 1 on Loom 5, **2 at Meridian Apparels: R-1204, R-1205**). Orders SO-0412 (14 → 16 Oct, +2) and SO-0419 (17 → 21 Oct, +3).
 Money: already lost ₹22,488 · newly exposed ₹64,024 · recoverable yarn 142.8 kg = ₹37,128 · **total ₹1,23,640**. Finished Y-112 roll = ₹7,496.
-Mass balance: issued 1,499.1 kg, unaccounted 17.1 kg = **1.14%**, all on **Loom 3 (6.64%)**.
+Floor at demo "now": Looms 1, 4, 6 weaving R-1213-G..R-1215-G (`BUSY_FLOOR`) + Loom 5 weaving R-1212-G; Loom 2 free (the Y-112 refusal), Loom 3 idle.
+Mass balance (`expected_mass_balance()`): issued 1,545.9 kg = fabric 1,410.0 + waste 56.4 + on the looms 62.4 + unaccounted 17.1 kg = **1.11%**, all on **Loom 3 (6.64%)**.
 Buyer link SO-0412: `/track/4155711b-d0c4-5f02-a2b5-bfd8dd09045d`. Logins: `owner@everest.test` (also store@, floor@, qc@, accounts@), password `demo1234`.
 
 ## 9. Definition of done (every task)
