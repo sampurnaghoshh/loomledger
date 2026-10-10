@@ -39,6 +39,25 @@ def ready_rolls(order: str, n: int, y112: bool = False) -> list[str]:
     return [r["lot_code"] for r in rows]
 
 
+def ready_by_batch(order: str) -> dict[str, list[str]]:
+    """Passed, in-store, not-held rolls of an order grouped by dye batch (Shade Guard: one batch per dispatch)."""
+    rows = q("""SELECT r.code AS batch, c.lot_code FROM v_roll_custody c
+                  JOIN lot l ON l.id = c.lot_id JOIN process_run r ON r.id = l.produced_by_run_id
+                  JOIN reservation rs ON rs.lot_id = c.lot_id JOIN order_line ol ON ol.id = rs.order_line_id
+                  JOIN sales_order so ON so.id = ol.order_id
+                 WHERE so.code = %s AND c.custody = 'passed_in_store' AND c.kind = 'finished'
+                   AND c.status NOT IN ('quarantined', 'recalled')
+                 ORDER BY 1, 2""", (order,))
+    batches: dict[str, list[str]] = {}
+    for r in rows:
+        batches.setdefault(r["batch"], []).append(r["lot_code"])
+    return batches
+
+
+def same_batch_rolls(order: str, n: int) -> list[str]:
+    return next(rolls[:n] for rolls in ready_by_batch(order).values() if len(rolls) >= n)
+
+
 def count(table: str) -> int:
     return q(f"SELECT count(*) AS n FROM {table}")[0]["n"]          # table names are test constants
 
@@ -114,8 +133,7 @@ def dispatch_body(order: str, lots: list[str], **overrides) -> dict:
 
 @pytest.fixture(scope="module")
 def shipped(client, auth, recalled) -> dict:
-    lots = ready_rolls("SO-0412", 2)
-    assert len(lots) == 2
+    lots = same_batch_rolls("SO-0412", 2)
     before_dispatched_m = client.get(f"/api/track/{buyer_token('SO-0412')}").json()["progress"]["dispatched_m"]
     body = dispatch_body("SO-0412", lots)
     res = client.post("/api/dispatches", json=body, headers=auth["store"])
@@ -161,7 +179,8 @@ def test_quarantined_roll_cannot_ship(client, auth, recalled):
     good, held = ready_rolls("SO-0412", 1), ready_rolls("SO-0412", 1, y112=True)
     assert good and held
     before = (count("dispatch"), count("stock_move"), count("invoice"))
-    res = client.post("/api/dispatches", json=dispatch_body("SO-0412", good + held), headers=auth["store"])
+    body = dispatch_body("SO-0412", good + held, shade_override_reason="testing the quarantine guard")
+    res = client.post("/api/dispatches", json=body, headers=auth["store"])
     assert_refused(res, 409, "LOT_QUARANTINED", "LL001", before)
     assert held[0] in res.json()["error"]["message"]
 
@@ -184,6 +203,36 @@ def test_roll_already_shipped_cannot_ship_again(client, auth, shipped):
     assert_refused(res, 409, "ALREADY_DISPATCHED", "23505", before)
 
 
+# ---------- Shade Guard (008) ----------
+def two_batches(order: str) -> tuple[list[str], list[str]]:
+    batches = ready_by_batch(order)
+    (b1, r1), (b2, r2) = list(batches.items())[:2]
+    return [b1, b2], [r1[0], r2[0]]
+
+
+def test_mixed_dye_batches_are_refused(client, auth, recalled):
+    batches, rolls = two_batches("SO-0412")
+    before = (count("dispatch"), count("stock_move"), count("invoice"))
+    res = client.post("/api/dispatches", json=dispatch_body("SO-0412", rolls), headers=auth["store"])
+    assert_refused(res, 409, "SHADE_MISMATCH", "LL006", before)
+    assert res.json()["error"]["fields"] == {"batches": ", ".join(sorted(batches))}
+
+
+def test_shade_override_ships_mixed_batches_and_is_recorded(client, auth, recalled):
+    _, rolls = two_batches("SO-0412")
+    reason = "Buyer approved mixed dye lots by phone (Ritu, Meridian QA)"
+    body = dispatch_body("SO-0412", rolls, shade_override_reason=reason)
+    res = client.post("/api/dispatches", json=body, headers=auth["store"])
+    assert res.status_code == 201, res.text
+    stored = q("SELECT shade_override_reason AS r FROM dispatch WHERE code = %s", (res.json()["dispatch_code"],))
+    assert stored == [{"r": reason}]
+
+    dispatches = count("dispatch")
+    again = client.post("/api/dispatches", json=body, headers=auth["store"])
+    assert again.status_code == 200 and again.json() == res.json()          # replay: the original, nothing new
+    assert count("dispatch") == dispatches
+
+
 @pytest.mark.parametrize("overrides,field", [({"order_code": "SO-9999"}, "order_code"),
                                              ({"lot_codes": ["R-9999"]}, "lot_codes")])
 def test_dispatch_unknown_reference_is_404(client, auth, overrides, field):
@@ -193,7 +242,8 @@ def test_dispatch_unknown_reference_is_404(client, auth, overrides, field):
 
 @pytest.mark.parametrize("overrides,field", [({"lot_codes": []}, "lot_codes"), ({"lot_codes": ["R-1101", "R-1101"]}, "lot_codes"),
                                              ({"lot_codes": ["Y-112"]}, "lot_codes"), ({"vehicle_no": ""}, "vehicle_no"),
-                                             ({"idempotency_key": "x"}, "idempotency_key")])
+                                             ({"idempotency_key": "x"}, "idempotency_key"),
+                                             ({"shade_override_reason": "ok"}, "shade_override_reason")])
 def test_dispatch_bad_body_is_422(client, auth, overrides, field):
     res = client.post("/api/dispatches", json=dispatch_body("SO-0412", ["R-1101"], **overrides), headers=auth["store"])
     assert res.status_code == 422 and field in res.json()["error"]["fields"]

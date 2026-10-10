@@ -37,7 +37,8 @@ def _move_key(idempotency_key: str, lot_code: str) -> str:
 def dispatch(conn: psycopg.Connection, req: DispatchRequest, user: dict) -> tuple[dict, bool]:
     """Ship rolls of one order: dispatch + lines, each roll FG-STORE -> CUSTOMERS, invoice, order status
     and a buyer-visible update. The database decides which rolls may ship (QC pass + reserved for this
-    order: 009; not quarantined, actually in FG-STORE: 002; never twice: one_dispatch_per_roll)."""
+    order: 009; one dye batch per dispatch unless shade_override_reason is given: 008; not quarantined,
+    actually in FG-STORE: 002; never twice: one_dispatch_per_roll)."""
     first_key = _move_key(req.idempotency_key, req.lot_codes[0])
     original = repo.dispatch_replay(conn, first_key)
     if original:
@@ -57,7 +58,8 @@ def dispatch(conn: psycopg.Connection, req: DispatchRequest, user: dict) -> tupl
             n = repo.next_dispatch_number(conn, order["id"])
             dispatch_code = f"DSP-{order['code'].removeprefix('SO-')}-{n}"
             invoice_code = dispatch_code.replace("DSP", "INV", 1)
-            dispatch_id = repo.insert_dispatch(conn, dispatch_code, order["id"], req.vehicle_no)
+            dispatch_id = repo.insert_dispatch(conn, dispatch_code, order["id"], req.vehicle_no,
+                                               req.shade_override_reason)
             for code in req.lot_codes:
                 lot = lots[code]
                 repo.insert_dispatch_line(conn, dispatch_id, lot["id"])

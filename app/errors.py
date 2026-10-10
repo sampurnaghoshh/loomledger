@@ -79,6 +79,10 @@ def map_db_error(exc: psycopg.Error) -> ApiError:
     if state == "LL005":
         return ApiError("NOT_IN_ORDER", diag.message_primary or "Roll is not reserved for this order.", 422,
                         hint=diag.message_hint or None, sqlstate=state)
+    if state == "LL006":
+        return ApiError("SHADE_MISMATCH", diag.message_primary or "Rolls from different dye batches.", 409,
+                        hint=diag.message_hint or None, fields={"batches": diag.message_detail or ""},
+                        sqlstate=state)
     if state == "LL003":
         return ApiError("LEDGER_IMMUTABLE", diag.message_primary or "The stock ledger is append-only.", 405,
                         hint="Post a correcting movement instead.", sqlstate=state)
