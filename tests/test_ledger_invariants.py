@@ -341,6 +341,32 @@ def test_pnl_counts_labour_once(db):
     assert D(str(a["wages"])) == wages
 
 
+# ---------------------------------------------------------------- yarn availability (014)
+def test_receipt_only_for_an_open_order(db):
+    err = expect_sqlstate(db, "LL010", """INSERT INTO goods_receipt (code, supplier_id, received_at, order_id)
+                                          SELECT 'GRN-T1', p.id, now(), so.id FROM party p, sales_order so
+                                           WHERE p.code = 'SUP-NAR' AND so.code = 'SO-0398'""")
+    assert "open order" in str(err)
+    expect_sqlstate(db, "LL010", """UPDATE goods_receipt SET order_id = (SELECT id FROM sales_order WHERE code = 'SO-0398')
+                                     WHERE code = 'GRN-Y-101'""")
+
+
+def test_a_fabric_is_woven_from_yarn_only(db):
+    # the bill of materials must point at a yarn product; yarn has no bill of materials and fabric no reorder level
+    expect_sqlstate(db, "23503", """UPDATE product SET yarn_product_id = (SELECT id FROM product WHERE code = 'GRG-TWL')
+                                     WHERE code = 'FIN-TWL-NVY'""")
+    expect_sqlstate(db, "23514", f"UPDATE product SET yarn_product_id = id WHERE code = '{S.YARN_PRODUCT}'")
+    expect_sqlstate(db, "23514", "UPDATE product SET reorder_level_kg = 10 WHERE code = 'FIN-TWL-NVY'")
+    expect_sqlstate(db, "23514", f"UPDATE product SET reorder_level_kg = -1 WHERE code = '{S.YARN_PRODUCT}'")
+
+
+def test_yarn_requirement_uses_the_weaving_bridge(db):
+    # 007's kg per metre (width x GSM / 1000 x 1.04) times the unwoven metres, for every open line
+    rows = db.execute("""SELECT r.unwoven_m, r.required_kg, weaving_yarn_issue_kg(r.product_id, r.unwoven_m) AS bridge
+                           FROM sales_order so CROSS JOIN LATERAL order_yarn_requirement(so.id) r""").fetchall()
+    assert rows and all(req == bridge for _, req, bridge in rows)
+
+
 def test_add_working_days_skips_sundays(db):
     # Sat 10 Oct 2026 + 1 working day = Mon 12 Oct
     assert db.execute("SELECT add_working_days('2026-10-10', 1)").fetchone()[0].isoformat() == "2026-10-12"
