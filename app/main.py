@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from app import auth, realtime
 from app.config import get_settings
 from app.db import create_pool
+from app.modules.finance import router as finance
 from app.modules.floor import router as floor
 from app.modules.inventory import router as inventory
 from app.modules.orders import router as orders
@@ -98,10 +99,10 @@ def create_app() -> FastAPI:
     app.include_router(production.router)
     app.include_router(quality.router)
     app.include_router(orders.router)            # /api/orders, /api/dispatches, /api/track (public)
+    app.include_router(finance.router)
     # still to come:
     #   from app.modules.trace.router import router as trace_router;           app.include_router(trace_router)
     #   from app.modules.recalls.router import router as recalls_router;       app.include_router(recalls_router)
-    #   from app.modules.finance.router import router as finance_router;       app.include_router(finance_router)
     # ---------------------------------------------------------------------------------------------
 
     return app
