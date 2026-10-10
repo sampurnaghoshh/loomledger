@@ -52,9 +52,7 @@ def test_availability_matches_contract(client, auth):
     assert res.status_code == 200
     body, mock = res.json(), load_mock("floor_availability")
     assert_same_shape(body, mock)
-    assert body["machines"] == mock["machines"]
-    # window echoed in mill time with an offset (the mock's from/to were exported without one)
-    assert body["from"] == f"{WINDOW['from']}T00:00:00+05:30" and body["to"] == f"{ANCHOR}T00:00:00+05:30"
+    assert body == mock                       # window echoed in mill time, +05:30
 
 
 def test_availability_default_window_is_30_days(client, auth):
