@@ -12,6 +12,7 @@ import type {
   DispatchResponse,
   FindCauseResponse,
   FloorAvailability,
+  FloorProgress,
   FloorEvent,
   FloorOutput,
   InspectionRequest,
@@ -83,6 +84,7 @@ const real = {
     output: (day?: string) => request<FloorOutput>("GET", `/api/floor/output${qs({ day })}`),
     availability: (from?: string, to?: string) =>
       request<FloorAvailability>("GET", `/api/floor/availability${qs({ from, to })}`),
+    progress: (at?: string) => request<FloorProgress>("GET", `/api/floor/progress${qs({ at })}`),
     setState: (machineCode: string, state: MachineState, reason?: string) =>
       request<{ machine_code: string; state: MachineState; started_at: string }>(
         "POST",

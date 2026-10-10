@@ -118,6 +118,8 @@ def export(conn) -> None:
         "from": window_from.isoformat(),
         "to": window_to.isoformat(),
         "machines": q(conn, "SELECT * FROM machine_availability(%s, %s)", (window_from, window_to))})
+    at = datetime.combine(anchor, S.PROGRESS_SNAPSHOT_AT, IST)
+    write("floor_progress", {"at": at, "runs": q(conn, "SELECT *, state::text AS state FROM run_progress(%s)", (at,))})
     write("ws_floor_event", {"machine_id": 4, "machine_code": "LOOM-4", "state": "breakdown",
                              "reason": "Warp beam bearing failure", "started_at": f"{anchor}T09:12:00+05:30",
                              "ended_at": None})
@@ -242,7 +244,7 @@ def export(conn) -> None:
     write("orders", q(conn, """
         WITH yarn AS (
             SELECT yp.order_id, CASE WHEN SUM(yp.shortfall_kg) > 0 THEN 'short' ELSE 'ok' END AS status,
-                   SUM(yp.required_kg) AS required_kg, SUM(yp.shortfall_kg) AS shortfall_kg,
+                   SUM(yp.required_kg) AS required_kg, SUM(yp.shortfall_kg) AS shortfall_kg, SUM(yp.unwoven_m) AS to_weave_m,
                    string_agg(DISTINCT y.name, ', ') FILTER (WHERE yp.shortfall_kg > 0) AS short_of
               FROM v_yarn_plan yp JOIN product y ON y.id = yp.yarn_product_id
              GROUP BY yp.order_id)
@@ -252,7 +254,7 @@ def export(conn) -> None:
                so.status::text AS status,
                buyer_order_status(bl.token)->'progress' AS progress, bl.token AS tracking_token,
                y.status AS yarn_status, y.required_kg AS yarn_required_kg, y.shortfall_kg AS yarn_shortfall_kg,
-               y.short_of AS yarn_short_of
+               y.short_of AS yarn_short_of, y.to_weave_m
           FROM sales_order so JOIN party b ON b.id = so.buyer_id
           JOIN order_line ol ON ol.order_id = so.id JOIN product p ON p.id = ol.product_id
           JOIN buyer_link bl ON bl.order_id = so.id

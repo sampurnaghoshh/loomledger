@@ -36,3 +36,9 @@ def change_state(conn: psycopg.Connection, machine_code: str, state: str, reason
         repo.close_open_state(conn, machine["id"])
         started_at = repo.open_state(conn, machine["id"], state, reason)
     return {"machine_code": machine["code"], "state": state, "started_at": started_at}
+
+
+def progress(conn: psycopg.Connection, at: datetime | None) -> dict:
+    """How far along each machine's current run is: running time since it started over the time the planned
+    metres take at rated speed (breakdowns pause it). Estimated — a loom has no metre counter."""
+    return repo.run_progress(conn, at)

@@ -20,7 +20,8 @@
     "yarn_status": null,
     "yarn_required_kg": null,
     "yarn_shortfall_kg": null,
-    "yarn_short_of": null
+    "yarn_short_of": null,
+    "to_weave_m": null
   },
   {
     "code": "SO-0412",
@@ -43,7 +44,8 @@
     "yarn_status": "ok",
     "yarn_required_kg": 312.0,
     "yarn_shortfall_kg": 0.0,
-    "yarn_short_of": null
+    "yarn_short_of": null,
+    "to_weave_m": 1000.0
   },
   {
     "code": "SO-0419",
@@ -66,7 +68,8 @@
     "yarn_status": "short",
     "yarn_required_kg": 312.0,
     "yarn_shortfall_kg": 312.0,
-    "yarn_short_of": "Cotton 40s Combed Yarn"
+    "yarn_short_of": "Cotton 40s Combed Yarn",
+    "to_weave_m": 1000.0
   },
   {
     "code": "SO-0405",
@@ -89,6 +92,7 @@
     "yarn_status": "short",
     "yarn_required_kg": 112.32,
     "yarn_shortfall_kg": 83.02,
-    "yarn_short_of": "Cotton 40s Combed Yarn"
+    "yarn_short_of": "Cotton 40s Combed Yarn",
+    "to_weave_m": 600.0
   }
 ]

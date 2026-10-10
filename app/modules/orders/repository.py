@@ -14,7 +14,7 @@ def list_orders(conn: psycopg.Connection) -> list[dict]:
     return conn.execute(
         """WITH yarn AS (                                              -- the yarn plan, computed once (014)
                SELECT yp.order_id, CASE WHEN SUM(yp.shortfall_kg) > 0 THEN 'short' ELSE 'ok' END AS status,
-                      SUM(yp.required_kg) AS required_kg, SUM(yp.shortfall_kg) AS shortfall_kg,
+                      SUM(yp.required_kg) AS required_kg, SUM(yp.shortfall_kg) AS shortfall_kg, SUM(yp.unwoven_m) AS to_weave_m,
                       string_agg(DISTINCT y.name, ', ') FILTER (WHERE yp.shortfall_kg > 0) AS short_of
                  FROM v_yarn_plan yp JOIN product y ON y.id = yp.yarn_product_id
                 GROUP BY yp.order_id)
@@ -24,7 +24,7 @@ def list_orders(conn: psycopg.Connection) -> list[dict]:
                   so.status::text AS status,
                   buyer_order_status(bl.token)->'progress' AS progress, bl.token AS tracking_token,
                   y.status AS yarn_status, y.required_kg AS yarn_required_kg, y.shortfall_kg AS yarn_shortfall_kg,
-                  y.short_of AS yarn_short_of
+                  y.short_of AS yarn_short_of, y.to_weave_m
              FROM sales_order so
              JOIN party b       ON b.id = so.buyer_id
              JOIN order_line ol ON ol.order_id = so.id

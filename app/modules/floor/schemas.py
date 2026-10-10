@@ -59,3 +59,29 @@ class StateChangeResponse(BaseModel):
     machine_code: str
     state: MachineState
     started_at: datetime
+
+
+class RunProgress(BaseModel):
+    machine_code: str
+    machine_name: str
+    state: MachineState           # at `at`
+    run_code: str
+    lot_code: str
+    order_code: str | None
+    started_at: datetime
+    planned_m: float
+    rated_m_per_hour: float
+    planned_hours: float          # planned_m / rated_m_per_hour
+    productive_hours: float       # time in 'running' since the run started
+    paused_hours: float           # breakdowns / changeovers since the run started
+    progress_pct: float           # productive / planned, capped at 100
+    est_done_m: float             # estimated metres woven (no metre counter on a loom)
+    remaining_hours: float
+    over_plan_hours: float        # running past the planned time
+    expected_end: datetime | None  # null while the machine is not running
+    woven_to_plan_at: datetime | None  # running time reached the plan: due off the loom since then; null = under plan
+
+
+class FloorProgress(BaseModel):
+    at: datetime                  # the moment the progress is computed for (default now)
+    runs: list[RunProgress]

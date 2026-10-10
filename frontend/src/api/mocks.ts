@@ -11,6 +11,7 @@ import type {
   DispatchResponse,
   FindCauseResponse,
   FloorAvailability,
+  FloorProgress,
   FloorEvent,
   FloorOutput,
   InventoryMasters,
@@ -83,6 +84,7 @@ export const mock: Api = {
     machines: () => load<MachineNow[]>(() => import("@mocks/floor_machines.json")),
     output: () => load<FloorOutput>(() => import("@mocks/floor_output.json")),
     availability: () => load<FloorAvailability>(() => import("@mocks/floor_availability.json")),
+    progress: () => load<FloorProgress>(() => import("@mocks/floor_progress.json")), // the story clock, 09:30
     setState: async (machineCode, state) => {
       await delay();
       return { machine_code: machineCode, state, started_at: new Date().toISOString() };

@@ -416,3 +416,27 @@ def expected_yarn_plan(after_recall: bool, anchor: date = ANCHOR_DATE) -> dict:
     return {"on_hand_kg": usable, "quarantined_kg": held, "committed_kg": committed,
             "available_kg": usable - committed, "reorder_level_kg": YARN_REORDER_LEVEL_KG[YARN_PRODUCT],
             "orders": {r["order_code"]: r for r in orders}}
+
+
+# ---------------------------------------------------------------------------
+# Run progress (G4). No metre counter on a loom: progress = time running since the run started / planned time,
+# planned time = planned metres / rated speed (rated_output_per_hour, stored to 2 decimals). The mock export
+# reads the floor at PROGRESS_SNAPSHOT_AT on the demo day.
+# ---------------------------------------------------------------------------
+PROGRESS_SNAPSHOT_AT = time(9, 30)
+
+
+def expected_run_progress(at_hour: D = D("9.5")) -> dict[str, dict]:
+    """Every open weaving run on the demo day (BUSY_FLOOR + R-1212 on its loom), all started at shift A."""
+    rate = (ROLL_LENGTH_M / WEAVE_HOURS).quantize(D("0.01"))
+    planned_h = ROLL_LENGTH_M / rate
+    running_h = at_hour - BUSY_FLOOR_START_HOUR
+    ratio = min(running_h / planned_h, D(1))
+    looms = {loom: None for loom in BUSY_FLOOR} | {Y112_ROLLS["R-1212"][0]: Y112_ROLLS["R-1212"][2]}
+    return {loom: {"order_code": order,
+                   "planned_hours": planned_h.quantize(D("0.01")),
+                   "productive_hours": running_h.quantize(D("0.01")),
+                   "progress_pct": (100 * ratio).quantize(D("0.1")),
+                   "est_done_m": (ROLL_LENGTH_M * ratio).quantize(D("0.1")),
+                   "remaining_hours": max(planned_h - running_h, D(0)).quantize(D("0.01"))}
+            for loom, order in looms.items()}
