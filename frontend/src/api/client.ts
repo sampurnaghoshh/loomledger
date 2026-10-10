@@ -13,6 +13,7 @@ import type {
   FloorOutput,
   InspectionRequest,
   InventoryMasters,
+  LatestRejections,
   InspectionResponse,
   LoginResponse,
   LotGraph,
@@ -107,6 +108,7 @@ const real = {
   quality: {
     queue: () => request<QualityQueueItem[]>("GET", "/api/quality/queue"),
     rejections: () => request<Rejection[]>("GET", "/api/quality/rejections"),
+    latestRejections: () => request<LatestRejections>("GET", "/api/quality/latest-rejections"),
     inspect: (req: InspectionRequest) => request<InspectionResponse>("POST", "/api/quality/inspections", req),
   },
   trace: {

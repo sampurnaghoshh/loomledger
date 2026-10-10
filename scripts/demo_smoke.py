@@ -21,7 +21,7 @@ import sys
 import time
 import uuid
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -63,6 +63,7 @@ class Smoke:
         self.http = httpx.Client(base_url=self.base, timeout=15)
         self.tokens: dict[str, str] = {}
         self.failures = 0
+        self.anchor = S.ANCHOR_DATE        # the story's demo day; read from the data in Act 2 (seed --anchor moves it)
         self.passes = 0
 
     # ---------- plumbing ----------
@@ -170,6 +171,9 @@ class Smoke:
         rejections = self.ok_json(act, "rejections", self.call("GET", "/api/quality/rejections", "qc"))
         if rejections is not None:
             rejected = {r["lot_code"] for r in rejections}
+            story = [r for r in rejections if r["lot_code"] == S.REJECTED_ROLLS[0]]
+            if story:                      # the story rolls are rejected on the demo day itself
+                self.anchor = date.fromisoformat(story[0]["inspected_at"][:10])
             self.check(act, "rejections include the story rolls", set(S.REJECTED_ROLLS) <= rejected,
                        f"{len(rejections)} rejected · {', '.join(S.REJECTED_ROLLS)} ({S.DEFECT})")
 
@@ -243,7 +247,7 @@ class Smoke:
             for key, label in (("cost_already_incurred", "already lost"), ("recall_exposure", "newly exposed"),
                                ("quarantined_material_value", "recoverable yarn"), ("total_exposure", "TOTAL exposure")):
                 self.check(act, f"money · {label}", i[key] == num(m[key].quantize(Decimal("0.01"))), money(i[key]))
-            expected = S.expected_order_impact()
+            expected = S.expected_order_impact(self.anchor)
             for o in preview["orders"]:
                 e = expected.get(o["order_code"])
                 ok = e is not None and o["delay_days"] == e["delay_days"] \
@@ -252,7 +256,7 @@ class Smoke:
                            f"{o['buyer_name']}: {o['promised_date']} → {o['revised_promise_date']} (+{o['delay_days']})")
 
         after = self.buyer_pages(act, "after the recall")
-        for order, e in S.expected_order_impact().items():
+        for order, e in S.expected_order_impact(self.anchor).items():
             b, a = before.get(order), after.get(order)
             if not (b and a):
                 self.check(act, f"buyer page {order}", False, "page missing")
@@ -267,7 +271,7 @@ class Smoke:
         orders = self.ok_json(act, "orders", self.call("GET", "/api/orders", "owner")) or []
         tokens = {o["code"]: o["tracking_token"] for o in orders}
         pages = {}
-        for order in S.expected_order_impact():
+        for order in S.expected_order_impact(self.anchor):
             res = self.http.get(f"/api/track/{tokens.get(order, 'missing')}")             # public: no login
             if self.check(act, f"buyer page {order} ({when})", res.status_code == 200,
                           f"expected {res.json().get('expected_date')}" if res.status_code == 200 else f"HTTP {res.status_code}"):
@@ -287,7 +291,7 @@ class Smoke:
             self.check(act, "leaky machine", worst["machine_code"] == S.LEAKY_MACHINE and worst["runs"] == S.LEAKY_ROLLS
                        and worst["unaccounted_kg"] == num(S.LEAKY_EXTRA_KG * S.LEAKY_ROLLS),
                        f"{worst['machine_name']}: {worst['unaccounted_kg']} kg = {worst['unaccounted_pct']}%")
-        order = next(iter(S.expected_order_impact()))
+        order = next(iter(S.expected_order_impact(self.anchor)))
         costs = self.ok_json(act, "roll costs", self.call("GET", "/api/finance/roll-costs", "accounts",
                                                           params={"order_code": order}))
         if costs is not None:

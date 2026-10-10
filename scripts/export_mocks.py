@@ -149,6 +149,17 @@ def export(conn) -> None:
           LEFT JOIN sales_order so ON so.id = ol.order_id
          WHERE q.result = 'reject' ORDER BY q.inspected_at DESC"""))
 
+    latest = conn.execute("""SELECT max((inspected_at AT TIME ZONE 'Asia/Kolkata')::date) AS d
+                               FROM qc_inspection WHERE result = 'reject'""").fetchone()["d"]
+    write("quality_latest_rejections", {"day": latest, "rejections": q(conn, """
+        SELECT l.code AS lot_code, q.defect_type, q.defect_meters, q.inspected_at, w.full_name AS inspector,
+               so.code AS order_code
+          FROM qc_inspection q JOIN lot l ON l.id = q.lot_id JOIN worker w ON w.id = q.inspector_id
+          LEFT JOIN reservation rs ON rs.lot_id = l.id LEFT JOIN order_line ol ON ol.id = rs.order_line_id
+          LEFT JOIN sales_order so ON so.id = ol.order_id
+         WHERE q.result = 'reject' AND (q.inspected_at AT TIME ZONE 'Asia/Kolkata')::date = %s
+         ORDER BY q.inspected_at DESC""", (latest,))})
+
     # ---- trace (Act 2)
     rejected = ids(S.REJECTED_ROLLS)
     write("trace_find_cause", {"selected": S.REJECTED_ROLLS,

@@ -9,9 +9,11 @@ Login for the whole demo: **`owner@everest.test`** / `demo1234` (owner can do ev
 
 ## 0. Before the day
 
-- **Demo date.** The seed puts the story on the demo day in `seed/scenario.py` (`ANCHOR_DATE`). The Quality page only
-  raises its "N rolls rejected …" banner for rejections made **today**, so if you present on any other date, reset with
-  that date: `.\scripts\reset_demo.ps1 -Anchor (Get-Date -Format yyyy-MM-dd)` (dates shift, no other number changes).
+- **Demo date. Finals on Sunday 11 Oct 2026 → plain `.\scripts\reset_demo.ps1`, no `-Anchor`.** The story's day
+  (`ANCHOR_DATE` in `seed/scenario.py`) is Saturday 10 Oct — the mill's last working day before a Sunday demo. The screens
+  follow the mill calendar, not your laptop's date: Quality shows the **latest** rejections ("3 rejections on 10 Oct"),
+  floor output defaults to the last working day. Only move the story (`-Anchor <date>`) to a **working day** (Mon–Sat)
+  that is today or earlier — the seed refuses a Sunday, and a future day would put the floor's "now" in the future.
 - **After pulling new code:** `cd frontend; npm install` (new packages, e.g. the genealogy graph), then restart the windows below.
 - **Private rehearsal, any time:** `.\scripts\reset_demo.ps1 -Rehearsal` — its own database (`loomledger_rehearsal`) and
   backend (:8001); never touches the demo database or :8000. Must end with `0 ✗`.
@@ -24,7 +26,7 @@ Login for the whole demo: **`owner@everest.test`** / `demo1234` (owner can do ev
 | 1 | Docker Desktop | Start it, wait for "Engine running". Then in any PowerShell in the repo: `docker compose up -d` | `docker compose ps` → `db` is `healthy` |
 | 2 | **Window 1 · backend** | `cd C:\Dev\loomledger`<br>`.venv\Scripts\Activate.ps1`<br>`$env:DATABASE_URL="postgresql://postgres:postgres@localhost:5432/loomledger"`<br>`uvicorn app.main:app --host 0.0.0.0 --port 8000` (no `--reload` on stage) | http://localhost:8000/api/health → `"status":"ok","db":"ok","realtime":"ok"` |
 | 3 | **Window 2 · frontend** | `cd C:\Dev\loomledger\frontend`<br>`frontend\.env.local` must contain `VITE_USE_MOCKS=false` (copy `.env.example` once)<br>`npm run dev -- --host` | It prints a `Local:` and a `Network:` URL — note the **Network** one for the phone. The header must **not** show "mock data". |
-| 4 | **Window 3 · reset + terminal** | `cd C:\Dev\loomledger; .venv\Scripts\Activate.ps1`<br>`.\scripts\reset_demo.ps1` (add `-Anchor …` if needed, see §0) | Ends with the four `buyer link …` lines |
+| 4 | **Window 3 · reset + terminal** | `cd C:\Dev\loomledger; .venv\Scripts\Activate.ps1`<br>`.\scripts\reset_demo.ps1` (tomorrow: **no** `-Anchor`, see §0) | Ends with "demo day 2026-10-10" and the four `buyer link …` lines |
 | 5 | Window 3 | Type the **terminal moment** command (§3) and **don't press Enter** yet | — |
 
 Optional final check, only when nobody else is using this backend: `.\scripts\reset_demo.ps1 -Smoke` (reset → whole
@@ -67,7 +69,7 @@ message in red noise).
 
 ## 4. Between rehearsals
 
-1. Window 3: `.\scripts\reset_demo.ps1` (same `-Anchor` as before, if you used one).
+1. Window 3: `.\scripts\reset_demo.ps1` (no `-Anchor` for the Sunday finals).
 2. Browser: **F5** on every tab (the Recall page keeps what it last loaded). Phone: refresh.
 3. Leave Windows 1 and 2 running — the reset works under a running backend.
 
@@ -79,7 +81,8 @@ message in red noise).
 | Header shows **mock data** | `frontend\.env.local` is missing `VITE_USE_MOCKS=false` → fix it, then stop and restart `npm run dev -- --host`. |
 | Floor board doesn't update live | F5 the Floor Board (the socket connects on page load). Check http://localhost:8000/api/health says `"realtime":"ok"`; if it says `connecting`, restart Window 1. |
 | Numbers look wrong, Recall already says *Quarantined*, buyer page already delayed | A previous run left state behind → `.\scripts\reset_demo.ps1`, then F5 everything. |
-| No "rolls rejected" banner on Quality | Presenting on a different date than the seed's demo day → reset with `-Anchor (Get-Date -Format yyyy-MM-dd)`. |
+| No "rolls rejected" banner on Quality | The rejections are gone (someone re-inspected, or the DB isn't seeded) → `.\scripts\reset_demo.ps1`, F5. The banner shows the latest rejection day, so the calendar date doesn't matter. |
+| Floor shows looms "running" for over a day | Expected on a Sunday: the floor is as the mill left it on Saturday (see §0). Say "this is the floor as of the last shift". |
 | Sent to the login page | Session expired (12 h) → log in as owner again. |
 | An action says *Your role is not allowed* | You're not logged in as owner → Log out, log in as `owner@everest.test`. |
 | Recall page: *"No idle loom right now"* | A loom's state was changed → Floor Board → set Loom 2 (or any loom) to *Idle*, or reset. |

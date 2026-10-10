@@ -525,6 +525,9 @@ def main() -> None:
     parser.add_argument("--anchor", type=date.fromisoformat, default=S.ANCHOR_DATE,
                         help="demo day, YYYY-MM-DD (default: %(default)s)")
     args = parser.parse_args()
+    if args.anchor.isoweekday() == 7:
+        parser.error(f"{args.anchor} is a Sunday and the mill works Monday-Saturday; "
+                     f"use the Saturday before ({args.anchor - timedelta(days=1)})")
     with psycopg.connect(database_url()) as conn:
         reset_schema(conn)
         migrate(conn)

@@ -27,6 +27,27 @@ def test_the_whole_demo_story_passes(fresh_story):
         assert f"✓ {act} ·" in report, act
 
 
+def test_the_story_passes_on_another_demo_day(live_server):
+    """seed --anchor moves the story; the smoke reads the anchor from the data and checks the same story."""
+    from datetime import timedelta
+
+    from db.migrate import migrate, reset_schema
+    from seed import scenario as S
+    from seed.seed import seed
+    import psycopg
+    from tests.conftest import TEST_URL
+
+    anchor = S.ANCHOR_DATE - timedelta(days=1)          # a working day before the real clock
+    with psycopg.connect(TEST_URL) as conn:
+        reset_schema(conn)
+        migrate(conn)
+        seed(conn, anchor)
+    lines: list[str] = []
+    smoke = Smoke(live_server[1], out=lines.append)
+    assert smoke.run() == 0, "\n".join(lines)
+    assert smoke.anchor == anchor
+
+
 def test_refuses_a_database_that_is_not_fresh(fresh_story):
     apply_story_recall()             # idempotent: whatever ran before, the recall is now applied
     lines: list[str] = []

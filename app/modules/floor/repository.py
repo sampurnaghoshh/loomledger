@@ -14,7 +14,8 @@ def machines_now(conn: psycopg.Connection) -> list[dict]:
 
 
 def output_day(conn: psycopg.Connection, day: date | None) -> date:
-    return conn.execute("SELECT COALESCE(%s::date, (now() AT TIME ZONE 'Asia/Kolkata')::date) AS day",
+    """The requested day, else the latest working day in mill time (a Sunday shows Saturday's output)."""
+    return conn.execute("SELECT COALESCE(%s::date, last_working_day((now() AT TIME ZONE 'Asia/Kolkata')::date)) AS day",
                         (day,)).fetchone()["day"]
 
 

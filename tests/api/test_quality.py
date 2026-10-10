@@ -49,7 +49,15 @@ def test_reads_match_contract(client, auth, path, mock):
     assert res.json() == load_mock(mock)
 
 
-@pytest.mark.parametrize("path", ["/api/quality/queue", "/api/quality/rejections"])
+def test_latest_rejections_are_the_story_day(client, auth):
+    res = client.get("/api/quality/latest-rejections", headers=auth["floor"])
+    assert res.status_code == 200
+    assert res.json() == load_mock("quality_latest_rejections")
+    assert res.json()["day"] == S.ANCHOR_DATE.isoformat()                 # the story rolls are rejected on the demo day
+    assert {r["lot_code"] for r in res.json()["rejections"]} == set(S.REJECTED_ROLLS)
+
+
+@pytest.mark.parametrize("path", ["/api/quality/queue", "/api/quality/rejections", "/api/quality/latest-rejections"])
 def test_reads_need_token(client, path):
     assert client.get(path).status_code == 401
 

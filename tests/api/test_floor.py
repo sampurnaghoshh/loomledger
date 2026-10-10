@@ -38,9 +38,9 @@ def test_output_for_anchor_day_matches_contract(client, auth):
     assert res.json() == mock
 
 
-def test_output_defaults_to_today_ist(client, auth):
-    with psycopg.connect(TEST_URL) as conn:
-        today = conn.execute("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date").fetchone()[0]
+def test_output_defaults_to_the_latest_working_day(client, auth):
+    with psycopg.connect(TEST_URL) as conn:      # today in mill time, or the Saturday before when it's a Sunday
+        today = conn.execute("SELECT last_working_day((now() AT TIME ZONE 'Asia/Kolkata')::date)").fetchone()[0]
     res = client.get("/api/floor/output", headers=auth["owner"])
     assert res.status_code == 200
     assert res.json()["day"] == today.isoformat()

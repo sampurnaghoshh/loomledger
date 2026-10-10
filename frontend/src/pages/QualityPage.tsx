@@ -8,6 +8,7 @@ import type {
   Rejection,
 } from "@/api/types";
 import { useApi } from "@/hooks/useApi";
+import { formatDate } from "@/lib/format";
 import {
   Badge,
   Button,
@@ -49,16 +50,6 @@ function defectLabel(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function isToday(value: string) {
-  const date = new Date(value);
-  const now = new Date();
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  );
-}
-
 export default function QualityPage() {
   const navigate = useNavigate();
 
@@ -74,10 +65,9 @@ export default function QualityPage() {
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  const todayRejections = useMemo(
-    () => (rejectionState.data ?? []).filter((item) => isToday(item.inspected_at)),
-    [rejectionState.data],
-  );
+  // The latest day anything was rejected, decided by the API in mill time (a Sunday demo still shows Saturday's).
+  const latestState = useApi(() => api.quality.latestRejections(), []);
+  const todayRejections = useMemo(() => latestState.data?.rejections ?? [], [latestState.data]);
 
   const colourMismatchToday = todayRejections.filter(
     (item) => item.defect_type === "colour_mismatch",
@@ -150,7 +140,7 @@ export default function QualityPage() {
         `${selectedLot.lot_code} inspection recorded as ${result.toUpperCase()}.`,
       );
       setSelectedLot(null);
-      await Promise.all([queueState.reload(), rejectionState.reload()]);
+      await Promise.all([queueState.reload(), rejectionState.reload(), latestState.reload()]);
     } catch (error) {
       setFormError(
         error instanceof Error
@@ -201,7 +191,7 @@ export default function QualityPage() {
                 <Badge tone="bad">Attention required</Badge>
                 <span className="text-sm text-bad">
                   {todayRejections.length} rejection
-                  {todayRejections.length === 1 ? "" : "s"} today
+                  {todayRejections.length === 1 ? "" : "s"} on {formatDate(latestState.data?.day)}
                 </span>
               </div>
               <h2 className="mt-2 text-lg font-semibold text-ink">

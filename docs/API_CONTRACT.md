@@ -60,7 +60,7 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 | Method & path | Body / query | Response | Owner | Screen |
 |---|---|---|---|---|
 | `GET /api/floor/machines` | – | `floor_machines.json` (`v_machine_now`) | Sampurna | Adithi |
-| `GET /api/floor/output` | `?day=YYYY-MM-DD` (default today IST) | `floor_output.json` | Sampurna | Adithi |
+| `GET /api/floor/output` | `?day=YYYY-MM-DD` (default: the latest working day in IST — a Sunday shows Saturday) | `floor_output.json` | Sampurna | Adithi |
 | `GET /api/floor/availability` | `?from=&to=` (date or timestamp; naive = IST; default the 30 days before today 00:00 IST; `from` must be before `to`). `from`/`to` are returned with `+05:30` | `floor_availability.json` | Sampurna | Adithi |
 | `POST /api/floor/machines/{code}/state` | `{state, reason?}` — closes the open state row, opens a new one, in one transaction (fires the `/ws/floor` events). Role `floor_supervisor` | `{machine_code, state, started_at}`; `404` unknown machine, `422` bad state | Sampurna | Adithi, simulator |
 | `WS /ws/floor` | – | stream of `ws_floor_event.json` (relay of `LISTEN loomledger_floor`) | Sampurna | Adithi |
@@ -95,6 +95,7 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 |---|---|---|---|---|
 | `GET /api/quality/queue` | – | `quality_queue.json` | Sampurna | Adithi |
 | `GET /api/quality/rejections` | – | `quality_rejections.json` | Sampurna | Adithi |
+| `GET /api/quality/latest-rejections` | – (any signed-in user) | `quality_latest_rejections.json`: `{day, rejections[]}` — the rejections of the latest day anything was rejected (mill time, so a Sunday still shows Saturday's); `day: null` when none | Sampurna | Adithi |
 | `POST /api/quality/inspections` | `{lot_code, result, defect_type?, defect_meters?, notes?, inspector_code?, idempotency_key?}`; `defect_type` required unless `pass` (empty for `pass`); reject also moves the roll FG-STORE → REJECT-BAY in the same transaction. `inspector_code` omitted = first active QC inspector. Send `idempotency_key` (replays of a reject return the original). Role `qc` | `201 {inspection_id, lot_code, result}`; reject replay → `200`; `404` unknown finished roll/inspector; `422 INSUFFICIENT_STOCK` roll not in FG-STORE; `409 LOT_QUARANTINED` roll is quarantined | Sampurna | Adithi |
 
 ### Trace (Act 2)
