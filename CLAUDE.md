@@ -76,6 +76,8 @@ cd frontend && npm install
 npm run dev                                            # http://localhost:5173 (mock data by default)
 npm run build                                          # typecheck + production build — must pass before a PR
 # real backend: create frontend/.env.local with VITE_USE_MOCKS=false
+# teammate's backend over LAN: they run `uvicorn app.main:app --host 0.0.0.0 --port 8000` (allow port 8000 in their firewall);
+#   you copy frontend/.env.example to .env.local, set VITE_API_TARGET=http://<their LAN IP>:8000, restart npm run dev
 ```
 
 Windows users: run the Python commands in PowerShell with `$env:DATABASE_URL="..."` and
