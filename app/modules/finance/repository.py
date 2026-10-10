@@ -37,6 +37,14 @@ def unaccounted_by_machine(conn: psycopg.Connection, from_: datetime | None, to:
             ORDER BY unaccounted_kg DESC, machine_code""", (from_, to)).fetchall()
 
 
+def first_run_at(conn: psycopg.Connection, from_: datetime | None, to: datetime | None) -> datetime | None:
+    """When the earliest weaving run in the window started (what "to date" counts from)."""
+    return conn.execute(
+        """SELECT min(started_at) AS t FROM v_yarn_balance_by_run
+            WHERE started_at >= COALESCE(%s::timestamptz, '-infinity')
+              AND started_at <  COALESCE(%s::timestamptz, 'infinity')""", (from_, to)).fetchone()["t"]
+
+
 def order_exists(conn: psycopg.Connection, order_code: str) -> bool:
     return conn.execute("SELECT 1 FROM sales_order WHERE code = %s", (order_code,)).fetchone() is not None
 

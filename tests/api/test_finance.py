@@ -65,9 +65,18 @@ def test_mass_balance_window_is_consistent(client, auth):
     assert body["totals"]["unaccounted_kg"] == pytest.approx(sum(m["unaccounted_kg"] for m in body["by_machine"]))
 
 
+def test_first_run_at_is_the_earliest_run_in_the_window(client, auth):
+    first = q("SELECT min(started_at) AS t FROM process_run WHERE stage = 'weaving'")[0]["t"]
+    assert client.get(BALANCE, headers=auth["owner"]).json()["first_run_at"] == first.isoformat()
+    month = {"from": S.ANCHOR_DATE.replace(day=1).isoformat(), "to": S.ANCHOR_DATE.isoformat()}
+    in_month = q("""SELECT min(started_at) AS t FROM process_run WHERE stage = 'weaving'
+                     AND started_at >= %s::timestamptz AND started_at < %s::timestamptz""", (month["from"], month["to"]))[0]["t"]
+    assert client.get(BALANCE, params=month, headers=auth["owner"]).json()["first_run_at"] == in_month.isoformat()
+
+
 def test_mass_balance_empty_window_is_zero(client, auth):
     body = client.get(BALANCE, params={"from": "2001-01-01", "to": "2001-02-01"}, headers=auth["owner"]).json()
-    assert body["by_machine"] == []
+    assert body["by_machine"] == [] and body["first_run_at"] is None
     assert body["totals"]["issued_kg"] == 0 and body["totals"]["unaccounted_pct"] is None
 
 

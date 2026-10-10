@@ -239,8 +239,9 @@ export interface BuyerOrderStatus {
 
 // ---------- finance
 export interface MassBalance {
-  from: string | null;
+  from: string | null; // null = to date (all runs so far)
   to: string | null;
+  first_run_at: string | null; // earliest weaving run in the window ("to date, since …"); null if none
   totals: {
     received_kg: number;
     issued_kg: number;

@@ -16,6 +16,7 @@ def mass_balance(conn: psycopg.Connection, from_: datetime | None, to: datetime 
     if window["from_"] is not None and window["to"] is not None and window["from_"] >= window["to"]:
         raise ApiError("VALIDATION_FAILED", "'from' must be before 'to'.", 422, fields={"from": "must be before to"})
     return {**window,
+            "first_run_at": repo.first_run_at(conn, window["from_"], window["to"]),
             "totals": repo.totals(conn, window["from_"], window["to"]),
             "by_machine": repo.unaccounted_by_machine(conn, window["from_"], window["to"])}
 
