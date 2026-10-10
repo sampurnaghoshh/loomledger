@@ -150,7 +150,7 @@ export default function InventoryPage() {
                 As of date and time
               </label>
               <Input
-                inputType="datetime-local"
+                type="datetime-local"
                 value={toLocalInputValue(selectedTime)}
                 onChange={(event) => {
                   const value = new Date(event.target.value).getTime();
