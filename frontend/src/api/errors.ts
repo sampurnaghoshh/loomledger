@@ -6,7 +6,7 @@ export type ApiErrorCode =
   | "INSUFFICIENT_STOCK" //   422
   | "MACHINE_BUSY" //         409  machine already booked for that time
   | "ALREADY_DISPATCHED" //   409
-  | "SHADE_MISMATCH" //       409  rolls from different dye batches in one order line
+  | "SHADE_MISMATCH" //       409  rolls from different dye batches in one dispatch (fields.batches); resend with shade_override_reason
   | "VALIDATION_FAILED" //    422  see fields
   | "INVALID_CREDENTIALS" //  401
   | "UNAUTHENTICATED" //      401

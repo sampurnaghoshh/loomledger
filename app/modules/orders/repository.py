@@ -60,10 +60,12 @@ def next_dispatch_number(conn: psycopg.Connection, order_id: int) -> int:
     return conn.execute("SELECT count(*) + 1 AS n FROM dispatch WHERE order_id = %s", (order_id,)).fetchone()["n"]
 
 
-def insert_dispatch(conn: psycopg.Connection, code: str, order_id: int, vehicle_no: str) -> int:
+def insert_dispatch(conn: psycopg.Connection, code: str, order_id: int, vehicle_no: str,
+                    shade_override_reason: str | None) -> int:
     return conn.execute(
-        """INSERT INTO dispatch (code, order_id, vehicle_no, dispatched_at)
-           VALUES (%s, %s, %s, now()) RETURNING id""", (code, order_id, vehicle_no)).fetchone()["id"]
+        """INSERT INTO dispatch (code, order_id, vehicle_no, dispatched_at, shade_override_reason)
+           VALUES (%s, %s, %s, now(), %s) RETURNING id""",
+        (code, order_id, vehicle_no, shade_override_reason)).fetchone()["id"]
 
 
 def insert_dispatch_line(conn: psycopg.Connection, dispatch_id: int, lot_id: int) -> None:

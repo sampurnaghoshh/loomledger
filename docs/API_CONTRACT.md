@@ -34,7 +34,7 @@ regenerate, update `frontend/src/api/types.ts`, and tell the team in the group c
 | SQLSTATE `P0002` (`lot % does not exist` in 004) | 404 | `NOT_FOUND` |
 | SQLSTATE `40001` / `40P01` (serialization failure / deadlock) | 409 | `CONFLICT_RETRY` (safe to resubmit with the same idempotency key) |
 | SQLSTATE `08xxx` / DB unreachable / pool timeout | 503 | `DB_UNAVAILABLE` |
-| shade check fails, no override | 409 | `SHADE_MISMATCH` |
+| SQLSTATE `LL006` (dispatch mixes dye batches, no `shade_override_reason`) | 409 | `SHADE_MISMATCH` + `fields: {batches: "DB-08, DB-14"}` |
 | bad login | 401 | `INVALID_CREDENTIALS` |
 | missing/expired token | 401 | `UNAUTHENTICATED` |
 | role not allowed | 403 | `FORBIDDEN` |
@@ -99,21 +99,21 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 ### Trace (Act 2)
 | Method & path | Body | Response | Owner | Screen |
 |---|---|---|---|---|
-| `POST /api/trace/find-cause` | `{lot_codes: ["R-1201", ...]}` | `trace_find_cause.json` (`find_cause()`) | Nooman | Nooman |
-| `POST /api/trace/graph` | `{lot_codes, direction: "up"}` | `trace_graph_ancestors.json` | Nooman | Nooman |
-| `GET /api/trace/lots/{code}/descendants` | – | `trace_graph_descendants.json` | Nooman | Nooman |
+| `POST /api/trace/find-cause` | `{lot_codes: ["R-1201", ...]}` (1–500, distinct). Any signed-in user | `trace_find_cause.json` (`find_cause()`; ranked and judged by the DB); `404` unknown lot (`fields.lot_codes`) | Sampurna | Nooman |
+| `POST /api/trace/graph` | `{lot_codes, direction: "up" \| "down"}` (default `up`): the lots + all ancestors (or descendants), nodes ordered by kind then code, edges only between listed nodes | `trace_graph_ancestors.json`; `404` unknown lot | Sampurna | Nooman |
+| `GET /api/trace/lots/{code}/descendants` | – | `trace_graph_descendants.json`; `404` unknown lot | Sampurna | Nooman |
 
 ### Recall (Acts 3–4)
 | Method & path | Body / query | Response | Owner | Screen |
 |---|---|---|---|---|
-| `GET /api/recalls/preview` | `?lot_code=Y-112` | `recall_preview.json` (or `recall_applied.json` if already applied) | Nooman | Nooman |
-| `POST /api/recalls` | `{lot_code, reason}` → `apply_recall()`; idempotent | `recall_applied.json` | Nooman | Nooman |
+| `GET /api/recalls/preview` | `?lot_code=Y-112`. Any signed-in user | `recall_preview.json` (no `applied_at` key), or `recall_applied.json` once applied; `404` unknown lot | Sampurna | Nooman |
+| `POST /api/recalls` | `{lot_code, reason (3–500 chars)}` → `apply_recall()`. Role `qc` | `201 recall_applied.json`; applying again → `200` with the **same** recall (code, time, numbers), nothing re-posted; `404` unknown lot | Sampurna | Nooman |
 
 ### Orders, dispatch, buyer portal
 | Method & path | Body | Response | Owner | Screen |
 |---|---|---|---|---|
 | `GET /api/orders` | – (any signed-in user; `tracking_token` = the order's newest unexpired link) | `orders.json` (exported **after** the recall; before it `revised_promise_date` is null) | Sampurna | Dhruva |
-| `POST /api/dispatches` | `{order_code, lot_codes[], vehicle_no, idempotency_key, shade_override_reason?}` → dispatch `DSP-<order>-<n>`, lines, each roll FG-STORE → CUSTOMERS, lots `dispatched`, invoice `INV-<order>-<n>` (Σ m × line price), order status, buyer update. Role `store`. Guards (DB): `409 NOT_QC_PASSED` (LL004), `422 NOT_IN_ORDER` (LL005), `409 LOT_QUARANTINED`, `422 INSUFFICIENT_STOCK` (not in FG-STORE), `409 ALREADY_DISPATCHED`. Shade Guard (migration 008, Nooman): all rolls of the line from one dye batch, else `409 SHADE_MISMATCH` with `fields.batches` unless an override reason is given — **not yet enforced**; `shade_override_reason` is accepted and ignored until 008 lands | `201 {dispatch_code, invoice_code, amount}`; replay → `200` original; `404` unknown order/roll | Sampurna (flow) + Nooman (Shade Guard) | Dhruva (stretch) |
+| `POST /api/dispatches` | `{order_code, lot_codes[], vehicle_no, idempotency_key, shade_override_reason?}` → dispatch `DSP-<order>-<n>`, lines, each roll FG-STORE → CUSTOMERS, lots `dispatched`, invoice `INV-<order>-<n>` (Σ m × line price), order status, buyer update. Role `store`. Guards (DB): `409 NOT_QC_PASSED` (LL004), `422 NOT_IN_ORDER` (LL005), `409 LOT_QUARANTINED`, `422 INSUFFICIENT_STOCK` (not in FG-STORE), `409 ALREADY_DISPATCHED`. Shade Guard (migration 008): all rolls of **one dispatch** from one dye batch, else `409 SHADE_MISMATCH` with `fields.batches`, unless `shade_override_reason` (3–500 chars) is given — it is stored on the dispatch | `201 {dispatch_code, invoice_code, amount}`; replay → `200` original; `404` unknown order/roll | Sampurna | Dhruva (stretch) |
 | `GET /api/track/{token}` | public, no login (`buyer_order_status(token)`) | `track_SO-0412_before.json` / `_after.json`; malformed, unknown and expired tokens all return the same `404 error_not_found.json` | Sampurna | Dhruva |
 
 ### Finance (month-end)

@@ -76,6 +76,8 @@ cd frontend && npm install
 npm run dev                                            # http://localhost:5173 (mock data by default)
 npm run build                                          # typecheck + production build — must pass before a PR
 # real backend: create frontend/.env.local with VITE_USE_MOCKS=false
+# teammate's backend over LAN: they run `uvicorn app.main:app --host 0.0.0.0 --port 8000` (allow port 8000 in their firewall);
+#   you copy frontend/.env.example to .env.local, set VITE_API_TARGET=http://<their LAN IP>:8000, restart npm run dev
 ```
 
 Windows users: run the Python commands in PowerShell with `$env:DATABASE_URL="..."` and
@@ -98,7 +100,7 @@ PostgreSQL 16 (14+ works). Extensions: `btree_gist`, `pgcrypto`. Session timezon
 | 005_floor_portal_balance | `v_machine_now`, `floor_output(day)`, `machine_availability(from,to)`, `v_yarn_balance_by_run`, **`mass_balance(from,to)`**, `v_yarn_unaccounted_by_machine`, **`buyer_order_status(token)`** |
 | 006_floor_notify_payload | `ist_iso(ts)`; `loomledger_floor` NOTIFY payload = `ws_floor_event.json` (adds `machine_code`, `reason`) |
 | 007_production_rules | `weaving_yarn_issue_kg(product, m)` (m × width × GSM/1000 × 1.04), `shift_at(ts)` (IST shift calendar) |
-| 008 | *reserved for Shade Guard (Nooman)* |
+| 008_shade_guard | `dispatch.shade_override_reason`; dispatch_line trigger: one dye batch per dispatch unless an override reason is recorded (`LL006`). Merged after 009 — order-independent |
 | 009_dispatch_guard | dispatch_line trigger: latest QC must be `pass` (`LL004`), roll reserved for the dispatch's order (`LL005`) |
 
 Conventions for new migrations:
@@ -181,6 +183,9 @@ Buyer link SO-0412: `/track/4155711b-d0c4-5f02-a2b5-bfd8dd09045d`. Logins: `owne
 - Frontend: `npm run build` passes (no TS errors); checked at 375 px and 1280 px; loading/error/empty states exist.
 - No hardcoded demo numbers; no secrets in code; no console errors.
 - Committed on a feature branch with a conventional message and merged by PR.
+- CI green on the PR (`.github/workflows/ci.yml`): migrate + seed from scratch, `pytest`, **mocks regenerated from
+  the DB equal `docs/api-mocks`** (changed a response shape or the seed? run `python -m scripts.export_mocks` and
+  commit the diff), and the frontend `npm ci && npm run build`.
 
 ## 10. Git workflow
 
