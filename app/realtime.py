@@ -9,6 +9,12 @@
 - Broadcaster gives each client a bounded queue: publishing never waits on a socket, and a client that
   falls `queue_size` messages behind is disconnected (1013 "try again later") instead of slowing everyone.
 - Events sent while the listener is reconnecting are lost; clients re-fetch GET /api/floor/machines on (re)connect.
+
+Owner alerts (016) use the same machinery on their OWN channel and socket, so floor clients never see them:
+
+    recall commit / breakdown --pg_notify('loomledger_alerts')--> listener --> Broadcaster --> /ws/alerts (owner, qc)
+
+Alerts are live only: nothing is replayed on connect.
 """
 from __future__ import annotations
 
@@ -29,7 +35,10 @@ from app.errors import ApiError
 log = logging.getLogger("loomledger.realtime")
 
 FLOOR_CHANNEL = "loomledger_floor"
+ALERTS_CHANNEL = "loomledger_alerts"
+ALERT_ROLES = frozenset({"owner", "qc"})
 WS_UNAUTHENTICATED = 4401      # app-defined close code (4000-4999): bad/missing/expired token
+WS_FORBIDDEN = 4403            # signed in, but this role may not listen here
 WS_TRY_AGAIN_LATER = 1013      # client too slow to keep up
 
 
@@ -87,7 +96,7 @@ class FloorListener:
     async def start(self) -> None:
         self._loop = asyncio.get_running_loop()
         self._stop.clear()
-        self._task = asyncio.create_task(asyncio.to_thread(self._run), name="floor-listener")
+        self._task = asyncio.create_task(asyncio.to_thread(self._run), name=f"listener-{self._channel}")
 
     async def stop(self) -> None:
         self._stop.set()
@@ -104,7 +113,7 @@ class FloorListener:
         while not self._stop.is_set():
             try:
                 with psycopg.connect(self._conninfo, autocommit=True, connect_timeout=5,
-                                     application_name="loomledger-floor-listener") as conn:
+                                     application_name=f"loomledger-{self._channel.removeprefix('loomledger_')}-listener") as conn:
                     conn.execute(sql.SQL("LISTEN {}").format(sql.Identifier(self._channel)))
                     self.connected.set()
                     log.info("listening on %s", self._channel)
@@ -161,16 +170,17 @@ async def _wait_for_disconnect(websocket: WebSocket) -> None:
             return
 
 
-@router.websocket("/ws/floor")
-async def floor_events(websocket: WebSocket, token: str | None = None) -> None:
-    """Stream of machine-state events. Auth: ?token=<login token> (browsers can't set WS headers)."""
-    await websocket.accept()       # accept first so the browser actually receives the 4401 close code
+async def _stream(websocket: WebSocket, token: str | None, broadcaster: Broadcaster,
+                  roles: frozenset[str] | None = None) -> None:
+    await websocket.accept()       # accept first so the browser actually receives the 4401 / 4403 close code
     user = await run_in_threadpool(_authenticate, websocket.app.state.pool, token)
     if user is None:
         await websocket.close(code=WS_UNAUTHENTICATED, reason="unauthenticated")
         return
+    if roles is not None and user["role"] not in roles:
+        await websocket.close(code=WS_FORBIDDEN, reason="forbidden")
+        return
 
-    broadcaster: Broadcaster = websocket.app.state.floor_broadcaster
     sub = broadcaster.subscribe()
     tasks = {asyncio.create_task(_pump(websocket, sub)), asyncio.create_task(_wait_for_disconnect(websocket))}
     try:
@@ -184,3 +194,15 @@ async def floor_events(websocket: WebSocket, token: str | None = None) -> None:
                 await t
             except (asyncio.CancelledError, WebSocketDisconnect, RuntimeError):
                 pass               # socket already gone
+
+
+@router.websocket("/ws/floor")
+async def floor_events(websocket: WebSocket, token: str | None = None) -> None:
+    """Stream of machine-state events. Auth: ?token=<login token> (browsers can't set WS headers)."""
+    await _stream(websocket, token, websocket.app.state.floor_broadcaster)
+
+
+@router.websocket("/ws/alerts")
+async def owner_alerts(websocket: WebSocket, token: str | None = None) -> None:
+    """Live owner alerts (016): committed recalls and breakdowns. Owner / qc only; nothing is replayed."""
+    await _stream(websocket, token, websocket.app.state.alerts_broadcaster, ALERT_ROLES)

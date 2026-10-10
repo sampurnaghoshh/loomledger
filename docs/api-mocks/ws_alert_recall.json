@@ -1,0 +1,40 @@
+{
+  "kind": "recall",
+  "recall_code": "RC-Y-112",
+  "root_lot_code": "Y-112",
+  "reason": "Colour mismatch traced to yarn lot Y-112",
+  "applied_at": "2026-10-10T09:45:00+05:30",
+  "rolls_total": 12,
+  "rolls_rejected": 3,
+  "rolls_at_risk": 9,
+  "rolls_at_customer": 2,
+  "at_buyers": [
+    {
+      "buyer": "Meridian Apparels",
+      "rolls": [
+        "R-1204",
+        "R-1205"
+      ]
+    }
+  ],
+  "orders_affected": 2,
+  "buyers_affected": 2,
+  "delay_days": 3,
+  "orders": [
+    {
+      "order_code": "SO-0412",
+      "buyer": "Meridian Apparels",
+      "delay_days": 2,
+      "promised_date": "2026-10-14",
+      "revised_promise_date": "2026-10-16"
+    },
+    {
+      "order_code": "SO-0419",
+      "buyer": "Coastline Garments",
+      "delay_days": 3,
+      "promised_date": "2026-10-17",
+      "revised_promise_date": "2026-10-21"
+    }
+  ],
+  "total_exposure": 123640.0
+}
