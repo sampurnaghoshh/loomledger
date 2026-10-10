@@ -11,6 +11,9 @@ import { verdictLabel, verdictTone, type Tone } from "@/lib/tones";
 
 const DEFAULT_LOTS = ["R-1201", "R-1202", "R-1203"];
 
+/** "1 roll" / "3 rolls" */
+const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
 // Literal classes so Tailwind picks them up. Neutral verdicts still get a visible "through" bar.
 const barFill: Record<Tone, string> = {
   ok: "bg-ok",
@@ -46,7 +49,7 @@ function whyCoincidental(f: CauseFactor): string {
       ? `that is no higher than the ${outside} rate elsewhere`
       : `only ${formatLift(f.lift)} the ${outside} rate elsewhere`;
   return (
-    `${f.factor_label}: ${f.rejected_through} of ${f.inspected_through} rolls through it were rejected (${through}), ` +
+    `${f.factor_label}: ${f.rejected_through} of ${count(f.inspected_through, "roll")} through it ${f.rejected_through === 1 ? "was" : "were"} rejected (${through}), ` +
     `${comparison}. Rolls that never touched it fail at a similar rate, so it was on the path of the bad rolls without causing them.`
   );
 }
@@ -110,7 +113,7 @@ export default function TracePage() {
                 <GitBranch className="size-6 text-muted" aria-hidden />
                 <p className="font-medium text-ink">Genealogy graph placeholder</p>
                 <p className="text-sm text-muted">
-                  {g.nodes.length} lots and {g.edges.length} links loaded
+                  {count(g.nodes.length, "lot")} and {count(g.edges.length, "link")} loaded
                   {rootCode && (
                     <>
                       {" "}· root cause <span className="font-mono">{rootCode}</span> will be highlighted
@@ -136,7 +139,7 @@ function Headline({ factor, rootCode, onRecall }: { factor: CauseFactor; rootCod
           <Badge tone={tone}>{verdictLabel[factor.verdict]}</Badge>
         </span>
       }
-      subtitle={`Strongest candidate · covers ${factor.selected_covered} of ${factor.selected_total} selected rolls`}
+      subtitle={`Strongest candidate · covers ${factor.selected_covered} of ${count(factor.selected_total, "selected roll")}`}
     >
       <div className="grid gap-4">
         <p className="text-sm text-ink">
