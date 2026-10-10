@@ -119,8 +119,8 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 ### Finance (month-end)
 | Method & path | Query | Response | Owner | Screen |
 |---|---|---|---|---|
-| `GET /api/finance/mass-balance` | `?from=&to=` (default all time) | `finance_mass_balance.json` | Sampurna | Dhruva |
-| `GET /api/finance/roll-costs` | `?order_code=SO-0412` | `finance_roll_costs_SO-0412.json` | Sampurna | Dhruva |
+| `GET /api/finance/mass-balance` | `?from=&to=` (default all time = `null`; date or timestamp, naive = IST; window = runs **started** in `[from, to)`; `by_machine` uses the same window, worst first, ties by machine code; empty window → zeros + `unaccounted_pct: null`). Role `accounts` | `finance_mass_balance.json`; `422` bad window | Sampurna | Dhruva |
+| `GET /api/finance/roll-costs` | `?order_code=SO-0412` (required) — every roll reserved for the order, `v_roll_cost` (material + machine + labour + chemicals) + custody. Role `accounts` | `finance_roll_costs_SO-0412.json` (exported after the recall; costs are the same before it); `404` unknown order, `422` missing `order_code` | Sampurna | Dhruva |
 
 ## Contract test (backend)
 
