@@ -93,3 +93,27 @@ message in red noise).
 | `npm run dev` fails with *Cannot find module* | `cd frontend; npm install`, then restart Window 2. |
 | Backend won't start: *address already in use* | Something else holds :8000 → close the old Window 1 (or `Get-NetTCPConnection -LocalPort 8000` to find it). |
 | Everything is down and there's no time | Last resort: `VITE_USE_MOCKS=true` in `frontend\.env.local`, restart Window 2 — the screens run on recorded data (no live database, no terminal moment). |
+
+## 6. Evaluator playground (separate database, separate ports — the demo is never touched)
+
+For evaluators who want to click around with more than the story: the same story **plus ~300 rolls of history**
+(15 buyers, 60 more orders in every status, QC pass / rework / reject with every defect type, dispatches, invoices,
+payments, attendance), all dated in the two months *before* the story so nothing in the story moves.
+
+```powershell
+# 1. build (or rebuild) loomledger_eval — starts nothing, never touches loomledger
+.\scripts\reset_demo.ps1 -Eval                                   # bash: ./scripts/reset_demo.sh --eval
+
+# 2. Window A — a backend on :8002 that only sees loomledger_eval
+$env:DATABASE_URL="postgresql://postgres:postgres@localhost:5432/loomledger_eval"
+uvicorn app.main:app --port 8002
+
+# 3. Window B — a frontend on :5174 that talks to it (real data, not mocks)
+cd frontend
+$env:VITE_USE_MOCKS="false"; $env:VITE_API_TARGET="http://localhost:8002"
+npm run dev -- --port 5174 --strictPort                         # http://localhost:5174 · owner@everest.test / demo1234
+```
+
+Notes: the eval rolls are `R-2001`…`R-2300` (yarn `Y-301`…`Y-312`, orders `SO-0301`…). Numbers that compare the story
+against *everything else* (find-cause rates, mass balance to date, earlier months' P&L) are different here — that is
+expected; the demo database keeps the locked numbers. Reset the playground any time with `.\scripts\reset_demo.ps1 -Eval`.

@@ -8,24 +8,30 @@
 #   ./scripts/reset_demo.sh --rehearsal        private rehearsal, leaves the demo DB and :8000 alone:
 #                                              loomledger_rehearsal (created if missing) + its own backend on :8001
 #                                              -> reset -> smoke -> stop that backend -> reset
+#   ./scripts/reset_demo.sh --eval             evaluator playground: loomledger_eval (created if missing) reset with
+#                                              --profile eval (story + ~300 rolls of history). Starts NOTHING;
+#                                              see docs/DEMO_RUNBOOK.md "Evaluator playground" (backend :8002, frontend :5174)
 #   other args go to the seed, e.g. --anchor 2026-10-12
-# Windows: .\scripts\reset_demo.ps1 [-DatabaseUrl URL] [-Smoke [-Url API]] [-Rehearsal] [-Anchor DATE]
+# Windows: .\scripts\reset_demo.ps1 [-DatabaseUrl URL] [-Smoke [-Url API]] [-Rehearsal] [-Eval] [-Anchor DATE]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 PY="${PYTHON:-python}"
 REHEARSAL_DB="postgresql://postgres:postgres@localhost:5432/loomledger_rehearsal"
 REHEARSAL_PORT="${REHEARSAL_PORT:-8001}"
+EVAL_DB="postgresql://postgres:postgres@localhost:5432/loomledger_eval"
 
 db_url="${DATABASE_URL:-postgresql://postgres:postgres@localhost:5432/loomledger}"
 custom_db=""
 smoke=""
 rehearsal=""
+eval_profile=""
 api="http://localhost:8000"
 seed_args=()
 while [ $# -gt 0 ]; do
     case "$1" in
         --db-url) db_url="$2"; custom_db=1; shift ;;
         --rehearsal) rehearsal=1 ;;
+        --eval) eval_profile=1 ;;
         --smoke)
             smoke=1
             if [ $# -gt 1 ] && [[ "$2" != --* ]]; then api="$2"; shift; fi ;;
@@ -34,6 +40,11 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+if [ -n "$eval_profile" ]; then
+    if [ -n "$rehearsal$smoke" ]; then echo "--eval only resets loomledger_eval; it can't be combined with --smoke/--rehearsal" >&2; exit 2; fi
+    [ -n "$custom_db" ] || db_url="$EVAL_DB"
+    seed_args+=(--profile eval)
+fi
 if [ -n "$rehearsal" ]; then
     [ -n "$custom_db" ] || db_url="$REHEARSAL_DB"
     api="http://localhost:$REHEARSAL_PORT"

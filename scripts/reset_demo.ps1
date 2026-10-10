@@ -7,6 +7,9 @@
 #                                                     loomledger_rehearsal (created if missing) + its own backend on :8001
 #                                                     -> reset -> smoke -> stop that backend -> reset
 #   .\scripts\reset_demo.ps1 -Anchor 2026-10-12       another demo day
+#   .\scripts\reset_demo.ps1 -Eval                    evaluator playground: loomledger_eval (created if missing) reset with
+#                                                     --profile eval (the story + ~300 rolls of history). Starts NOTHING;
+#                                                     see docs/DEMO_RUNBOOK.md "Evaluator playground" (backend :8002, frontend :5174)
 # Run with the venv active. If PowerShell blocks scripts:
 #   powershell -ExecutionPolicy Bypass -File .\scripts\reset_demo.ps1 -Rehearsal
 param(
@@ -15,11 +18,14 @@ param(
     [string]$Url = "http://localhost:8000",
     [switch]$Rehearsal,
     [int]$Port = 8001,
-    [string]$Anchor
+    [string]$Anchor,
+    [switch]$Eval
 )
 $ErrorActionPreference = "Stop"
 Set-Location (Join-Path $PSScriptRoot "..")
 
+if ($Eval -and ($Rehearsal -or $Smoke)) { [Console]::Error.WriteLine("-Eval only resets loomledger_eval; it can't be combined with -Smoke/-Rehearsal"); exit 2 }
+if ($Eval -and -not $DatabaseUrl) { $DatabaseUrl = "postgresql://postgres:postgres@localhost:5432/loomledger_eval" }
 if ($Rehearsal) {
     if (-not $DatabaseUrl) { $DatabaseUrl = "postgresql://postgres:postgres@localhost:5432/loomledger_rehearsal" }
     $Url = "http://localhost:$Port"
@@ -33,6 +39,7 @@ Write-Host ("database: " + ($env:DATABASE_URL -split "/")[-1])
 
 $seedArgs = @()
 if ($Anchor) { $seedArgs += @("--anchor", $Anchor) }
+if ($Eval) { $seedArgs += @("--profile", "eval") }
 
 function Reset-Demo {
     python -m seed.seed @seedArgs
