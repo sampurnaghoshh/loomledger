@@ -29,18 +29,44 @@ export class ApiError extends Error {
   readonly status: number;
   readonly hint?: string;
   readonly fields?: Record<string, string>;
+  /** PostgreSQL's SQLSTATE when the database refused (e.g. "LL001" for quarantined stock). */
+  readonly sqlstate?: string;
 
-  constructor(code: ApiErrorCode, message: string, status = 0, hint?: string, fields?: Record<string, string>) {
+  constructor(
+    code: ApiErrorCode,
+    message: string,
+    status = 0,
+    hint?: string,
+    fields?: Record<string, string>,
+    sqlstate?: string,
+  ) {
     super(message);
     this.code = code;
     this.status = status;
     this.hint = hint;
     this.fields = fields;
+    this.sqlstate = sqlstate;
   }
 
   static fromBody(status: number, body: unknown): ApiError {
-    const e = (body as { error?: { code?: ApiErrorCode; message?: string; hint?: string; fields?: Record<string, string> } })
-      ?.error;
-    return new ApiError(e?.code ?? "UNKNOWN", e?.message ?? `Request failed (${status})`, status, e?.hint, e?.fields);
+    const e = (
+      body as {
+        error?: {
+          code?: ApiErrorCode;
+          message?: string;
+          hint?: string | null;
+          fields?: Record<string, string> | null;
+          sqlstate?: string | null;
+        };
+      }
+    )?.error;
+    return new ApiError(
+      e?.code ?? "UNKNOWN",
+      e?.message ?? `Request failed (${status})`,
+      status,
+      e?.hint ?? undefined,
+      e?.fields ?? undefined,
+      e?.sqlstate ?? undefined,
+    );
   }
 }
