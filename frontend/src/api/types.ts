@@ -68,6 +68,10 @@ export interface StockRow {
   qty: number;
   uom: "kg" | "m";
 }
+export interface InventoryMasters {
+  suppliers: { code: string; name: string }[];
+  yarn_products: { code: string; name: string }[];
+}
 export interface StockSnapshot {
   as_of: string | null; // null = now
   rows: StockRow[];
@@ -281,6 +285,7 @@ export interface ReceiptRequest {
   price_per_kg: number;
   vehicle_no?: string;
   challan_no?: string;
+  product_code?: string; // yarn product (api.inventory.masters); omitted = the only yarn product
   idempotency_key: string;
 }
 export interface ReceiptResponse {

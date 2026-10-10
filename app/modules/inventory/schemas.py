@@ -32,6 +32,16 @@ class ReceiptRequest(BaseModel):
     idempotency_key: str = Field(min_length=8, max_length=100)
 
 
+class CodeName(BaseModel):
+    code: str
+    name: str
+
+
+class Masters(BaseModel):
+    suppliers: list[CodeName]          # parties a yarn receipt can come from
+    yarn_products: list[CodeName]      # what can be received (product_code on POST /receipts)
+
+
 class ReceiptResponse(BaseModel):
     receipt_code: str
     lot_code: str

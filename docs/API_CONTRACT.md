@@ -79,6 +79,7 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 | Method & path | Body / query | Response | Owner | Screen |
 |---|---|---|---|---|
 | `GET /api/inventory/stock` | `?as_of=<ISO timestamp>` (omit = now) | `inventory_stock_now.json` / `inventory_stock_as_of.json` | Sampurna | Adithi |
+| `GET /api/inventory/masters` | – (role `store`) | `inventory_masters.json`: `{suppliers: [{code, name}], yarn_products: [{code, name}]}` — the gate-entry form's choices | Sampurna | Sampurna |
 | `POST /api/inventory/receipts` | `{supplier_code, lot_code (^Y-\d{3,}$), kg, price_per_kg, vehicle_no?, challan_no?, product_code?, idempotency_key}` → goods_receipt `GRN-<lot>` + yarn lot + receipt move SUPPLIERS → YARN-STORE. `product_code` omitted = the only yarn product. Role `store` | `201 {receipt_code, lot_code, kg, location}`; same `idempotency_key` again → `200` + the original body; `404` unknown supplier/product (`fields`); `422` lot code exists | Sampurna | Adithi |
 
 ### Production

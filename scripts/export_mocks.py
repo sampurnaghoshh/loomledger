@@ -123,6 +123,9 @@ def export(conn) -> None:
                              "ended_at": None})
 
     # ---- inventory
+    write("inventory_masters", {
+        "suppliers": q(conn, "SELECT code, name FROM party WHERE kind = 'supplier' ORDER BY code"),
+        "yarn_products": q(conn, "SELECT code, name FROM product WHERE kind = 'yarn' ORDER BY code")})
     write("inventory_stock_now", {"as_of": None, "rows": q(conn, "SELECT * FROM stock_on_hand() ORDER BY location_code, lot_code")})
     received = conn.execute("SELECT received_at FROM goods_receipt WHERE code = 'GRN-Y-112'").fetchone()["received_at"]
     write("inventory_stock_as_of", {"as_of": received,

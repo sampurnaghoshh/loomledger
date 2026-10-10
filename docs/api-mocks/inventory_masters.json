@@ -1,0 +1,18 @@
+{
+  "suppliers": [
+    {
+      "code": "SUP-KAV",
+      "name": "Kaveri Yarn Traders"
+    },
+    {
+      "code": "SUP-NAR",
+      "name": "Narmada Spinners"
+    }
+  ],
+  "yarn_products": [
+    {
+      "code": "YRN-C40",
+      "name": "Cotton 40s Combed Yarn"
+    }
+  ]
+}

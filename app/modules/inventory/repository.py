@@ -21,6 +21,14 @@ def stock(conn: psycopg.Connection, as_of: datetime | None) -> list[dict]:
             ORDER BY location_code, lot_code""", (as_of,)).fetchall()
 
 
+def suppliers(conn: psycopg.Connection) -> list[dict]:
+    return conn.execute("SELECT code, name FROM party WHERE kind = 'supplier' ORDER BY code").fetchall()
+
+
+def yarn_products(conn: psycopg.Connection) -> list[dict]:
+    return conn.execute("SELECT code, name FROM product WHERE kind = 'yarn' ORDER BY code").fetchall()
+
+
 def receipt_by_key(conn: psycopg.Connection, idempotency_key: str) -> dict | None:
     return conn.execute(
         """SELECT gr.code AS receipt_code, l.code AS lot_code, m.qty AS kg, loc.code AS location

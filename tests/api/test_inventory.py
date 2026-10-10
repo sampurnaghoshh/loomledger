@@ -58,6 +58,18 @@ def test_stock_needs_token(client):
     assert client.get("/api/inventory/stock").status_code == 401
 
 
+def test_masters_match_contract(client, auth):
+    for role in ("store", "owner"):
+        res = client.get("/api/inventory/masters", headers=auth[role])
+        assert res.status_code == 200, res.text
+        assert res.json() == load_mock("inventory_masters")
+
+
+def test_masters_are_for_the_store(client, auth):
+    assert client.get("/api/inventory/masters", headers=auth["qc"]).status_code == 403
+    assert client.get("/api/inventory/masters").status_code == 401
+
+
 # ---------- write: receipts ----------
 def test_receipt_creates_lot_in_yarn_store(client, auth):
     body = receipt()
