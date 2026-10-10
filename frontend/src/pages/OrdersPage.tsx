@@ -43,16 +43,6 @@ const REFUSED: ApiErrorCode[] = ["NOT_QC_PASSED", "LOT_QUARANTINED", "NOT_IN_ORD
 // Fixed actions column so every row lines up whether or not it has a Dispatch button.
 const COLUMNS = "xl:grid-cols-[minmax(0,1.2fr)_9.5rem_minmax(0,1.1fr)_minmax(0,1.4fr)_15rem]";
 
-/** Working days (Mon–Sat, as add_working_days() in the DB) from one ISO date to a later one. */
-function workingDaysBetween(from: string, to: string): number {
-  const day = 86_400_000;
-  const start = Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10));
-  const end = Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10));
-  let n = 0;
-  for (let t = start + day; t <= end; t += day) if (new Date(t).getUTCDay() !== 0) n++;
-  return n;
-}
-
 export default function OrdersPage() {
   const orders = useApi(() => api.orders.list(), []);
   const [dispatchFor, setDispatchFor] = useState<OrderSummary | null>(null);
@@ -105,7 +95,7 @@ export default function OrdersPage() {
 function OrderRow({ order: o, onDispatch }: { order: OrderSummary; onDispatch: () => void }) {
   const [copied, setCopied] = useState<"ok" | "failed" | null>(null);
   const path = `/track/${encodeURIComponent(o.tracking_token)}`;
-  const late = o.revised_promise_date != null && o.revised_promise_date > o.promised_date;
+  const late = o.delay_days > 0; // computed in the DB (working days, Mon–Sat)
   const canDispatch = o.status !== "dispatched" && o.status !== "cancelled";
 
   async function copy() {
@@ -140,7 +130,7 @@ function OrderRow({ order: o, onDispatch }: { order: OrderSummary; onDispatch: (
             <span className="whitespace-nowrap text-muted line-through">{formatDate(o.promised_date)}</span>
             <span aria-hidden>→</span>
             <span className="whitespace-nowrap font-semibold text-bad">{formatDate(o.revised_promise_date)}</span>
-            <Badge tone="bad">+{count(workingDaysBetween(o.promised_date, o.revised_promise_date!), "working day")}</Badge>
+            <Badge tone="bad">+{count(o.delay_days, "working day")}</Badge>
           </>
         ) : (
           <span className="whitespace-nowrap text-ink">{formatDate(o.promised_date)}</span>
@@ -291,8 +281,7 @@ function DispatchModal({ order, onClose, onDispatched }: { order: OrderSummary; 
           </dl>
         </div>
       ) : (
-        // The shared Modal has no max height: scroll the body so the footer buttons stay on screen on phones.
-        <div className="-mx-1 grid max-h-[65dvh] gap-4 overflow-y-auto px-1">
+        <div className="grid gap-4">
           <Loadable state={rolls}>
             {(list) => (
               <RollPicker
