@@ -49,6 +49,7 @@ seed/seed.py                    deterministic seed (python -m seed.seed [--ancho
 scripts/export_mocks.py         regenerate docs/api-mocks from the DB
 scripts/reset_demo.sh / .ps1    wipe + reseed (run before every rehearsal); --smoke / -Smoke = reset → demo smoke → reset
 scripts/demo_smoke.py           walks the whole demo story over HTTP + ws against a running backend (✓/✗ per step)
+scripts/benchmark.py            EXPLAIN (ANALYZE, BUFFERS) of the demo queries, read-only → docs/BENCHMARK.md
 tests/                          DB tests: golden chain + invariants (pytest)
 app/                            FastAPI backend (to be built — §6)
 frontend/                       React + Vite + TS + Tailwind v4 (skeleton built — §7)
@@ -68,6 +69,7 @@ export TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledge
 ./scripts/reset_demo.sh --smoke [URL]                  # REHEARSAL: reset → walk Acts 1–4 + close over HTTP/ws → reset
                                                        #   (backend must be running; exit ≠ 0 = the demo is broken)
 python -m scripts.demo_smoke [URL]                     # just the walk-through; refuses (exit 2) unless the DB is fresh
+./scripts/reset_demo.sh && python -m scripts.benchmark # measured query timings + index use → docs/BENCHMARK.md (rule 9: quote only these)
 python -m pytest -q                                    # golden + invariants + api tests (wipes + reseeds the TEST db itself)
 psql "$DATABASE_URL" -f docs/demo.sql                  # run the demo in SQL
 python -m scripts.export_mocks                         # regenerate the API contract files
