@@ -125,6 +125,10 @@ class Seeder:
                 """INSERT INTO product (code, name, kind, uom, gsm, width_m, colour, yarn_count)
                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
                 (code, name, kind, unit, gsm, width, colour, count))
+        # every fabric is woven from the one yarn; the store is warned below its reorder level (014)
+        self.c.execute("UPDATE product SET yarn_product_id = %s WHERE kind <> 'yarn'", (self.id["product"][S.YARN_PRODUCT],))
+        for code, level in S.YARN_REORDER_LEVEL_KG.items():
+            self.c.execute("UPDATE product SET reorder_level_kg = %s WHERE id = %s", (level, self.id["product"][code]))
 
         for code, name, kind in [
             ("SUPPLIERS", "Suppliers", "supplier"), ("CUSTOMERS", "Customers", "customer"),
@@ -411,8 +415,14 @@ class Seeder:
                                      and not r.reject and r.inspected_at),
                                     key=lambda r: (r.inspected_at, r.code))
         twill_ok, poplin_ok = passed("twill"), passed("poplin")
-        alloc = {"SO-0412": twill_ok[:20], "SO-0419": twill_ok[20:30],
-                 "SO-0398": poplin_ok[:30], "SO-0405": poplin_ok[30:48]}
+        pool = {"twill": twill_ok, "poplin": poplin_ok}
+        taken = {"twill": 0, "poplin": 0}
+        alloc: dict[str, list[Roll]] = {}
+        for o in sorted(S.ORDERS, key=lambda o: ("SO-0412", "SO-0419", "SO-0398", "SO-0405").index(o.code)):
+            n = S.RESERVED_ROLLS[o.code]
+            alloc[o.code] = pool[o.family][taken[o.family]:taken[o.family] + n]
+            assert len(alloc[o.code]) == n, f"{o.code}: only {len(alloc[o.code])} passed {o.family} rolls to reserve"
+            taken[o.family] += n
         for order, rolls in alloc.items():
             for r in rolls:
                 reserve(r.code, order, r.inspected_at)
