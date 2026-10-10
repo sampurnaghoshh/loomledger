@@ -69,6 +69,9 @@ export TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledge
 ./scripts/reset_demo.sh --smoke [URL]                  # REHEARSAL: reset → walk Acts 1–4 + close over HTTP/ws → reset
                                                        #   (backend must be running; exit ≠ 0 = the demo is broken)
 python -m scripts.demo_smoke [URL]                     # just the walk-through; refuses (exit 2) unless the DB is fresh
+./scripts/reset_demo.sh --rehearsal                    # PRIVATE rehearsal: loomledger_rehearsal (auto-created) + own backend on :8001
+                                                       #   → reset → smoke → stop → reset. Never touches the demo DB or :8000
+./scripts/reset_demo.sh --db-url URL                   # reset any other database (created if missing)
 ./scripts/reset_demo.sh && python -m scripts.benchmark # measured query timings + index use → docs/BENCHMARK.md (rule 9: quote only these)
 python -m pytest -q                                    # golden + invariants + api tests (wipes + reseeds the TEST db itself)
 psql "$DATABASE_URL" -f docs/demo.sql                  # run the demo in SQL
@@ -87,12 +90,16 @@ npm run build                                          # typecheck + production 
 ```
 
 Windows users: run the Python commands in PowerShell with `$env:DATABASE_URL="..."` and
-`$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/loomledger_test"`, and use `.\scripts\reset_demo.ps1` (rehearsal: `.\scripts\reset_demo.ps1 -Smoke`; if scripts are blocked:
+`$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/loomledger_test"`, and use `.\scripts\reset_demo.ps1` (private rehearsal: `.\scripts\reset_demo.ps1 -Rehearsal`, other DB: `-DatabaseUrl URL`; if scripts are blocked:
 `powershell -ExecutionPolicy Bypass -File .\scripts\reset_demo.ps1 -Smoke`) instead of the .sh script.
 
 Test database: `docker compose` creates the empty `loomledger_test` database (scripts/init-test-db.sql). You never
 seed it by hand — the pytest fixtures drop its schema, migrate and seed it automatically (once per module for DB tests,
 once per session for `tests/api`). Never point `TEST_DATABASE_URL` at the demo database.
+
+**Shared demo DB:** `loomledger` is what teammates test against through the backend on :8000 — don't reset, seed,
+smoke or export mocks against it while they're using it. Rehearse with `--rehearsal` / `-Rehearsal` (DB
+`loomledger_rehearsal`, backend :8001); `scripts/export_mocks.py` also resets whatever `DATABASE_URL` points at.
 
 ## 5. Database (done — extend, don't rewrite)
 
