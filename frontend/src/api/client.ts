@@ -32,6 +32,7 @@ import type {
   StockSnapshot,
 } from "./types";
 import { getSession } from "@/lib/auth";
+import { openFloorSocket } from "./floorSocket";
 import { mock } from "./mocks";
 
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== "false";
@@ -79,22 +80,17 @@ const real = {
         `/api/floor/machines/${encodeURIComponent(machineCode)}/state`,
         { state, reason },
       ),
-    subscribe: (onEvent: (e: FloorEvent) => void): (() => void) => {
-      const proto = location.protocol === "https:" ? "wss" : "ws";
-      const token = encodeURIComponent(getSession()?.token ?? "");
-      let ws: WebSocket | null = new WebSocket(`${proto}://${location.host}/ws/floor?token=${token}`);
-      ws.onmessage = (m) => {
-        try {
-          onEvent(JSON.parse(m.data) as FloorEvent);
-        } catch {
-          /* ignore malformed frames */
-        }
-      };
-      return () => {
-        ws?.close();
-        ws = null;
-      };
-    },
+    // Stays connected (reconnects with backoff after a backend/Vite restart, sleep or Wi-Fi change; stops on 4401).
+    // onReconnect: re-fetch the board — events sent while disconnected are not replayed.
+    subscribe: (onEvent: (e: FloorEvent) => void, onReconnect?: () => void): (() => void) =>
+      openFloorSocket<FloorEvent>({
+        url: () => {
+          const proto = location.protocol === "https:" ? "wss" : "ws";
+          return `${proto}://${location.host}/ws/floor?token=${encodeURIComponent(getSession()?.token ?? "")}`;
+        },
+        onEvent,
+        onReconnect,
+      }),
   },
   inventory: {
     masters: () => request<InventoryMasters>("GET", "/api/inventory/masters"), // store@ / owner@
