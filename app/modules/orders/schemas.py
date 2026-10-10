@@ -24,6 +24,7 @@ class OrderSummary(BaseModel):
     unit_price: float
     promised_date: date
     revised_promise_date: date | None
+    delay_days: int                     # working days (Mon–Sat) from promised to revised; 0 when on time
     status: Literal["confirmed", "in_production", "partially_dispatched", "dispatched", "cancelled"]
     progress: OrderProgress
     tracking_token: UUID

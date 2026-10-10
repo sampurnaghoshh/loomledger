@@ -197,7 +197,9 @@ def export(conn) -> None:
     # ---- orders
     write("orders", q(conn, """
         SELECT so.code, b.name AS buyer, p.name AS product, ol.qty_m AS ordered_m, ol.unit_price,
-               so.promised_date, so.revised_promise_date, so.status::text AS status,
+               so.promised_date, so.revised_promise_date,
+               working_days_between(so.promised_date, so.revised_promise_date) AS delay_days,
+               so.status::text AS status,
                buyer_order_status(bl.token)->'progress' AS progress, bl.token AS tracking_token
           FROM sales_order so JOIN party b ON b.id = so.buyer_id
           JOIN order_line ol ON ol.order_id = so.id JOIN product p ON p.id = ol.product_id

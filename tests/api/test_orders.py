@@ -82,6 +82,7 @@ def test_orders_shape_before_recall(client, auth):
     assert res.status_code == 200
     assert_same_shape(res.json(), load_mock("orders"))
     assert all(o["revised_promise_date"] is None for o in res.json())   # nothing is late yet
+    assert all(o["delay_days"] == 0 for o in res.json())
 
 
 def test_orders_need_token(client):
@@ -123,6 +124,15 @@ def test_track_after_recall_matches_contract(client, recalled, order):
 def test_orders_after_recall_match_contract(client, auth, recalled):
     res = client.get("/api/orders", headers=auth["owner"])
     assert res.json() == load_mock("orders")                           # the mock was exported post-recall
+
+
+def test_order_delay_is_in_working_days(client, auth, recalled):
+    from seed import scenario as S
+    delays = {o["code"]: o["delay_days"] for o in client.get("/api/orders", headers=auth["owner"]).json()}
+    expected = S.expected_order_impact()
+    for code, e in expected.items():
+        assert delays[code] == e["delay_days"], code                     # the same calendar as the recall's
+    assert all(d == 0 for code, d in delays.items() if code not in expected)
 
 
 # ---------- dispatch ----------
