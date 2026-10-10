@@ -7,6 +7,7 @@
     "unit_price": 140.0,
     "promised_date": "2026-10-08",
     "revised_promise_date": null,
+    "delay_days": 0,
     "status": "dispatched",
     "progress": {
       "ready_m": 0,
@@ -25,6 +26,7 @@
     "unit_price": 185.0,
     "promised_date": "2026-10-14",
     "revised_promise_date": "2026-10-16",
+    "delay_days": 2,
     "status": "partially_dispatched",
     "progress": {
       "ready_m": 500.0,
@@ -43,6 +45,7 @@
     "unit_price": 185.0,
     "promised_date": "2026-10-17",
     "revised_promise_date": "2026-10-21",
+    "delay_days": 3,
     "status": "in_production",
     "progress": {
       "ready_m": 500.0,
@@ -61,6 +64,7 @@
     "unit_price": 140.0,
     "promised_date": "2026-10-20",
     "revised_promise_date": null,
+    "delay_days": 0,
     "status": "in_production",
     "progress": {
       "ready_m": 900.0,

@@ -18,20 +18,31 @@ cd frontend && npm install && npm run dev  # http://localhost:5173 · owner@ever
 Database + tests:
 ```bash
 docker compose up -d                       # PostgreSQL 16 with loomledger + loomledger_test
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate   # Windows Git Bash: .venv/Scripts/activate · PowerShell: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt            # backend + tests (incl. pydantic-settings)
 
 export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledger
 export TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledger_test
-./scripts/reset_demo.sh                    # migrate from scratch + seed the Y-112 scenario
+./scripts/reset_demo.sh                    # creates the DB if missing, migrates from scratch, seeds the Y-112 scenario
 python -m pytest -v                        # golden test + ledger invariants + API tests
-psql "$DATABASE_URL" -f docs/demo.sql      # the whole demo as raw SQL
-python -m scripts.export_mocks             # regenerate docs/api-mocks (the API contract)
+docker compose exec -T db psql -U postgres -d loomledger < docs/demo.sql   # the whole demo as raw SQL (no local psql needed)
+python -m scripts.export_mocks             # regenerate docs/api-mocks (the API contract) - resets DATABASE_URL!
 ```
 
-Without Docker: any PostgreSQL **14+** with the `btree_gist` and `pgcrypto` contrib extensions.
+Run it:
+```bash
+uvicorn app.main:app --port 8000           # backend, docs at http://localhost:8000/docs
+cd frontend && cp .env.example .env.local  # then set VITE_USE_MOCKS=false in .env.local
+npm run dev                                # http://localhost:5173 against the real backend
+./scripts/reset_demo.sh --rehearsal        # private end-to-end check on loomledger_rehearsal + its own backend :8001
+```
+
+Without Docker: any PostgreSQL **14+** with the `btree_gist` and `pgcrypto` contrib extensions; `reset_demo` creates the demo
+database, and the test database once with `python -m scripts.ensure_db "$TEST_DATABASE_URL"`. With a local `psql`,
+`psql "$DATABASE_URL" -f docs/demo.sql` works too.
 PowerShell: `$env:DATABASE_URL="postgresql://postgres:postgres@localhost:5432/loomledger"` and
-`$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/loomledger_test"`, then `python -m seed.seed` instead of the .sh script.
+`$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/loomledger_test"`, then `.\scripts\reset_demo.ps1` instead of the .sh script.
+Presenting: [`docs/DEMO_RUNBOOK.md`](docs/DEMO_RUNBOOK.md).
 
 `TEST_DATABASE_URL` is the test database (default `loomledger_test`, created empty by `docker compose`).
 pytest seeds it automatically: its schema is dropped, migrated and seeded on every run — never point it at the demo DB.
@@ -44,6 +55,7 @@ db/migrations/002_ledger_guards.sql      append-only ledger, quarantine + stock 
 db/migrations/003_traceability.sql       ancestors/descendants (recursive CTEs), time travel, roll custody, FIND CAUSE, recall scope
 db/migrations/004_costing_impact.sql     true cost roll-up, working-day calendar, recall impact, apply_recall
 db/migrations/005_floor_portal_balance.sql  floor board, availability, mass balance, buyer portal
+db/migrations/006-009_*.sql              floor NOTIFY payload, production rules, Shade Guard, dispatch guard
 db/migrate.py                            applies migrations once each, in order, each in its own transaction
 seed/scenario.py                         THE SINGLE SOURCE OF TRUTH for every demo number
 seed/seed.py                             deterministic seed built only from scenario.py
@@ -53,7 +65,8 @@ docs/demo.sql                            the 5-minute demo as SQL (Act 1 → mon
 docs/api-mocks/*.json                    real API responses exported from the seeded DB (the contract)
 scripts/export_mocks.py                  regenerates docs/api-mocks
 frontend/                                React + Vite + TS + Tailwind v4 skeleton with mock mode
-app/                                     FastAPI backend (being built — see CLAUDE.md §6)
+app/                                     FastAPI backend (CLAUDE.md §6, endpoints in docs/API_CONTRACT.md)
+scripts/demo_smoke.py, reset_demo.*      the whole demo over HTTP; reset / rehearse (see docs/DEMO_RUNBOOK.md)
 ```
 
 ---
@@ -179,15 +192,11 @@ Seeded logins (all `demo1234`): `owner@`, `store@`, `floor@`, `qc@`, `accounts@e
 
 ## Before quoting performance numbers
 
-No benchmark has been run yet. Seed at scale, run `EXPLAIN ANALYZE` before/after, and quote only what you measured. Known hotspot: `v_roll_factor` (used by `find_cause`) is computed live from the full genealogy; at 100k+ rolls, make it a materialized view refreshed on QC insert.
+Quote only what was measured: [`docs/BENCHMARK.md`](docs/BENCHMARK.md) (`./scripts/reset_demo.sh && python -m scripts.benchmark`,
+`EXPLAIN (ANALYZE, BUFFERS)` of every demo query, read-only). Re-run it after the data grows.
 
 ## Team ownership
 
-| Member | Owns |
-|---|---|
-| A · Data | migrations, seed, invariants, benchmark |
-| B · Floor | floor board API + WebSocket relay, floor simulator |
-| C · Quality & money | Find Cause / Recall / Impact API, costing, invoices |
-| D · Frontend | design system, all screens, buyer portal |
+See [`CLAUDE.md` §11](CLAUDE.md).
 
 Rule: **if the golden test is red, nobody merges.**

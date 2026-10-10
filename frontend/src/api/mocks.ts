@@ -12,6 +12,7 @@ import type {
   FloorAvailability,
   FloorEvent,
   FloorOutput,
+  InventoryMasters,
   LoginResponse,
   LotGraph,
   MachineNow,
@@ -32,7 +33,9 @@ const TOKENS = {
 
 let recallApplied = false;
 
-// dispatch mock state (cleared on refresh, like the recall)
+// receipt + dispatch mock state (cleared on refresh, like the recall)
+const receiptsByKey = new Map<string, { receipt_code: string; lot_code: string; kg: number; location: string }>();
+const receivedLots = new Set<string>();
 const dispatchesByKey = new Map<string, DispatchResponse>();
 const shippedRolls = new Set<string>();
 const dispatchCount: Record<string, number> = {};
@@ -80,14 +83,36 @@ export const mock: Api = {
     },
   },
   inventory: {
+    masters: () => load<InventoryMasters>(() => import("@mocks/inventory_masters.json")),
     stock: (asOf) =>
       asOf
         ? load<StockSnapshot>(() => import("@mocks/inventory_stock_as_of.json"))
         : load<StockSnapshot>(() => import("@mocks/inventory_stock_now.json")),
+    // Mirrors POST /api/inventory/receipts: validation, unknown supplier/product (masters mock), lot code that
+    // already exists (stock mock or received this session), and idempotent replay.
     receive: async (req) => {
       await delay();
-      if (!req.lot_code.trim()) throw new ApiError("VALIDATION_FAILED", "Lot code is required.", 422, undefined, { lot_code: "Required" });
-      return { receipt_code: `GRN-${req.lot_code}`, lot_code: req.lot_code, kg: req.kg, location: "YARN-STORE" };
+      const replay = receiptsByKey.get(req.idempotency_key);
+      if (replay) return structuredClone(replay);
+      const fields: Record<string, string> = {};
+      if (!/^Y-\d{3,}$/.test(req.lot_code)) fields.lot_code = "Use Y- and at least 3 digits";
+      if (!(req.kg > 0)) fields.kg = "Input should be greater than 0";
+      if (!(req.price_per_kg > 0)) fields.price_per_kg = "Input should be greater than 0";
+      if (Object.keys(fields).length) throw new ApiError("VALIDATION_FAILED", "Please correct the highlighted fields.", 422, undefined, fields);
+
+      const masters = await load<InventoryMasters>(() => import("@mocks/inventory_masters.json"));
+      if (!masters.suppliers.some((s) => s.code === req.supplier_code))
+        throw new ApiError("NOT_FOUND", `Supplier ${req.supplier_code} not found.`, 404, undefined, { supplier_code: "unknown supplier" });
+      if (req.product_code && !masters.yarn_products.some((p) => p.code === req.product_code))
+        throw new ApiError("NOT_FOUND", "Yarn product not found.", 404, undefined, { product_code: "unknown yarn product" });
+      const stock = await load<StockSnapshot>(() => import("@mocks/inventory_stock_now.json"));
+      if (receivedLots.has(req.lot_code) || stock.rows.some((r) => r.lot_code === req.lot_code))
+        throw new ApiError("VALIDATION_FAILED", `Lot ${req.lot_code} already exists.`, 422, undefined, { lot_code: "already exists" }, "23505");
+
+      const result = { receipt_code: `GRN-${req.lot_code}`, lot_code: req.lot_code, kg: req.kg, location: "YARN-STORE" };
+      receivedLots.add(req.lot_code);
+      receiptsByKey.set(req.idempotency_key, result);
+      return structuredClone(result);
     },
   },
   production: {

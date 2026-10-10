@@ -79,6 +79,7 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 | Method & path | Body / query | Response | Owner | Screen |
 |---|---|---|---|---|
 | `GET /api/inventory/stock` | `?as_of=<ISO timestamp>` (omit = now) | `inventory_stock_now.json` / `inventory_stock_as_of.json` | Sampurna | Adithi |
+| `GET /api/inventory/masters` | – (role `store`) | `inventory_masters.json`: `{suppliers: [{code, name}], yarn_products: [{code, name}]}` — the gate-entry form's choices | Sampurna | Sampurna |
 | `POST /api/inventory/receipts` | `{supplier_code, lot_code (^Y-\d{3,}$), kg, price_per_kg, vehicle_no?, challan_no?, product_code?, idempotency_key}` → goods_receipt `GRN-<lot>` + yarn lot + receipt move SUPPLIERS → YARN-STORE. `product_code` omitted = the only yarn product. Role `store` | `201 {receipt_code, lot_code, kg, location}`; same `idempotency_key` again → `200` + the original body; `404` unknown supplier/product (`fields`); `422` lot code exists | Sampurna | Adithi |
 
 ### Production
@@ -112,7 +113,7 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 ### Orders, dispatch, buyer portal
 | Method & path | Body | Response | Owner | Screen |
 |---|---|---|---|---|
-| `GET /api/orders` | – (any signed-in user; `tracking_token` = the order's newest unexpired link) | `orders.json` (exported **after** the recall; before it `revised_promise_date` is null) | Sampurna | Dhruva |
+| `GET /api/orders` | – (any signed-in user; `tracking_token` = the order's newest unexpired link; `delay_days` = working days Mon–Sat from promised to revised via `working_days_between()`, 0 when on time) | `orders.json` (exported **after** the recall; before it `revised_promise_date` is null) | Sampurna | Dhruva |
 | `POST /api/dispatches` | `{order_code, lot_codes[], vehicle_no, idempotency_key, shade_override_reason?}` → dispatch `DSP-<order>-<n>`, lines, each roll FG-STORE → CUSTOMERS, lots `dispatched`, invoice `INV-<order>-<n>` (Σ m × line price), order status, buyer update. Role `store`. Guards (DB): `409 NOT_QC_PASSED` (LL004), `422 NOT_IN_ORDER` (LL005), `409 LOT_QUARANTINED`, `422 INSUFFICIENT_STOCK` (not in FG-STORE), `409 ALREADY_DISPATCHED`. Shade Guard (migration 008): all rolls of **one dispatch** from one dye batch, else `409 SHADE_MISMATCH` with `fields.batches`, unless `shade_override_reason` (3–500 chars) is given — it is stored on the dispatch | `201 {dispatch_code, invoice_code, amount}`; replay → `200` original; `404` unknown order/roll | Sampurna | Dhruva (stretch) |
 | `GET /api/track/{token}` | public, no login (`buyer_order_status(token)`) | `track_SO-0412_before.json` / `_after.json`; malformed, unknown and expired tokens all return the same `404 error_not_found.json` | Sampurna | Dhruva |
 

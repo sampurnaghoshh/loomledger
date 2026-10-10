@@ -123,6 +123,9 @@ def export(conn) -> None:
                              "ended_at": None})
 
     # ---- inventory
+    write("inventory_masters", {
+        "suppliers": q(conn, "SELECT code, name FROM party WHERE kind = 'supplier' ORDER BY code"),
+        "yarn_products": q(conn, "SELECT code, name FROM product WHERE kind = 'yarn' ORDER BY code")})
     write("inventory_stock_now", {"as_of": None, "rows": q(conn, "SELECT * FROM stock_on_hand() ORDER BY location_code, lot_code")})
     received = conn.execute("SELECT received_at FROM goods_receipt WHERE code = 'GRN-Y-112'").fetchone()["received_at"]
     write("inventory_stock_as_of", {"as_of": received,
@@ -194,7 +197,9 @@ def export(conn) -> None:
     # ---- orders
     write("orders", q(conn, """
         SELECT so.code, b.name AS buyer, p.name AS product, ol.qty_m AS ordered_m, ol.unit_price,
-               so.promised_date, so.revised_promise_date, so.status::text AS status,
+               so.promised_date, so.revised_promise_date,
+               working_days_between(so.promised_date, so.revised_promise_date) AS delay_days,
+               so.status::text AS status,
                buyer_order_status(bl.token)->'progress' AS progress, bl.token AS tracking_token
           FROM sales_order so JOIN party b ON b.id = so.buyer_id
           JOIN order_line ol ON ol.order_id = so.id JOIN product p ON p.id = ol.product_id

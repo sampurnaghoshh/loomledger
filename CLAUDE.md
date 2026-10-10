@@ -116,6 +116,7 @@ PostgreSQL 16 (14+ works). Extensions: `btree_gist`, `pgcrypto`. Session timezon
 | 007_production_rules | `weaving_yarn_issue_kg(product, m)` (m × width × GSM/1000 × 1.04), `shift_at(ts)` (IST shift calendar) |
 | 008_shade_guard | `dispatch.shade_override_reason`; dispatch_line trigger: one dye batch per dispatch unless an override reason is recorded (`LL006`). Merged after 009 — order-independent |
 | 009_dispatch_guard | dispatch_line trigger: latest QC must be `pass` (`LL004`), roll reserved for the dispatch's order (`LL005`) |
+| 010_working_days_between | `working_days_between(a, b)`: Mon–Sat days in (a, b], the inverse of `add_working_days` (order delay) |
 
 Conventions for new migrations:
 - File `db/migrations/00N_short_name.sql`, one concern per file, comment header explaining *why*.

@@ -13,6 +13,11 @@ from app.modules.inventory.schemas import ReceiptRequest
 DUPLICATE_LOT_CONSTRAINTS = {"lot_code_key", "goods_receipt_code_key"}
 
 
+def masters(conn: psycopg.Connection) -> dict:
+    """What the gate-entry form can choose from."""
+    return {"suppliers": repo.suppliers(conn), "yarn_products": repo.yarn_products(conn)}
+
+
 def stock(conn: psycopg.Connection, as_of: datetime | None) -> dict:
     as_of = repo.resolve_as_of(conn, as_of) if as_of is not None else None
     return {"as_of": as_of, "rows": repo.stock(conn, as_of)}
