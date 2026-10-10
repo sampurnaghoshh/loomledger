@@ -133,6 +133,19 @@ def test_y112_golden_chain(fresh_db):
     other = conn.execute("SELECT buyer_order_status(%s)", (buyer_token("SO-0405"),)).fetchone()[0]
     assert other["delayed"] is False                                  # unaffected orders stay untouched
 
+    # ---- Close: month-end mass balance = the independent model, all of the gap on the leaky loom ----
+    totals = rows(conn, "SELECT * FROM mass_balance('-infinity', 'infinity')")[0]
+    for key, value in S.expected_mass_balance().items():
+        assert totals[key] == value, key
+    worst = rows(conn, "SELECT * FROM v_yarn_unaccounted_by_machine")[0]
+    assert (worst["machine_code"], worst["runs"]) == (S.LEAKY_MACHINE, S.LEAKY_ROLLS)
+    assert worst["unaccounted_kg"] == totals["unaccounted_kg"]
+
+    # ---- Act 1: a busy floor at demo "now" ---------------------------------------------------
+    busy = dict(conn.execute("SELECT code, current_lot FROM v_machine_now WHERE state = 'running'"))
+    assert set(S.BUSY_FLOOR) | {S.Y112_ROLLS["R-1212"][0]} == set(busy)
+    assert all(lot.endswith("-G") for lot in busy.values())                # each loom is weaving a WIP roll
+
     # ---- Evidence trail ---------------------------------------------------------------------
     audited = conn.execute(
         "SELECT count(*) FROM audit_log WHERE table_name = 'lot' AND new_data->>'status' IN ('quarantined', 'recalled')"

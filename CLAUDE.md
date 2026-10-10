@@ -12,11 +12,11 @@ Core idea: **a factory is two things — a ledger and a family tree.**
 Everything else — inventory, traceability, defect root cause, recall, true cost per roll, delivery delay, buyer portal — is **derived** from those two tables, mostly inside PostgreSQL.
 
 **The demo story (everything we build serves it):**
-1. **Act 1 – Normal day.** Live floor board, machines running, yarn arriving.
+1. **Act 1 – Normal day.** Live floor board: 4 of 6 looms weaving (Looms 1, 4, 5, 6), yarn arriving; Loom 4 breaks down live.
 2. **Act 2 – Something's wrong.** QC rejects 3 rolls (colour mismatch). *Find Cause* walks their ancestry and compares defect rates: **Yarn Lot Y-112 (37.5% vs 4.0% elsewhere) is the root cause; Dye Vat 3 and Night Shift B are coincidental.**
 3. **Act 3 – Contain it.** *Recall* finds 9 more at-risk rolls, **2 already delivered** to a buyer. Apply recall → everything quarantined → trying to issue Y-112 yarn is **refused by PostgreSQL itself** (shown in the UI and in psql).
 4. **Act 4 – Business impact.** 2 orders, 2 buyers, 600 m to remake, **600 ÷ 250 = 2.4 → 3 working days** delay, **₹1,23,640 total exposure**. The buyer's phone shows the new date.
-5. **Close.** Month-end mass balance (1.14% yarn unaccounted — all on Loom 3), true cost per roll, tests passing.
+5. **Close.** Month-end mass balance (1.11% yarn unaccounted — all on Loom 3), true cost per roll, tests passing.
 
 Closing line: *"The factory knew it had a defect. LoomLedger knows where it came from, what it touched, what it cost, and what to do next."*
 
@@ -47,7 +47,9 @@ db/migrate.py                   python -m db.migrate [--reset]
 seed/scenario.py                canonical numbers + independent expected values
 seed/seed.py                    deterministic seed (python -m seed.seed [--anchor YYYY-MM-DD])
 scripts/export_mocks.py         regenerate docs/api-mocks from the DB
-scripts/reset_demo.sh           wipe + reseed (run before every rehearsal)
+scripts/reset_demo.sh / .ps1    wipe + reseed (run before every rehearsal); --smoke / -Smoke = reset → demo smoke → reset
+scripts/demo_smoke.py           walks the whole demo story over HTTP + ws against a running backend (✓/✗ per step)
+scripts/benchmark.py            EXPLAIN (ANALYZE, BUFFERS) of the demo queries, read-only → docs/BENCHMARK.md
 tests/                          DB tests: golden chain + invariants (pytest)
 app/                            FastAPI backend (to be built — §6)
 frontend/                       React + Vite + TS + Tailwind v4 (skeleton built — §7)
@@ -64,6 +66,13 @@ docker compose up -d                                   # Postgres 16 on :5432 (l
 export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledger
 export TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledger_test
 ./scripts/reset_demo.sh                                # migrate from scratch + seed
+./scripts/reset_demo.sh --smoke [URL]                  # REHEARSAL: reset → walk Acts 1–4 + close over HTTP/ws → reset
+                                                       #   (backend must be running; exit ≠ 0 = the demo is broken)
+python -m scripts.demo_smoke [URL]                     # just the walk-through; refuses (exit 2) unless the DB is fresh
+./scripts/reset_demo.sh --rehearsal                    # PRIVATE rehearsal: loomledger_rehearsal (auto-created) + own backend on :8001
+                                                       #   → reset → smoke → stop → reset. Never touches the demo DB or :8000
+./scripts/reset_demo.sh --db-url URL                   # reset any other database (created if missing)
+./scripts/reset_demo.sh && python -m scripts.benchmark # measured query timings + index use → docs/BENCHMARK.md (rule 9: quote only these)
 python -m pytest -q                                    # golden + invariants + api tests (wipes + reseeds the TEST db itself)
 psql "$DATABASE_URL" -f docs/demo.sql                  # run the demo in SQL
 python -m scripts.export_mocks                         # regenerate the API contract files
@@ -81,11 +90,16 @@ npm run build                                          # typecheck + production 
 ```
 
 Windows users: run the Python commands in PowerShell with `$env:DATABASE_URL="..."` and
-`$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/loomledger_test"`, and run `python -m seed.seed` instead of the .sh script.
+`$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/loomledger_test"`, and use `.\scripts\reset_demo.ps1` (private rehearsal: `.\scripts\reset_demo.ps1 -Rehearsal`, other DB: `-DatabaseUrl URL`; if scripts are blocked:
+`powershell -ExecutionPolicy Bypass -File .\scripts\reset_demo.ps1 -Smoke`) instead of the .sh script.
 
 Test database: `docker compose` creates the empty `loomledger_test` database (scripts/init-test-db.sql). You never
 seed it by hand — the pytest fixtures drop its schema, migrate and seed it automatically (once per module for DB tests,
 once per session for `tests/api`). Never point `TEST_DATABASE_URL` at the demo database.
+
+**Shared demo DB:** `loomledger` is what teammates test against through the backend on :8000 — don't reset, seed,
+smoke or export mocks against it while they're using it. Rehearse with `--rehearsal` / `-Rehearsal` (DB
+`loomledger_rehearsal`, backend :8001); `scripts/export_mocks.py` also resets whatever `DATABASE_URL` points at.
 
 ## 5. Database (done — extend, don't rewrite)
 
@@ -173,7 +187,8 @@ Rules:
 Find Cause on R-1201..R-1203: Y-112 **3/8 = 37.50%** vs 4/100 = **4.00%** → lift 9.38 → root_cause · Dye Vat 3 3/33 = 9.09% vs 5.33% → coincidental · Night Shift B 3/43 = 6.98% vs 6.15% → coincidental · Loom 2 covers 2 of 3 → partial.
 Recall Y-112: 12 rolls = 3 rejected + 9 at risk (3 passed in store, 3 awaiting QC, 1 on Loom 5, **2 at Meridian Apparels: R-1204, R-1205**). Orders SO-0412 (14 → 16 Oct, +2) and SO-0419 (17 → 21 Oct, +3).
 Money: already lost ₹22,488 · newly exposed ₹64,024 · recoverable yarn 142.8 kg = ₹37,128 · **total ₹1,23,640**. Finished Y-112 roll = ₹7,496.
-Mass balance: issued 1,499.1 kg, unaccounted 17.1 kg = **1.14%**, all on **Loom 3 (6.64%)**.
+Floor at demo "now": Looms 1, 4, 6 weaving R-1213-G..R-1215-G (`BUSY_FLOOR`) + Loom 5 weaving R-1212-G; Loom 2 free (the Y-112 refusal), Loom 3 idle.
+Mass balance (`expected_mass_balance()`): issued 1,545.9 kg = fabric 1,410.0 + waste 56.4 + on the looms 62.4 + unaccounted 17.1 kg = **1.11%**, all on **Loom 3 (6.64%)**.
 Buyer link SO-0412: `/track/4155711b-d0c4-5f02-a2b5-bfd8dd09045d`. Logins: `owner@everest.test` (also store@, floor@, qc@, accounts@), password `demo1234`.
 
 ## 9. Definition of done (every task)

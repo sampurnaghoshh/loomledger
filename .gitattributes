@@ -1,0 +1,2 @@
+# Shell scripts keep LF even in Windows checkouts (bash in WSL / Linux containers fails on CRLF)
+*.sh text eol=lf
