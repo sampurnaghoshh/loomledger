@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from datetime import date, time, timedelta
-from decimal import Decimal as D
+from decimal import ROUND_HALF_UP, Decimal as D
 
 # ---------------------------------------------------------------------------
 # Demo clock. Everything is placed relative to this day (09:00–10:00 is "now" in the story).
@@ -29,6 +29,7 @@ GSM = {"twill": 200, "poplin": 120}
 YARN_WASTE_RATIO = D("0.04")              # 4 % recorded loom waste
 LEAKY_MACHINE = "LOOM-3"                  # issues more yarn than it can account for
 LEAKY_EXTRA_KG = D("0.9")                 # per roll, never recorded anywhere
+LEAKY_ROLLS = 19                          # rolls the weaving plan puts on LEAKY_MACHINE (asserted by the golden test)
 
 WEAVE_HOURS = 6
 DYE_HOURS = 6
@@ -47,6 +48,15 @@ def yarn_issue_kg(family: str, loom: str) -> D:
 
 def yarn_waste_kg(family: str) -> D:
     return fabric_kg(family) * YARN_WASTE_RATIO
+
+
+# ---------------------------------------------------------------------------
+# Act 1: a busy floor at demo "now" — looms weaving WIP greige rolls (open runs), like R-1212 on Loom 5.
+# Loom 2 stays free for the stage moment (issue Y-112 to Loom 2 -> refused, LL001), and Loom 3 — the leaky
+# loom — is idle, so its month-end figure is untouched. Loom 4 is running when it breaks down live in Act 1.
+# ---------------------------------------------------------------------------
+BUSY_FLOOR = {"LOOM-1": "Y-101", "LOOM-4": "Y-102", "LOOM-6": "Y-103"}   # loom: yarn lot it is weaving
+BUSY_FLOOR_START_HOUR = 8                                               # shift A start on the demo day
 
 
 # ---------------------------------------------------------------------------
@@ -242,3 +252,23 @@ if __name__ == "__main__":   # print the locked numbers for the demo script / RE
         print(code, row)
     for k, v in expected_money().items():
         print(f"{k:28s} {v:>12,.2f}")
+
+
+def expected_mass_balance() -> dict[str, D]:
+    """Independent month-end yarn balance (all time): every woven roll (YARN_LOTS) plus the rolls on the looms
+    now (BUSY_FLOOR). Open runs carry their issued yarn as WIP; only the leaky loom loses yarn."""
+    woven = {"twill": 0, "poplin": 0}
+    for family, _, _, _, rolls in YARN_LOTS.values():
+        woven[family] += rolls
+    on_loom = [(YARN_LOTS[Y112][0], Y112_ROLLS["R-1212"][0])] + [(YARN_LOTS[y][0], loom) for loom, y in BUSY_FLOOR.items()]
+
+    unaccounted = LEAKY_EXTRA_KG * LEAKY_ROLLS
+    issued = sum(yarn_issue_kg(f, "") * n for f, n in woven.items()) + unaccounted         + sum(yarn_issue_kg(f, loom) for f, loom in on_loom[1:])           # R-1212 is already in YARN_LOTS
+    wip = sum(yarn_issue_kg(f, loom) for f, loom in on_loom)
+    finished = dict(woven)
+    finished[YARN_LOTS[Y112][0]] -= 1                                       # R-1212 is still on Loom 5
+    fabric = sum(fabric_kg(f) * n for f, n in finished.items())
+    waste = sum(yarn_waste_kg(f) * n for f, n in finished.items())
+    return {"issued_kg": issued, "fabric_kg": fabric, "waste_kg": waste, "wip_kg": wip,
+            "unaccounted_kg": unaccounted,
+            "unaccounted_pct": (100 * unaccounted / issued).quantize(D("0.01"), rounding=ROUND_HALF_UP)}

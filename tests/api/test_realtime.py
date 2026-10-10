@@ -115,12 +115,12 @@ def test_starting_a_run_pushes_running_to_the_floor_board(live, token, reseed_af
     base = url.replace("ws://", "http://").removesuffix("/ws/floor")
     with subscribe(live, token) as ws:
         res = httpx.post(f"{base}/api/production/weaving-runs", headers={"Authorization": f"Bearer {token}"},
-                         json={"machine_code": "LOOM-6", "yarn_lot_code": "Y-103", "product_code": "GRG-TWL",
+                         json={"machine_code": "LOOM-3", "yarn_lot_code": "Y-104", "product_code": "GRG-TWL",
                                "meters_planned": 50, "idempotency_key": str(uuid.uuid4())}, timeout=TIMEOUT)
         assert res.status_code == 201, res.text
         events = [json.loads(ws.recv(timeout=TIMEOUT)) for _ in range(2)]
     closed, opened = events
-    assert closed["machine_code"] == opened["machine_code"] == "LOOM-6"
+    assert closed["machine_code"] == opened["machine_code"] == "LOOM-3"
     assert closed["ended_at"] == opened["started_at"]
     assert (opened["state"], opened["ended_at"]) == ("running", None)
 

@@ -305,6 +305,30 @@ class Seeder:
                           f"woven:{run_code}", run=run)
             roll.ids["run"] = run
 
+    def busy_floor(self) -> None:
+        """Act 1: looms weaving at demo "now" (scenario.BUSY_FLOOR) — open runs on WIP greige rolls, built
+        exactly like a run started through POST /api/production/weaving-runs (and like R-1212 on Loom 5)."""
+        start = self.at(0, S.BUSY_FLOOR_START_HOUR)
+        n = max(int(code.removeprefix("R-")) for code in self.rolls) + 1
+        for loom, yarn in S.BUSY_FLOOR.items():
+            family = S.YARN_LOTS[yarn][0]
+            code, run_code = f"R-{n}-G", f"WV-R-{n}"
+            run = self.one(
+                """INSERT INTO process_run (code, machine_id, stage, shift_id, operator_id, started_at)
+                   VALUES (%s, %s, 'weaving', %s, %s, %s) RETURNING id""",
+                (run_code, self.id["machine"][loom], self.id["shift"][self.shift_of(start)],
+                 self.id["worker"][f"W-0{loom[-1]}"], start))
+            self.runs.append((run_code, loom, self.shift_of(start), start, None))
+            self.id["lot"][code] = self.one(
+                """INSERT INTO lot (code, kind, product_id, qty, produced_by_run_id, produced_by_stage, status, created_at)
+                   VALUES (%s, 'greige', %s, %s, %s, 'weaving', 'wip', %s) RETURNING id""",
+                (code, self.id["product"]["GRG-TWL" if family == "twill" else "GRG-POP"], S.ROLL_LENGTH_M, run, start))
+            issue = S.yarn_issue_kg(family, loom)
+            self.move(yarn, "YARN-STORE", "PRODUCTION", issue, "issue", start, f"issue:{run_code}", run=run)
+            self.c.execute("INSERT INTO lot_lineage (parent_lot_id, child_lot_id, qty_consumed) VALUES (%s, %s, %s)",
+                           (self.id["lot"][yarn], self.id["lot"][code], issue))
+            n += 1
+
     # ------------------------------------------------------------------ dyeing + QC
     def dye_and_inspect(self) -> None:
         dyer = {"VAT-1": "D-01", "VAT-2": "D-02", "VAT-3": "D-03"}
@@ -478,6 +502,7 @@ class Seeder:
         self.receipts()
         self.plan()
         self.weave()
+        self.busy_floor()
         self.dye_and_inspect()
         self.orders()
         self.floor_and_people()

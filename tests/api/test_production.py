@@ -128,7 +128,7 @@ def test_machine_busy_is_409_and_writes_nothing(client, auth, started):
 def test_insufficient_stock_is_422_and_writes_nothing(client, auth):
     moves, runs, lots = count("stock_move"), count("process_run"), count("lot")
     too_much = float(on_hand("Y-102", "YARN-STORE") / (S.fabric_kg("twill") / S.ROLL_LENGTH_M) + 1)   # > all of it
-    res = client.post(STARTS, json=run_body(machine_code="LOOM-1", yarn_lot_code="Y-102", meters_planned=too_much),
+    res = client.post(STARTS, json=run_body(machine_code="LOOM-3", yarn_lot_code="Y-102", meters_planned=too_much),
                       headers=auth["floor"])
     assert res.status_code == 422, res.text
     err = res.json()["error"]
