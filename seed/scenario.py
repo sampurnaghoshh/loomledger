@@ -272,3 +272,34 @@ def expected_mass_balance() -> dict[str, D]:
     return {"issued_kg": issued, "fabric_kg": fabric, "waste_kg": waste, "wip_kg": wip,
             "unaccounted_kg": unaccounted,
             "unaccounted_pct": (100 * unaccounted / issued).quantize(D("0.01"), rounding=ROUND_HALF_UP)}
+
+
+# ---------------------------------------------------------------------------
+# Workforce register (G1). The seed records, for the ATTENDANCE_DAYS up to and including the demo day, every
+# worker on every working day (Mon–Sat) on their usual shift: present, except the listed exceptions.
+# Rows the production runs already imply (the operator was there, Sundays included) are kept as they are.
+# Exceptions sit on days the worker ran no machine (the seed asserts it). Pay: hourly_wage x shift length
+# (12 h) per shift, half for a half day, nothing for absence or leave (wages() in migration 012).
+# ---------------------------------------------------------------------------
+ATTENDANCE_DAYS = 30
+SHIFT_HOURS = 12
+WORKER_SHIFT = {"W-01": "A", "W-02": "A", "W-03": "A", "W-04": "B", "W-05": "B", "W-06": "B",
+                "D-01": "A", "D-02": "A", "D-03": "B", "Q-01": "A", "Q-02": "B"}
+ATTENDANCE_EXCEPTIONS = {          # (worker, days relative to the demo day): status
+    ("W-02", -24): "absent", ("W-05", -22): "half_day", ("D-01", -16): "leave",
+    ("D-03", -12): "absent", ("Q-01", -3): "half_day", ("Q-02", -9): "leave", ("Q-02", -26): "absent",
+}
+
+
+def expected_register(anchor: date = ANCHOR_DATE) -> dict[str, dict[date, tuple[str, str]]]:
+    """worker -> {working day: (status, shift)} for the register the seed writes (Mon–Sat only)."""
+    out: dict[str, dict[date, tuple[str, str]]] = {}
+    for code, shift in WORKER_SHIFT.items():
+        days = {}
+        for offset in range(-(ATTENDANCE_DAYS - 1), 1):
+            d = anchor + timedelta(days=offset)
+            if d.isoweekday() != 7:
+                days[d] = (ATTENDANCE_EXCEPTIONS.get((code, offset), "present"), shift)
+        out[code] = days
+    return out
+

@@ -6,6 +6,7 @@ import TrackPage from "@/pages/TrackPage";
 import FloorBoardPage from "@/pages/FloorBoardPage";
 import InventoryPage from "@/pages/InventoryPage";
 import GateEntryPage from "@/pages/GateEntryPage";
+import WorkforcePage from "@/pages/WorkforcePage";
 import QualityPage from "@/pages/QualityPage";
 import TracePage from "@/pages/TracePage";
 import RecallPage from "@/pages/RecallPage";
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/floor" element={<FloorBoardPage />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/gate" element={<GateEntryPage />} />
+          <Route path="/workforce" element={<WorkforcePage />} />
           <Route path="/quality" element={<QualityPage />} />
           <Route path="/trace" element={<TracePage />} />
           <Route path="/recall/:lotCode" element={<RecallPage />} />

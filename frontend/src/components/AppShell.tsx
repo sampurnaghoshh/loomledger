@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   Truck,
   X,
+  Users,
 } from "lucide-react";
 import { USE_MOCKS } from "@/api/client";
 import { getSession, setSession } from "@/lib/auth";
@@ -25,6 +26,7 @@ const NAV = [
       { to: "/inventory", label: "Inventory", icon: PackageSearch },
       { to: "/gate", label: "Gate Entry", icon: Truck },
       { to: "/quality", label: "Quality", icon: ClipboardCheck },
+      { to: "/workforce", label: "Workforce", icon: Users },
     ],
   },
   {

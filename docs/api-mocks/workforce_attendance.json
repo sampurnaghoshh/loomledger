@@ -1,0 +1,96 @@
+{
+  "day": "2026-10-10",
+  "shifts": [
+    {
+      "code": "A",
+      "name": "Day Shift A",
+      "starts_at": "08:00",
+      "ends_at": "20:00"
+    },
+    {
+      "code": "B",
+      "name": "Night Shift B",
+      "starts_at": "20:00",
+      "ends_at": "08:00"
+    }
+  ],
+  "workers": [
+    {
+      "worker_code": "D-01",
+      "full_name": "Dyer 1",
+      "skill": "dyeing",
+      "status": "present",
+      "shift_code": "A"
+    },
+    {
+      "worker_code": "D-02",
+      "full_name": "Dyer 2",
+      "skill": "dyeing",
+      "status": "present",
+      "shift_code": "A"
+    },
+    {
+      "worker_code": "D-03",
+      "full_name": "Dyer 3",
+      "skill": "dyeing",
+      "status": "present",
+      "shift_code": "B"
+    },
+    {
+      "worker_code": "Q-01",
+      "full_name": "Kavya Rao",
+      "skill": null,
+      "status": "present",
+      "shift_code": "A"
+    },
+    {
+      "worker_code": "Q-02",
+      "full_name": "Imran Khan",
+      "skill": null,
+      "status": "present",
+      "shift_code": "B"
+    },
+    {
+      "worker_code": "W-01",
+      "full_name": "Weaver 1",
+      "skill": "weaving",
+      "status": "present",
+      "shift_code": "A"
+    },
+    {
+      "worker_code": "W-02",
+      "full_name": "Weaver 2",
+      "skill": "weaving",
+      "status": "present",
+      "shift_code": "A"
+    },
+    {
+      "worker_code": "W-03",
+      "full_name": "Weaver 3",
+      "skill": "weaving",
+      "status": "present",
+      "shift_code": "A"
+    },
+    {
+      "worker_code": "W-04",
+      "full_name": "Weaver 4",
+      "skill": "weaving",
+      "status": "present",
+      "shift_code": "A"
+    },
+    {
+      "worker_code": "W-05",
+      "full_name": "Weaver 5",
+      "skill": "weaving",
+      "status": "present",
+      "shift_code": "A"
+    },
+    {
+      "worker_code": "W-06",
+      "full_name": "Weaver 6",
+      "skill": "weaving",
+      "status": "present",
+      "shift_code": "A"
+    }
+  ]
+}

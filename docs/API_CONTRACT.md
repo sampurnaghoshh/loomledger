@@ -34,6 +34,8 @@ regenerate, update `frontend/src/api/types.ts`, and tell the team in the group c
 | SQLSTATE `P0002` (`lot % does not exist` in 004) | 404 | `NOT_FOUND` |
 | SQLSTATE `40001` / `40P01` (serialization failure / deadlock) | 409 | `CONFLICT_RETRY` (safe to resubmit with the same idempotency key) |
 | SQLSTATE `08xxx` / DB unreachable / pool timeout | 503 | `DB_UNAVAILABLE` |
+| SQLSTATE `LL007` (attendance for a future day) | 422 | `ATTENDANCE_FUTURE_DATE` + `fields.day` |
+| SQLSTATE `LL008` (attendance for an inactive worker) | 422 | `WORKER_INACTIVE` + `fields.marks` |
 | SQLSTATE `LL006` (dispatch mixes dye batches, no `shade_override_reason`) | 409 | `SHADE_MISMATCH` + `fields: {batches: "DB-08, DB-14"}` |
 | bad login | 401 | `INVALID_CREDENTIALS` |
 | missing/expired token | 401 | `UNAUTHENTICATED` |
@@ -119,6 +121,13 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 | `GET /api/orders` | – (any signed-in user; `tracking_token` = the order's newest unexpired link; `delay_days` = working days Mon–Sat from promised to revised via `working_days_between()`, 0 when on time) | `orders.json` (exported **after** the recall; before it `revised_promise_date` is null) | Sampurna | Dhruva |
 | `POST /api/dispatches` | `{order_code, lot_codes[], vehicle_no, idempotency_key, shade_override_reason?}` → dispatch `DSP-<order>-<n>`, lines, each roll FG-STORE → CUSTOMERS, lots `dispatched`, invoice `INV-<order>-<n>` (Σ m × line price), order status, buyer update. Role `store`. Guards (DB): `409 NOT_QC_PASSED` (LL004), `422 NOT_IN_ORDER` (LL005), `409 LOT_QUARANTINED`, `422 INSUFFICIENT_STOCK` (not in FG-STORE), `409 ALREADY_DISPATCHED`. Shade Guard (migration 008): all rolls of **one dispatch** from one dye batch, else `409 SHADE_MISMATCH` with `fields.batches`, unless `shade_override_reason` (3–500 chars) is given — it is stored on the dispatch | `201 {dispatch_code, invoice_code, amount}`; replay → `200` original; `404` unknown order/roll | Sampurna | Dhruva (stretch) |
 | `GET /api/track/{token}` | public, no login (`buyer_order_status(token)`) | `track_SO-0412_before.json` / `_after.json`; malformed, unknown and expired tokens all return the same `404 error_not_found.json` | Sampurna | Dhruva |
+
+### Workforce (attendance + wages)
+| Method & path | Body / query | Response | Owner | Screen |
+|---|---|---|---|---|
+| `GET /api/workforce/attendance` | `?day=YYYY-MM-DD` (default today IST). Role `floor_supervisor` | `workforce_attendance.json`: `{day, shifts[], workers[{worker_code, full_name, skill, status, shift_code}]}` (`status: null` = not marked) | Sampurna | Sampurna |
+| `POST /api/workforce/attendance` | `{day, shift_code, marks: [{worker_code, status: present\|absent\|half_day\|leave}], idempotency_key}` — one transaction; one row per worker per day (marking again corrects it). Role `floor_supervisor` | `201 {batch_id, day, shift_code, marked, marked_at}`; replay → `200` original; `404` unknown shift/worker; `422 ATTENDANCE_FUTURE_DATE` (LL007), `422 WORKER_INACTIVE` (LL008), `422` duplicate worker / empty marks | Sampurna | Sampurna |
+| `GET /api/workforce/wages` | `?from=&to=` (inclusive; default this month to date). Role `accounts` | `workforce_wages.json`: `{from, to, totals{workers, days_worked, shifts_worked, gross_wage}, workers[…]}` — `wages()` (012): a shift pays `hourly_wage` × shift length, half day ½, absent/leave 0 | Sampurna | Sampurna |
 
 ### Finance (month-end)
 | Method & path | Query | Response | Owner | Screen |

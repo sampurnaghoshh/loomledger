@@ -4,6 +4,9 @@
 
 import { ApiError } from "./errors";
 import type {
+  AttendanceRegister,
+  AttendanceRequest,
+  AttendanceResponse,
   BuyerOrderStatus,
   DispatchRequest,
   DispatchResponse,
@@ -30,6 +33,7 @@ import type {
   StartWeavingRequest,
   StartWeavingResponse,
   StockSnapshot,
+  WageRun,
 } from "./types";
 import { getSession } from "@/lib/auth";
 import { openFloorSocket } from "./floorSocket";
@@ -127,6 +131,11 @@ const real = {
     // store@ / owner@. Errors: NOT_FOUND, NOT_QC_PASSED, NOT_IN_ORDER, SHADE_MISMATCH, LOT_QUARANTINED,
     // INSUFFICIENT_STOCK, ALREADY_DISPATCHED, VALIDATION_FAILED (see docs/API_CONTRACT.md)
     dispatch: (req: DispatchRequest) => request<DispatchResponse>("POST", "/api/dispatches", req),
+  },
+  workforce: {
+    register: (day?: string) => request<AttendanceRegister>("GET", `/api/workforce/attendance${qs({ day })}`),
+    mark: (req: AttendanceRequest) => request<AttendanceResponse>("POST", "/api/workforce/attendance", req),
+    wages: (from?: string, to?: string) => request<WageRun>("GET", `/api/workforce/wages${qs({ from, to })}`),
   },
   finance: {
     massBalance: (from?: string, to?: string) =>
