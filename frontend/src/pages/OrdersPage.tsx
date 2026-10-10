@@ -20,12 +20,12 @@ const statusTone: Record<OrderSummary["status"], Tone> = {
   cancelled: "idle",
 };
 
-// Progress segments reuse the custody colours so this bar agrees with the Recall page.
+// Progress segments: five clearly different tones (done = navy, in process = grey).
 const SEGMENTS: { key: keyof OrderProgress; label: string; tone: Tone }[] = [
-  { key: "dispatched_m", label: "Dispatched", tone: custodyTone.at_customer },
+  { key: "dispatched_m", label: "Dispatched", tone: "brand" },
   { key: "ready_m", label: "Ready", tone: custodyTone.passed_in_store },
   { key: "quality_check_m", label: "Quality check", tone: custodyTone.awaiting_qc },
-  { key: "weaving_m", label: "Weaving", tone: custodyTone.wip },
+  { key: "weaving_m", label: "Weaving", tone: "idle" },
   { key: "on_hold_m", label: "On hold", tone: lotStatusTone.quarantined },
 ];
 const segmentFill: Record<Tone, string> = {
