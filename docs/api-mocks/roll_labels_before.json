@@ -1,0 +1,96 @@
+{
+  "root": "Y-112",
+  "rolls": [
+    {
+      "code": "R-1201",
+      "product": "Navy Twill",
+      "qty_m": 50.0,
+      "custody": "rejected",
+      "in_scope": true
+    },
+    {
+      "code": "R-1202",
+      "product": "Navy Twill",
+      "qty_m": 50.0,
+      "custody": "rejected",
+      "in_scope": true
+    },
+    {
+      "code": "R-1203",
+      "product": "Navy Twill",
+      "qty_m": 50.0,
+      "custody": "rejected",
+      "in_scope": true
+    },
+    {
+      "code": "R-1204",
+      "product": "Navy Twill",
+      "qty_m": 50.0,
+      "custody": "at_customer",
+      "in_scope": true
+    },
+    {
+      "code": "R-1205",
+      "product": "Navy Twill",
+      "qty_m": 50.0,
+      "custody": "at_customer",
+      "in_scope": true
+    },
+    {
+      "code": "R-1206",
+      "product": "Navy Twill",
+      "qty_m": 50.0,
+      "custody": "passed_in_store",
+      "in_scope": true
+    },
+    {
+      "code": "R-1207",
+      "product": "Navy Twill",
+      "qty_m": 50.0,
+      "custody": "passed_in_store",
+      "in_scope": true
+    },
+    {
+      "code": "R-1208",
+      "product": "Navy Twill",
+      "qty_m": 50.0,
+      "custody": "passed_in_store",
+      "in_scope": true
+    },
+    {
+      "code": "R-1209",
+      "product": "Navy Twill",
+      "qty_m": 50.0,
+      "custody": "awaiting_qc",
+      "in_scope": true
+    },
+    {
+      "code": "R-1210",
+      "product": "Navy Twill",
+      "qty_m": 50.0,
+      "custody": "awaiting_qc",
+      "in_scope": true
+    },
+    {
+      "code": "R-1211",
+      "product": "Navy Twill",
+      "qty_m": 50.0,
+      "custody": "awaiting_qc",
+      "in_scope": true
+    },
+    {
+      "code": "R-1212-G",
+      "product": "Greige Twill",
+      "qty_m": 50.0,
+      "custody": "wip",
+      "in_scope": true
+    },
+    {
+      "code": "R-1003",
+      "product": "Navy Twill",
+      "qty_m": 50.0,
+      "custody": "passed_in_store",
+      "in_scope": false
+    }
+  ]
+}

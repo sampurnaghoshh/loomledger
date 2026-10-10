@@ -223,6 +223,12 @@ class Smoke:
             same = again.status_code == 200 and again.json()["recall_code"] == first["recall_code"] \
                 and again.json()["applied_at"] == first["applied_at"]
             self.check(act, "apply again → same recall", same, f"HTTP {again.status_code}, {again.json().get('recall_code')}")
+            shipped = S.EXPECTED_AT_CUSTOMER[0]          # what the buyer's QR scan of a shipped roll now says
+            p = self.ok_json(act, f"QR passport {shipped}", self.call("GET", f"/api/rolls/{shipped}/passport", "qc"))
+            if p is not None:
+                self.check(act, f"QR passport {shipped}", (p["recall"] or {}).get("code") == first["recall_code"]
+                           and (p["status"], p["custody"]) == ("recalled", "at_customer"),
+                           f"{p['status']} · {p['custody']} · {(p['recall'] or {}).get('code')} · {p['order']['buyer']}")
 
         res = self.call("POST", "/api/production/weaving-runs", "floor", json={
             "machine_code": "LOOM-2", "yarn_lot_code": S.Y112, "product_code": GREIGE_FOR[S.YARN_LOTS[S.Y112][0]],

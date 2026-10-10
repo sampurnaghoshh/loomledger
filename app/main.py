@@ -21,6 +21,7 @@ from app.modules.orders import router as orders
 from app.modules.production import router as production
 from app.modules.quality import router as quality
 from app.modules.recalls import router as recalls
+from app.modules.rolls import router as rolls
 from app.modules.trace import router as trace
 from app.modules.workforce import router as workforce
 from app.errors import handle_unexpected, install_exception_handlers
@@ -106,6 +107,7 @@ def create_app() -> FastAPI:
     app.include_router(trace.router)
     app.include_router(recalls.router)
     app.include_router(workforce.router)
+    app.include_router(rolls.router)             # /api/rolls/{code}/passport, /api/rolls/labels (QR)
     # ---------------------------------------------------------------------------------------------
 
     return app

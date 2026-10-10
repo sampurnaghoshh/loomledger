@@ -440,3 +440,15 @@ def expected_run_progress(at_hour: D = D("9.5")) -> dict[str, dict]:
                    "est_done_m": (ROLL_LENGTH_M * ratio).quantize(D("0.1")),
                    "remaining_hours": max(planned_h - running_h, D(0)).quantize(D("0.01"))}
             for loom, order in looms.items()}
+
+
+# ---------------------------------------------------------------------------
+# QR roll passport (F1): one Y-112 roll per banner the passport shows. A roll still on the loom is its greige
+# lot (seed: "<roll>-G"). The clean, unaffected roll is whatever /api/rolls/labels picks (it is not Y-112).
+# ---------------------------------------------------------------------------
+def _first_y112(custody: str) -> str:
+    return next(r for r, (_, c, _) in Y112_ROLLS.items() if c == custody)
+
+
+PASSPORT_ROLLS = {"rejected": REJECTED_ROLLS[0], "at_customer": EXPECTED_AT_CUSTOMER[0],
+                  "passed_in_store": _first_y112("passed_in_store"), "wip": f"{_first_y112('wip')}-G"}
