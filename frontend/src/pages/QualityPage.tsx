@@ -8,7 +8,7 @@ import type {
   Rejection,
 } from "@/api/types";
 import { useApi } from "@/hooks/useApi";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateTime, formatQty } from "@/lib/format";
 import {
   Badge,
   Button,
@@ -31,18 +31,6 @@ const DEFECT_TYPES = [
   { value: "uneven_weave", label: "Uneven weave" },
   { value: "other", label: "Other" },
 ];
-
-function formatDateTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function defectLabel(value: string) {
   return value
@@ -158,13 +146,21 @@ export default function QualityPage() {
         title="Quality"
         subtitle="Inspect finished dye lots, record defects and trace recurring quality issues."
         actions={
+
           <Button
             variant="secondary"
             onClick={() => {
-              void queueState.reload();
-              void rejectionState.reload();
+              void Promise.all([
+                queueState.reload(),
+                rejectionState.reload(),
+                latestState.reload(),
+              ]);
             }}
-            loading={queueState.loading || rejectionState.loading}
+            loading={
+              queueState.loading ||
+              rejectionState.loading ||
+              latestState.loading
+            }
           >
             Refresh
           </Button>
@@ -272,10 +268,10 @@ export default function QualityPage() {
                     </td>
                     <td className="px-3 py-3 text-ink">{lot.product}</td>
                     <td className="px-3 py-3 text-ink">
-                      {lot.qty_m.toLocaleString("en-IN")} m
+                      {formatQty(lot.qty_m, "m")}
                     </td>
                     <td className="px-3 py-3 text-ink">{lot.dye_batch}</td>
-                    <td className="px-3 py-3 text-ink">{lot.dyed_on}</td>
+                    <td className="px-3 py-3 text-ink">{formatDate(lot.dyed_on)}</td>
                     <td className="px-3 py-3 text-muted">
                       {formatDateTime(lot.dyed_at)}
                     </td>
@@ -335,7 +331,7 @@ export default function QualityPage() {
                     <td className="num px-3 py-3 text-right text-ink">
                       {item.defect_meters == null
                         ? "—"
-                        : `${item.defect_meters.toLocaleString("en-IN")} m`}
+                        : formatQty(item.defect_meters, "m")}
                     </td>
                     <td className="px-3 py-3 text-ink">{item.inspector}</td>
                     <td className="px-3 py-3 text-muted">
@@ -378,8 +374,8 @@ export default function QualityPage() {
                 {selectedLot.product} · {selectedLot.dye_batch}
               </p>
               <p className="mt-1 text-muted">
-                {selectedLot.qty_m.toLocaleString("en-IN")} m ·{" "}
-                {selectedLot.dyed_on} · Order {selectedLot.order_code ?? "—"}
+                {formatQty(selectedLot.qty_m, "m")} ·{" "}
+                {formatDate(selectedLot.dyed_on)} · Order {selectedLot.order_code ?? "—"}
               </p>
             </div>
 

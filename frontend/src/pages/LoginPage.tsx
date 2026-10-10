@@ -17,7 +17,9 @@ export default function LoginPage() {
   async function submit(e: FormEvent) {
     e.preventDefault();
     const errs: typeof fieldErrors = {};
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) errs.email = "Enter a valid email address.";
+    if (!/^[^@\s]+@[^@\s]+.[^@\s]+$/.test(email.trim())) {
+      errs.email = "Enter a valid email address.";
+    }
     if (!password) errs.password = "Enter your password.";
     setFieldErrors(errs);
     if (Object.keys(errs).length) return;

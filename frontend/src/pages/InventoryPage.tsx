@@ -210,102 +210,101 @@ export default function InventoryPage() {
       <Loadable state={stockState}>
         {() => (
           <Card title="Stock overview" subtitle={`${rows.length} stock entries`}>
-        <div className="mb-5 flex flex-wrap gap-2">
-          {FILTERS.map((item) => {
-            const active = filter === item.value;
+            <div className="mb-5 flex flex-wrap gap-2">
+              {FILTERS.map((item) => {
+                const active = filter === item.value;
 
-            return (
-              <button
-                key={item.value}
-                type="button"
-                onClick={() => setFilter(item.value)}
-                aria-pressed={active}
-                className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-                  active
-                    ? "border-brand bg-brand text-white"
-                    : "border-line bg-surface text-ink hover:bg-canvas"
-                }`}
-              >
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
+                return (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setFilter(item.value)}
+                    aria-pressed={active}
+                    className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${active
+                        ? "border-brand bg-brand text-white"
+                        : "border-line bg-surface text-ink hover:bg-canvas"
+                      }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
 
-        {groupedRows.length === 0 ? (
-          <div className="py-10 text-center">
-            <p className="font-medium text-ink">No stock entries found</p>
-            <p className="mt-1 text-sm text-muted">
-              Try another stock filter or select a different time.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {groupedRows.map(([location, locationRows]) => (
-              <section key={location} className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-base font-semibold text-ink">
-                    {locationName(location)}
-                  </h2>
-                  <span className="text-sm text-muted">
-                    {locationRows.length} entries
-                  </span>
-                </div>
+            {groupedRows.length === 0 ? (
+              <div className="py-10 text-center">
+                <p className="font-medium text-ink">No stock entries found</p>
+                <p className="mt-1 text-sm text-muted">
+                  Try another stock filter or select a different time.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {groupedRows.map(([location, locationRows]) => (
+                  <section key={location} className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <h2 className="text-base font-semibold text-ink">
+                        {locationName(location)}
+                      </h2>
+                      <span className="text-sm text-muted">
+                        {locationRows.length} entries
+                      </span>
+                    </div>
 
-                <div className="overflow-x-auto rounded-lg border border-line">
-                  <table className="w-full min-w-[620px] text-left text-sm">
-                    <thead className="bg-canvas text-muted">
-                      <tr>
-                        <th className="px-4 py-3 font-medium">Lot</th>
-                        <th className="px-4 py-3 font-medium">Product</th>
-                        <th className="px-4 py-3 font-medium">Kind</th>
-                        <th className="px-4 py-3 text-right font-medium">
-                          Quantity
-                        </th>
-                        <th className="px-4 py-3 font-medium">Unit</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-line">
-                      {locationRows.map((row, index) => (
-                        <tr
-                          key={`${row.location_code}-${row.lot_code}-${index}`}
-                          className={
-                            isQuarantine(row)
-                              ? "bg-hold-soft"
-                              : "bg-surface"
-                          }
-                        >
-                          <td className="px-4 py-3 font-medium text-ink">
-                            {row.lot_code}
-                          </td>
-                          <td className="px-4 py-3 text-ink">
-                            {row.product_code}
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge
-                              tone={isQuarantine(row) ? "hold" : "idle"}
+                    <div className="overflow-x-auto rounded-lg border border-line">
+                      <table className="w-full min-w-[620px] text-left text-sm">
+                        <thead className="bg-canvas text-muted">
+                          <tr>
+                            <th className="px-4 py-3 font-medium">Lot</th>
+                            <th className="px-4 py-3 font-medium">Product</th>
+                            <th className="px-4 py-3 font-medium">Kind</th>
+                            <th className="px-4 py-3 text-right font-medium">
+                              Quantity
+                            </th>
+                            <th className="px-4 py-3 font-medium">Unit</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-line">
+                          {locationRows.map((row, index) => (
+                            <tr
+                              key={`${row.location_code}-${row.lot_code}-${index}`}
+                              className={
+                                isQuarantine(row)
+                                  ? "bg-hold-soft"
+                                  : "bg-surface"
+                              }
                             >
-                              {row.lot_kind}
-                            </Badge>
-                            {isQuarantine(row) && (
-                              <span className="ml-2">
-                                <Badge tone="hold">On hold</Badge>
-                              </span>
-                            )}
-                          </td>
-                          <td className="num px-4 py-3 text-right text-ink">
-                            {formatQty(row.qty, row.uom).replace(` ${row.uom}`, "")}
-                          </td>
-                          <td className="px-4 py-3 text-muted">{row.uom}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            ))}
-          </div>
-        )}
+                              <td className="px-4 py-3 font-medium text-ink">
+                                {row.lot_code}
+                              </td>
+                              <td className="px-4 py-3 text-ink">
+                                {row.product_code}
+                              </td>
+                              <td className="px-4 py-3">
+                                <Badge
+                                  tone={isQuarantine(row) ? "hold" : "idle"}
+                                >
+                                  {row.lot_kind}
+                                </Badge>
+                                {isQuarantine(row) && (
+                                  <span className="ml-2">
+                                    <Badge tone="hold">On hold</Badge>
+                                  </span>
+                                )}
+                              </td>
+                              <td className="num px-4 py-3 text-right text-ink">
+                                {formatQty(row.qty, row.uom).replace(` ${row.uom}`, "")}
+                              </td>
+                              <td className="px-4 py-3 text-muted">{row.uom}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
           </Card>
         )}
       </Loadable>
