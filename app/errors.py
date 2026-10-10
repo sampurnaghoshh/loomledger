@@ -73,6 +73,12 @@ def map_db_error(exc: psycopg.Error) -> ApiError:
     if state == "LL002":
         return ApiError("INSUFFICIENT_STOCK", diag.message_primary or "Insufficient stock.", 422,
                         hint=diag.message_hint or None, sqlstate=state)
+    if state == "LL004":
+        return ApiError("NOT_QC_PASSED", diag.message_primary or "Roll has not passed quality control.", 409,
+                        hint=diag.message_hint or None, sqlstate=state)
+    if state == "LL005":
+        return ApiError("NOT_IN_ORDER", diag.message_primary or "Roll is not reserved for this order.", 422,
+                        hint=diag.message_hint or None, sqlstate=state)
     if state == "LL003":
         return ApiError("LEDGER_IMMUTABLE", diag.message_primary or "The stock ledger is append-only.", 405,
                         hint="Post a correcting movement instead.", sqlstate=state)

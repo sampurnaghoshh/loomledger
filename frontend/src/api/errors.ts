@@ -13,6 +13,8 @@ export type ApiErrorCode =
   | "FORBIDDEN" //            403
   | "NOT_FOUND" //            404
   | "LEDGER_IMMUTABLE" //     405  ledger rows can't be changed; post a correcting move
+  | "NOT_QC_PASSED" //        409  dispatch: roll has not passed QC
+  | "NOT_IN_ORDER" //         422  dispatch: roll is not reserved for this order
   | "DUPLICATE_REQUEST" //    409  same idempotency key already used (normally replayed as 200)
   | "CONFLICT_RETRY" //       409  concurrent change / deadlock — safe to resubmit
   | "DB_UNAVAILABLE" //       503  database unreachable

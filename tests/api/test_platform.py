@@ -145,6 +145,8 @@ def raise_in_db(conn, sqlstate: str, message: str = "boom", constraint: str | No
     ("LL001", None, None, 409, "LOT_QUARANTINED"),
     ("LL002", None, None, 422, "INSUFFICIENT_STOCK"),
     ("LL003", None, None, 405, "LEDGER_IMMUTABLE"),
+    ("LL004", None, None, 409, "NOT_QC_PASSED"),
+    ("LL005", None, None, 422, "NOT_IN_ORDER"),
     ("23P01", "no_machine_double_booking", None, 409, "MACHINE_BUSY"),
     ("23505", "one_dispatch_per_roll", None, 409, "ALREADY_DISPATCHED"),
     ("23505", "stock_move_idempotency_key_key", None, 409, "DUPLICATE_REQUEST"),

@@ -23,6 +23,8 @@ regenerate, update `frontend/src/api/types.ts`, and tell the team in the group c
 | SQLSTATE `LL001` | 409 | `LOT_QUARANTINED` |
 | SQLSTATE `LL002` | 422 | `INSUFFICIENT_STOCK` |
 | SQLSTATE `LL003` | 405 | `LEDGER_IMMUTABLE` |
+| SQLSTATE `LL004` (dispatch: roll's latest QC is not a pass) | 409 | `NOT_QC_PASSED` |
+| SQLSTATE `LL005` (dispatch: roll not reserved for that order) | 422 | `NOT_IN_ORDER` |
 | SQLSTATE `23P01` (exclusion) | 409 | `MACHINE_BUSY` |
 | SQLSTATE `23505` on `one_dispatch_per_roll` | 409 | `ALREADY_DISPATCHED` |
 | SQLSTATE `23505` on `idempotency_key` | 200 | (return the original result — services catch it with `app.errors.is_idempotency_replay`) |
