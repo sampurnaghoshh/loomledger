@@ -12,6 +12,7 @@ import {
   QrCode,
   ReceiptIndianRupee,
   ShieldAlert,
+  Table2,
   Truck,
   X,
   Users,
@@ -45,6 +46,7 @@ const NAV = [
     items: [
       { to: "/orders", label: "Orders", icon: Factory },
       { to: "/month-end", label: "Month-end", icon: ReceiptIndianRupee },
+      { to: "/records", label: "Records", icon: Table2 },
     ],
   },
 ];

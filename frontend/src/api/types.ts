@@ -577,3 +577,46 @@ export interface BreakdownAlert {
   started_at: string;
 }
 export type OwnerAlert = RecallAlert | BreakdownAlert;
+
+/** Paged lists (app/listing.py): ?page=&page_size=&q=&sort=(-)col&<filters> -> one page + the total. */
+export interface Page<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number; // what was used (capped at 100)
+}
+/** The list query exactly as it sits in the URL: page, page_size, q, sort and the endpoint's filters. */
+export type ListQuery = Record<string, string | undefined>;
+export interface RollListItem {
+  code: string;
+  kind: "greige" | "finished";
+  product: string;
+  qty_m: number;
+  status: LotStatus;
+  custody: Custody;
+  order_code: string | null;
+  buyer: string | null;
+  qc_result: QcResult | null;
+  defect_type: string | null;
+  inspected_at: string | null;
+  created_at: string;
+}
+export interface InvoiceRow {
+  code: string;
+  order_code: string;
+  buyer: string;
+  dispatch_code: string;
+  dispatched_at: string;
+  rolls: number;
+  amount: number;
+  paid: number;
+  outstanding: number;
+  issued_at: string;
+}
+export interface WorkerRow {
+  code: string;
+  full_name: string;
+  skill: string | null;
+  hourly_wage: number;
+  active: boolean;
+}

@@ -37,6 +37,12 @@ import type {
   RollPassport,
   BreakdownAlert,
   OwnerAlert,
+  InvoiceRow,
+  ListQuery,
+  Page,
+  RollListItem,
+  StockRow,
+  WorkerRow,
 } from "./types";
 
 const TOKENS = {
@@ -74,6 +80,33 @@ const receivedLots = new Set<string>();
 const dispatchesByKey = new Map<string, DispatchResponse>();
 const shippedRolls = new Set<string>();
 const dispatchCount: Record<string, number> = {};
+
+// Paged lists in mock mode: the same query language as app/listing.py, applied in the browser to the mock files.
+const PAGING = new Set(["page", "page_size", "q", "sort"]);
+const POSITIVE: Record<string, string> = { late: "delay_days", unpaid: "outstanding" };
+function mockPage<T extends object>(rows: T[], p: ListQuery, search: (keyof T)[], defaultSort: string): Page<T> {
+  const val = (r: T, k: string) => (r as Record<string, unknown>)[k];
+  let out = rows.filter((r) =>
+    Object.entries(p).every(([k, v]) => {
+      if (v === undefined || v === "" || PAGING.has(k)) return true;
+      if (POSITIVE[k]) return (Number(val(r, POSITIVE[k]) ?? 0) > 0) === (v === "true");
+      return String(val(r, k)) === v;
+    }),
+  );
+  const q = p.q?.trim().toLowerCase();
+  if (q) out = out.filter((r) => search.some((k) => String(val(r, k as string) ?? "").toLowerCase().includes(q)));
+  const sort = p.sort || defaultSort;
+  const key = sort.replace(/^-/, "");
+  const dir = sort.startsWith("-") ? -1 : 1;
+  out = [...out].sort((a, b) => {
+    const x = val(a, key), y = val(b, key);
+    if (x == null || y == null) return x == null ? (y == null ? 0 : 1) : -1;
+    return (x < y ? -1 : x > y ? 1 : 0) * dir;
+  });
+  const page = Math.max(1, Number(p.page) || 1);
+  const size = Math.min(100, Math.max(1, Number(p.page_size) || 25));
+  return { items: out.slice((page - 1) * size, page * size), total: out.length, page, page_size: size };
+}
 
 const delay = (ms = 250) => new Promise((r) => setTimeout(r, ms));
 async function load<T>(loader: () => Promise<{ default: unknown }>): Promise<T> {
@@ -196,6 +229,32 @@ export const mock: Api = {
       alertListeners.add(onAlert);
       setTimeout(() => onStatus?.("open"), 300);
       return () => void alertListeners.delete(onAlert);
+    },
+  },
+  lists: {
+    rolls: async (p) => {
+      const labels = await load<RollLabels>(() =>
+        recallApplied ? import("@mocks/roll_labels_after.json") : import("@mocks/roll_labels_before.json"),
+      );
+      const rows: RollListItem[] = labels.rolls.map((r) => ({
+        code: r.code, kind: r.code.endsWith("-G") ? "greige" : "finished", product: r.product, qty_m: r.qty_m,
+        status: "active", custody: r.custody, order_code: null, buyer: null, qc_result: null, defect_type: null,
+        inspected_at: null, created_at: "",
+      }));
+      return mockPage(rows, p, ["code", "product"], "code");
+    },
+    orders: async (p) => mockPage(await load<OrderSummary[]>(() => import("@mocks/orders.json")), p, ["code", "buyer", "product"], "promised_date"),
+    stock: async (p) => mockPage((await load<{ rows: StockRow[] }>(() => import("@mocks/inventory_stock_now.json"))).rows, p,
+      ["lot_code", "product_code", "location_code"], "location_code"),
+    qcQueue: async (p) => mockPage(await load<QualityQueueItem[]>(() => import("@mocks/quality_queue.json")), p, ["lot_code", "order_code"], "lot_code"),
+    rejections: async (p) => mockPage(await load<Rejection[]>(() => import("@mocks/quality_rejections.json")), p,
+      ["lot_code", "order_code", "inspector"], "-inspected_at"),
+    invoices: async (p) => mockPage<InvoiceRow>([], p, ["code"], "-issued_at"), // no invoice list in the mock files
+    workers: async (p) => {
+      const reg = await load<{ workers: { worker_code: string; full_name: string; skill: string | null }[] }>(
+        () => import("@mocks/workforce_attendance.json"));
+      const rows: WorkerRow[] = reg.workers.map((w) => ({ code: w.worker_code, full_name: w.full_name, skill: w.skill, hourly_wage: 0, active: true }));
+      return mockPage(rows, p, ["code", "full_name"], "code");
     },
   },
   rolls: {

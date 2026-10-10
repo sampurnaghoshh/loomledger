@@ -152,3 +152,22 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 For every GET above: seed, call the endpoint, compare with the mock file. Ignore only wall-clock fields
 (`applied_at`, `at` of events created during the test, `state_since` of rows the test changed). A red contract test means
 the frontend will break when mocks are switched off.
+
+## Paged lists (`app/listing.py`) — new endpoints, the originals above are unchanged
+
+Every list takes `page` (≥1, default 1), `page_size` (default 25; above 100 is **clamped** to 100 and the response
+says so), `q` (case-insensitive "contains" over the listed columns; LIKE wildcards are literal), `sort` (a
+whitelisted key, `-key` for descending; anything else → `422 VALIDATION_FAILED`, `fields.sort` lists the allowed
+keys) plus typed filters (a bad value → 422). Response: `{items, total, page, page_size}`; past the last page
+`items` is `[]` and `total` is still right. No column name ever comes from the request (whitelist → identifier).
+
+| Endpoint | Items | sort keys | filters | Roles |
+|---|---|---|---|---|
+| `GET /api/rolls` | physical rolls: code, kind, product, qty_m, status, custody, order_code, buyer, latest qc_result + defect_type + inspected_at, created_at | code, custody, status, qty_m, order_code, inspected_at, created_at | custody, status, kind, qc_result, order_code | any |
+| `GET /api/orders/list` | = `GET /api/orders` items | code, buyer, status, promised_date, revised_promise_date, delay_days, ordered_m | status, buyer, yarn_status, late (bool) | any |
+| `GET /api/inventory/stock/list` | = stock rows (now) | location_code, lot_code, product_code, qty, lot_kind | location_code, lot_kind, product_code | any |
+| `GET /api/quality/queue/list` | = queue items | lot_code, dyed_at, order_code, dye_batch | order_code, dyed_on | any |
+| `GET /api/quality/rejections/list` | = rejections (newest first) | inspected_at, lot_code, defect_type, inspector | defect_type, order_code, inspector | any |
+| `GET /api/finance/invoices` | code, order_code, buyer, dispatch_code, dispatched_at, rolls, amount, paid, outstanding, issued_at | issued_at, code, amount, outstanding, buyer | buyer, order_code, unpaid (bool) | accounts |
+| `GET /api/workforce/workers` | code, full_name, skill, hourly_wage, active | code, full_name, hourly_wage, skill | skill, active (bool) | floor_supervisor |
+

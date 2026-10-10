@@ -6,13 +6,13 @@ from uuid import UUID
 
 import psycopg
 
+from app.listing import Filter, Listing
+
 FG_STORE = "FG-STORE"
 CUSTOMERS = "CUSTOMERS"
 
 
-def list_orders(conn: psycopg.Connection) -> list[dict]:
-    return conn.execute(
-        """WITH yarn AS (                                              -- the yarn plan, computed once (014)
+ORDERS_SQL = """WITH yarn AS (                                              -- the yarn plan, computed once (014)
                SELECT yp.order_id, CASE WHEN SUM(yp.shortfall_kg) > 0 THEN 'short' ELSE 'ok' END AS status,
                       SUM(yp.required_kg) AS required_kg, SUM(yp.shortfall_kg) AS shortfall_kg, SUM(yp.unwoven_m) AS to_weave_m,
                       string_agg(DISTINCT y.name, ', ') FILTER (WHERE yp.shortfall_kg > 0) AS short_of
@@ -33,7 +33,21 @@ def list_orders(conn: psycopg.Connection) -> list[dict]:
                             WHERE order_id = so.id AND expires_at > now()
                             ORDER BY created_at DESC LIMIT 1) bl ON true
              LEFT JOIN yarn y   ON y.order_id = so.id                    -- null for a closed order
-            ORDER BY so.promised_date""").fetchall()
+"""
+
+
+def list_orders(conn: psycopg.Connection) -> list[dict]:
+    return conn.execute(ORDERS_SQL + " ORDER BY so.promised_date").fetchall()
+
+
+ORDER_LIST = Listing(
+    source=ORDERS_SQL,
+    sort={"code": "code", "buyer": "buyer", "status": "status", "promised_date": "promised_date",
+          "revised_promise_date": "revised_promise_date", "delay_days": "delay_days", "ordered_m": "ordered_m"},
+    default_sort="promised_date", tiebreak="code",
+    search=("code", "buyer", "product"),
+    filters={"status": Filter("status"), "buyer": Filter("buyer"), "yarn_status": Filter("yarn_status"),
+             "late": Filter("delay_days", "positive")})
 
 
 def buyer_status(conn: psycopg.Connection, token: UUID) -> dict | None:

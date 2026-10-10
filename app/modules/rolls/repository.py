@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import psycopg
 
+from app.listing import Filter, Listing
+
 
 def roll(conn: psycopg.Connection, code: str) -> dict | None:
     """A roll (greige or finished), its product and where it is (custody derived from facts, 003)."""
@@ -123,3 +125,24 @@ def clean_label(conn: psycopg.Connection, root_id: int | None) -> dict | None:
               AND c.lot_id NOT IN (SELECT descendant_id FROM lot_descendants(%s))
             ORDER BY q.inspected_at DESC, c.lot_code DESC
             LIMIT 1""", (root_id,)).fetchone()
+
+
+ROLL_LIST = Listing(
+    source="""SELECT c.lot_code AS code, c.kind::text AS kind, p.name AS product, c.qty_m, c.status::text AS status,
+                     c.custody, so.code AS order_code, b.name AS buyer, q.result::text AS qc_result, q.defect_type,
+                     q.inspected_at, l.created_at
+                FROM v_roll_custody c
+                JOIN lot l     ON l.id = c.lot_id
+                JOIN product p ON p.id = l.product_id
+                LEFT JOIN v_latest_qc q  ON q.lot_id = c.lot_id
+                LEFT JOIN reservation rs ON rs.lot_id = c.lot_id
+                LEFT JOIN order_line ol  ON ol.id = rs.order_line_id
+                LEFT JOIN sales_order so ON so.id = ol.order_id
+                LEFT JOIN party b        ON b.id = so.buyer_id
+               WHERE c.custody <> 'consumed'""",
+    sort={"code": "code", "custody": "custody", "status": "status", "qty_m": "qty_m", "order_code": "order_code",
+          "inspected_at": "inspected_at", "created_at": "created_at"},
+    default_sort="code", tiebreak="code",
+    search=("code", "order_code", "buyer", "product", "defect_type"),
+    filters={"custody": Filter("custody"), "status": Filter("status"), "kind": Filter("kind"),
+             "qc_result": Filter("qc_result"), "order_code": Filter("order_code")})

@@ -56,3 +56,7 @@ def wages(conn: psycopg.Connection, from_: date | None, to: date | None) -> dict
               "shifts_worked": sum(r["shifts_worked"] for r in rows),
               "gross_wage": sum(r["gross_wage"] for r in rows)}
     return {"from_": from_, "to": to, "totals": totals, "workers": rows}
+
+
+def page_workers(conn: psycopg.Connection, query, filters: dict) -> dict:
+    return repo.WORKER_LIST.fetch(conn, query, filters)

@@ -12,6 +12,7 @@ import TracePage from "@/pages/TracePage";
 import RecallPage from "@/pages/RecallPage";
 import OrdersPage from "@/pages/OrdersPage";
 import MonthEndPage from "@/pages/MonthEndPage";
+import RecordsPage from "@/pages/RecordsPage";
 import RollPassportPage from "@/pages/RollPassportPage";
 import QrLabelsPage from "@/pages/QrLabelsPage";
 import AlertsPage from "@/pages/AlertsPage";
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/recall/:lotCode" element={<RecallPage />} />
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/month-end" element={<MonthEndPage />} />
+          <Route path="/records" element={<RecordsPage />} />
           <Route path="/labels" element={<QrLabelsPage />} />
         </Route>
       </Route>

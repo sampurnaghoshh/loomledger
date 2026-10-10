@@ -5,6 +5,8 @@ from datetime import date
 
 import psycopg
 
+from app.listing import Filter, Listing
+
 
 def last_working_day(conn: psycopg.Connection) -> date:
     """Today in mill time, or the Saturday before on a Sunday (the mill works Mon–Sat)."""
@@ -73,3 +75,11 @@ def month_to_date(conn: psycopg.Connection) -> tuple[date, date]:
 
 def wages(conn: psycopg.Connection, from_: date, to: date) -> list[dict]:
     return conn.execute("SELECT * FROM wages(%s, %s)", (from_, to)).fetchall()
+
+
+WORKER_LIST = Listing(
+    source="SELECT code, full_name, skill::text AS skill, hourly_wage, active FROM worker",
+    sort={"code": "code", "full_name": "full_name", "hourly_wage": "hourly_wage", "skill": "skill"},
+    default_sort="code", tiebreak="code",
+    search=("code", "full_name"),
+    filters={"skill": Filter("skill"), "active": Filter("active")})

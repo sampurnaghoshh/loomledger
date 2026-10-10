@@ -125,3 +125,16 @@ class PaymentResponse(BaseModel):
     paid_at: datetime
     invoice_amount: float
     outstanding_after: float             # what was still due right after this payment
+
+
+class InvoiceRow(BaseModel):
+    code: str
+    order_code: str
+    buyer: str
+    dispatch_code: str
+    dispatched_at: datetime
+    rolls: int
+    amount: float
+    paid: float
+    outstanding: float
+    issued_at: datetime

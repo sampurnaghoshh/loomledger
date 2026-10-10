@@ -5,6 +5,8 @@ from datetime import date
 
 import psycopg
 
+from app.listing import Filter, Listing
+
 FG_STORE = "FG-STORE"
 REJECT_BAY = "REJECT-BAY"
 
@@ -77,3 +79,36 @@ def reject_replay(conn: psycopg.Connection, idempotency_key: str) -> dict | None
                                  AND q.inspected_at = m.created_at
             WHERE m.idempotency_key = %s AND m.kind = 'transfer'
             ORDER BY q.id DESC LIMIT 1""", (idempotency_key,)).fetchone()
+
+
+QUEUE_LIST = Listing(
+    source="""SELECT c.lot_code, p.name AS product, c.qty_m, r.code AS dye_batch, m.name AS dyed_on,
+                     r.ended_at AS dyed_at, so.code AS order_code
+                FROM v_roll_custody c
+                JOIN lot l          ON l.id = c.lot_id
+                JOIN product p      ON p.id = l.product_id
+                JOIN process_run r  ON r.id = l.produced_by_run_id
+                JOIN machine m      ON m.id = r.machine_id
+                LEFT JOIN reservation rs ON rs.lot_id = l.id
+                LEFT JOIN order_line ol  ON ol.id = rs.order_line_id
+                LEFT JOIN sales_order so ON so.id = ol.order_id
+               WHERE c.custody = 'awaiting_qc'""",
+    sort={"lot_code": "lot_code", "dyed_at": "dyed_at", "order_code": "order_code", "dye_batch": "dye_batch"},
+    default_sort="lot_code", tiebreak="lot_code",
+    search=("lot_code", "order_code", "dye_batch", "product"),
+    filters={"order_code": Filter("order_code"), "dyed_on": Filter("dyed_on")})
+
+REJECTION_LIST = Listing(
+    source="""SELECT q.id AS inspection_id, l.code AS lot_code, q.defect_type, q.defect_meters, q.inspected_at,
+                     w.full_name AS inspector, so.code AS order_code
+                FROM qc_inspection q
+                JOIN lot l    ON l.id = q.lot_id
+                JOIN worker w ON w.id = q.inspector_id
+                LEFT JOIN reservation rs ON rs.lot_id = l.id
+                LEFT JOIN order_line ol  ON ol.id = rs.order_line_id
+                LEFT JOIN sales_order so ON so.id = ol.order_id
+               WHERE q.result = 'reject'""",
+    sort={"inspected_at": "inspected_at", "lot_code": "lot_code", "defect_type": "defect_type", "inspector": "inspector"},
+    default_sort="-inspected_at", tiebreak="inspection_id",
+    search=("lot_code", "order_code", "inspector", "defect_type"),
+    filters={"defect_type": Filter("defect_type"), "order_code": Filter("order_code"), "inspector": Filter("inspector")})

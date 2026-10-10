@@ -95,3 +95,8 @@ def dispatch(conn: psycopg.Connection, req: DispatchRequest, user: dict) -> tupl
             return original, False
         raise
     return {"dispatch_code": dispatch_code, "invoice_code": invoice_code, "amount": amount}, True
+
+
+def page_orders(conn: psycopg.Connection, query, filters: dict) -> dict:
+    """Orders, paged / searched / sorted / filtered (app.listing): same items as list_orders()."""
+    return repo.ORDER_LIST.fetch(conn, query, filters)

@@ -43,6 +43,12 @@ import type {
   RollLabels,
   RollPassport,
   OwnerAlert,
+  InvoiceRow,
+  ListQuery,
+  Page,
+  RollListItem,
+  StockRow,
+  WorkerRow,
 } from "./types";
 import { getSession } from "@/lib/auth";
 import { openFloorSocket, type SocketStatus } from "./floorSocket";
@@ -141,6 +147,16 @@ const real = {
         onEvent: onAlert,
         onStatus,
       }),
+  },
+  // Paged / searched / sorted / filtered lists (the original endpoints are unchanged)
+  lists: {
+    rolls: (p: ListQuery) => request<Page<RollListItem>>("GET", `/api/rolls${qs(p)}`),
+    orders: (p: ListQuery) => request<Page<OrderSummary>>("GET", `/api/orders/list${qs(p)}`),
+    stock: (p: ListQuery) => request<Page<StockRow>>("GET", `/api/inventory/stock/list${qs(p)}`),
+    qcQueue: (p: ListQuery) => request<Page<QualityQueueItem>>("GET", `/api/quality/queue/list${qs(p)}`),
+    rejections: (p: ListQuery) => request<Page<Rejection>>("GET", `/api/quality/rejections/list${qs(p)}`),
+    invoices: (p: ListQuery) => request<Page<InvoiceRow>>("GET", `/api/finance/invoices${qs(p)}`), // accounts
+    workers: (p: ListQuery) => request<Page<WorkerRow>>("GET", `/api/workforce/workers${qs(p)}`), // floor supervisor
   },
   rolls: {
     passport: (code: string) => request<RollPassport>("GET", `/api/rolls/${encodeURIComponent(code)}/passport`),

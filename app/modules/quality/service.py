@@ -56,3 +56,11 @@ def inspect(conn: psycopg.Connection, req: InspectionRequest, user: dict) -> tup
             return original, False
         raise
     return {"inspection_id": inspection_id, "lot_code": lot["code"], "result": req.result}, True
+
+
+def page_queue(conn: psycopg.Connection, query, filters: dict) -> dict:
+    return repo.QUEUE_LIST.fetch(conn, query, filters)
+
+
+def page_rejections(conn: psycopg.Connection, query, filters: dict) -> dict:
+    return repo.REJECTION_LIST.fetch(conn, query, filters)
