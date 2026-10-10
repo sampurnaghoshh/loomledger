@@ -7,7 +7,8 @@
       "lot_kind": "yarn",
       "product_code": "YRN-C40",
       "qty": 200.0,
-      "uom": "kg"
+      "uom": "kg",
+      "order_code": null
     },
     {
       "location_code": "YARN-STORE",
@@ -15,7 +16,8 @@
       "lot_kind": "yarn",
       "product_code": "YRN-C40",
       "qty": 200.0,
-      "uom": "kg"
+      "uom": "kg",
+      "order_code": null
     },
     {
       "location_code": "YARN-STORE",
@@ -23,7 +25,8 @@
       "lot_kind": "yarn",
       "product_code": "YRN-C40",
       "qty": 200.0,
-      "uom": "kg"
+      "uom": "kg",
+      "order_code": null
     },
     {
       "location_code": "YARN-STORE",
@@ -31,7 +34,8 @@
       "lot_kind": "yarn",
       "product_code": "YRN-C40",
       "qty": 200.0,
-      "uom": "kg"
+      "uom": "kg",
+      "order_code": null
     },
     {
       "location_code": "YARN-STORE",
@@ -39,7 +43,8 @@
       "lot_kind": "yarn",
       "product_code": "YRN-C40",
       "qty": 200.0,
-      "uom": "kg"
+      "uom": "kg",
+      "order_code": null
     },
     {
       "location_code": "YARN-STORE",
@@ -47,7 +52,8 @@
       "lot_kind": "yarn",
       "product_code": "YRN-C40",
       "qty": 120.0,
-      "uom": "kg"
+      "uom": "kg",
+      "order_code": null
     },
     {
       "location_code": "YARN-STORE",
@@ -55,7 +61,8 @@
       "lot_kind": "yarn",
       "product_code": "YRN-C40",
       "qty": 120.0,
-      "uom": "kg"
+      "uom": "kg",
+      "order_code": null
     },
     {
       "location_code": "YARN-STORE",
@@ -63,7 +70,8 @@
       "lot_kind": "yarn",
       "product_code": "YRN-C40",
       "qty": 120.0,
-      "uom": "kg"
+      "uom": "kg",
+      "order_code": null
     },
     {
       "location_code": "YARN-STORE",
@@ -71,7 +79,8 @@
       "lot_kind": "yarn",
       "product_code": "YRN-C40",
       "qty": 120.0,
-      "uom": "kg"
+      "uom": "kg",
+      "order_code": null
     },
     {
       "location_code": "YARN-STORE",
@@ -79,7 +88,8 @@
       "lot_kind": "yarn",
       "product_code": "YRN-C40",
       "qty": 120.0,
-      "uom": "kg"
+      "uom": "kg",
+      "order_code": null
     },
     {
       "location_code": "YARN-STORE",
@@ -87,7 +97,8 @@
       "lot_kind": "yarn",
       "product_code": "YRN-C40",
       "qty": 100.0,
-      "uom": "kg"
+      "uom": "kg",
+      "order_code": null
     },
     {
       "location_code": "YARN-STORE",
@@ -95,7 +106,8 @@
       "lot_kind": "yarn",
       "product_code": "YRN-C40",
       "qty": 330.0,
-      "uom": "kg"
+      "uom": "kg",
+      "order_code": null
     }
   ]
 }

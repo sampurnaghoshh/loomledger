@@ -1,0 +1,22 @@
+{
+  "order_code": "SO-0412",
+  "status": "ok",
+  "due": "2026-10-16",
+  "required_kg": 312.0,
+  "shortfall_kg": 0.0,
+  "orders_ahead": [],
+  "lines": [
+    {
+      "product_code": "FIN-TWL-NVY",
+      "product": "Navy Twill",
+      "yarn_product_code": "YRN-C40",
+      "yarn_product": "Cotton 40s Combed Yarn",
+      "ordered_m": 2000.0,
+      "covered_m": 1000.0,
+      "unwoven_m": 1000.0,
+      "required_kg": 312.0,
+      "available_kg": 341.3,
+      "shortfall_kg": 0.0
+    }
+  ]
+}

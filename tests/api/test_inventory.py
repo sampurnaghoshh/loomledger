@@ -75,12 +75,13 @@ def test_receipt_creates_lot_in_yarn_store(client, auth):
     body = receipt()
     res = client.post("/api/inventory/receipts", json=body, headers=auth["store"])
     assert res.status_code == 201, res.text
-    assert res.json() == {"receipt_code": "GRN-Y-901", "lot_code": "Y-901", "kg": 150.5, "location": "YARN-STORE"}
+    assert res.json() == {"receipt_code": "GRN-Y-901", "lot_code": "Y-901", "kg": 150.5, "location": "YARN-STORE",
+                          "order_code": None}
 
     rows = client.get("/api/inventory/stock", headers=auth["store"]).json()["rows"]
     assert [r for r in rows if r["lot_code"] == "Y-901"] == [
         {"location_code": "YARN-STORE", "lot_code": "Y-901", "lot_kind": "yarn", "product_code": "YRN-C40",
-         "qty": 150.5, "uom": "kg"}]
+         "qty": 150.5, "uom": "kg", "order_code": None}]
 
 
 def test_receipt_replay_returns_original(client, auth):

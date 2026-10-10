@@ -15,7 +15,13 @@ DUPLICATE_LOT_CONSTRAINTS = {"lot_code_key", "goods_receipt_code_key"}
 
 def masters(conn: psycopg.Connection) -> dict:
     """What the gate-entry form can choose from."""
-    return {"suppliers": repo.suppliers(conn), "yarn_products": repo.yarn_products(conn)}
+    return {"suppliers": repo.suppliers(conn), "yarn_products": repo.yarn_products(conn),
+            "open_orders": repo.open_orders(conn)}
+
+
+def low_stock(conn: psycopg.Connection) -> list[dict]:
+    """Yarn whose free stock (usable on hand - still needed by open orders) is below its reorder level."""
+    return repo.low_stock(conn)
 
 
 def stock(conn: psycopg.Connection, as_of: datetime | None) -> dict:
@@ -41,9 +47,15 @@ def receive_yarn(conn: psycopg.Connection, req: ReceiptRequest, user: dict) -> t
             if product_id is None:
                 raise ApiError("NOT_FOUND", "Yarn product not found.", 404,
                                fields={"product_code": "unknown yarn product"})
+            order_id = None
+            if req.order_code is not None:
+                order_id = repo.order_id(conn, req.order_code)
+                if order_id is None:
+                    raise ApiError("NOT_FOUND", f"Order {req.order_code} not found.", 404,
+                                   fields={"order_code": "unknown order"})
             receipt_code = f"GRN-{req.lot_code}"
             grn_id = repo.insert_goods_receipt(conn, receipt_code, supplier_id, req.vehicle_no, req.challan_no,
-                                               user["id"])
+                                               user["id"], order_id)
             lot_id = repo.insert_yarn_lot(conn, req.lot_code, product_id, req.kg, req.price_per_kg, grn_id)
             repo.insert_receipt_move(conn, lot_id, req.kg, grn_id, req.idempotency_key, user["id"])
     except psycopg.errors.UniqueViolation as exc:
@@ -56,4 +68,5 @@ def receive_yarn(conn: psycopg.Connection, req: ReceiptRequest, user: dict) -> t
             raise ApiError("VALIDATION_FAILED", f"Lot {req.lot_code} already exists.", 422,
                            fields={"lot_code": "already exists"}, sqlstate=exc.sqlstate) from exc
         raise
-    return {"receipt_code": receipt_code, "lot_code": req.lot_code, "kg": req.kg, "location": repo.YARN_STORE}, True
+    return {"receipt_code": receipt_code, "lot_code": req.lot_code, "kg": req.kg, "location": repo.YARN_STORE,
+            "order_code": req.order_code}, True

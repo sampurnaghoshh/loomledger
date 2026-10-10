@@ -17,6 +17,7 @@ export type ApiErrorCode =
   | "ATTENDANCE_FUTURE_DATE" // 422  attendance can't be marked for a future day
   | "WORKER_INACTIVE" //      422  worker is not active
   | "OVERPAYMENT" //          422  payment above what is still outstanding
+  | "ORDER_CLOSED" //         422  gate entry: yarn received for an order that is dispatched / cancelled
   | "NOT_IN_ORDER" //         422  dispatch: roll is not reserved for this order
   | "DUPLICATE_REQUEST" //    409  same idempotency key already used (normally replayed as 200)
   | "CONFLICT_RETRY" //       409  concurrent change / deadlock — safe to resubmit

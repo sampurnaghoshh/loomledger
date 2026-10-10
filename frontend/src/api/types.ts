@@ -67,10 +67,24 @@ export interface StockRow {
   product_code: string;
   qty: number;
   uom: "kg" | "m";
+  order_code: string | null; // yarn received at the gate for this order (null = general stock)
 }
 export interface InventoryMasters {
   suppliers: { code: string; name: string }[];
   yarn_products: { code: string; name: string }[];
+  open_orders: { code: string; buyer: string }[]; // what a receipt can be for (dispatched/cancelled are refused)
+}
+/** GET /api/inventory/low-stock — yarn whose free stock is below its reorder level (migration 014). */
+export interface LowStock {
+  product_code: string;
+  product_name: string;
+  on_hand_kg: number; // usable: in the yarn store, not quarantined
+  quarantined_kg: number; // held — never counted as available
+  committed_kg: number; // what the open orders still need to weave
+  open_orders: number;
+  available_kg: number; // on hand − committed; negative = the order book needs more yarn than we have
+  reorder_level_kg: number;
+  below_reorder_kg: number;
 }
 export interface StockSnapshot {
   as_of: string | null; // null = now
@@ -233,6 +247,31 @@ export interface OrderSummary {
   status: "confirmed" | "in_production" | "partially_dispatched" | "dispatched" | "cancelled";
   progress: OrderProgress;
   tracking_token: string; // buyer page: /track/<tracking_token>
+  yarn_status: "ok" | "short" | null; // null = closed order
+  yarn_required_kg: number | null;
+  yarn_shortfall_kg: number | null;
+  yarn_short_of: string | null; // yarn product name(s) it is short of
+}
+/** GET /api/orders/{code}/yarn-check — enough yarn to weave what the order still needs? */
+export interface YarnCheck {
+  order_code: string;
+  status: "ok" | "short" | "closed";
+  due: string; // revised promise date if any
+  required_kg: number;
+  shortfall_kg: number;
+  orders_ahead: string[]; // open orders that take the same yarn first
+  lines: {
+    product_code: string;
+    product: string;
+    yarn_product_code: string;
+    yarn_product: string;
+    ordered_m: number;
+    covered_m: number; // reserved rolls that are not rejected, quarantined or recalled
+    unwoven_m: number;
+    required_kg: number;
+    available_kg: number; // usable yarn left for this order after the orders due before it
+    shortfall_kg: number;
+  }[];
 }
 export interface BuyerOrderStatus {
   order: string;
@@ -387,6 +426,7 @@ export interface ReceiptRequest {
   vehicle_no?: string;
   challan_no?: string;
   product_code?: string; // yarn product (api.inventory.masters); omitted = the only yarn product
+  order_code?: string; // which open order the yarn is for (optional)
   idempotency_key: string;
 }
 export interface ReceiptResponse {
@@ -394,6 +434,7 @@ export interface ReceiptResponse {
   lot_code: string;
   kg: number;
   location: string;
+  order_code: string | null;
 }
 export interface InspectionRequest {
   lot_code: string;

@@ -13,6 +13,7 @@ import {
   Loadable,
   PageHeader,
 } from "@/components/ui";
+import { LowStockBanner } from "@/components/YarnLowStock";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOCATION_ORDER = [
@@ -125,6 +126,8 @@ export default function InventoryPage() {
           </Button>
         }
       />
+
+      <LowStockBanner />
 
       <Card
         title="Stock time travel"
@@ -275,7 +278,14 @@ export default function InventoryPage() {
                               }
                             >
                               <td className="px-4 py-3 font-medium text-ink">
-                                {row.lot_code}
+                                <span className="font-mono">{row.lot_code}</span>
+                                {row.order_code && (
+                                  <span className="ml-2">
+                                    <Badge tone="brand">
+                                      For <span className="font-mono">{row.order_code}</span>
+                                    </Badge>
+                                  </span>
+                                )}
                               </td>
                               <td className="px-4 py-3 text-ink">
                                 {row.product_code}

@@ -369,3 +369,50 @@ def expected_pnl(anchor: date, frm: date, to: date) -> dict:
         "receivables": receivables,
         "payables": payables,
     }
+
+
+# ---------------------------------------------------------------------------
+# Yarn availability (G3). Every fabric is woven from one yarn product; the store warns when free yarn (usable
+# on hand minus what the open orders still need) drops below the reorder level. Usable = in the yarn store and
+# not quarantined. What an order still needs: its unwoven metres (ordered - reserved rolls that are not rejected,
+# quarantined or recalled) x yarn_issue_kg per metre. Open orders take usable yarn in due-date order.
+# ---------------------------------------------------------------------------
+YARN_PRODUCT = "YRN-C40"
+YARN_REORDER_LEVEL_KG = {YARN_PRODUCT: D("150")}
+RESERVED_ROLLS = {"SO-0412": 20, "SO-0419": 10, "SO-0398": 30, "SO-0405": 18}   # passed rolls, besides Y-112's
+
+
+def expected_yarn_plan(after_recall: bool, anchor: date = ANCHOR_DATE) -> dict:
+    """Independent yarn plan before / after the Y-112 recall."""
+    received = sum((kg for _, kg, _, _, _ in YARN_LOTS.values()), D(0))
+    usable = received - expected_mass_balance()["issued_kg"]
+    held = D(0)
+    if after_recall:
+        held = expected_money()["quarantined_material_qty"]
+        usable -= held
+    shipped = {order: rolls for order, _, _, rolls in DISPATCHES.values()}
+    impact = expected_order_impact(anchor)
+    orders = []
+    for o in ORDERS:
+        if shipped.get(o.code, 0) * ROLL_LENGTH_M >= o.qty_m:
+            continue                                                       # fully dispatched: not open
+        y112 = [r for r, (_, custody, order) in Y112_ROLLS.items() if order == o.code]
+        good = RESERVED_ROLLS[o.code] + (0 if after_recall else len([r for r in y112 if r not in REJECTED_ROLLS]))
+        unwoven = max(D(o.qty_m) - good * ROLL_LENGTH_M, D(0))
+        due = anchor + timedelta(days=o.promise_offset)
+        if after_recall and o.code in impact:
+            due = impact[o.code]["revised"]
+        orders.append({"order_code": o.code, "due": due, "covered_m": good * ROLL_LENGTH_M, "unwoven_m": unwoven,
+                       "required_kg": (yarn_issue_kg(o.family, "") / ROLL_LENGTH_M * unwoven).quantize(D("0.001"))})
+    orders.sort(key=lambda r: (r["due"], r["order_code"]))
+    cumulative = D(0)
+    for r in orders:
+        before = cumulative
+        cumulative += r["required_kg"]
+        r["available_kg"] = max(usable - before, D(0))
+        r["shortfall_kg"] = min(r["required_kg"], max(cumulative - usable, D(0)))
+        r["status"] = "short" if r["shortfall_kg"] > 0 else "ok"
+    committed = sum((r["required_kg"] for r in orders), D(0))
+    return {"on_hand_kg": usable, "quarantined_kg": held, "committed_kg": committed,
+            "available_kg": usable - committed, "reorder_level_kg": YARN_REORDER_LEVEL_KG[YARN_PRODUCT],
+            "orders": {r["order_code"]: r for r in orders}}

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Response
 
 from app.auth import Conn, CurrentUser, require_role
 from app.modules.orders import service
-from app.modules.orders.schemas import BuyerOrderStatus, DispatchRequest, DispatchResponse, OrderSummary
+from app.modules.orders.schemas import BuyerOrderStatus, DispatchRequest, DispatchResponse, OrderSummary, YarnCheck
 
 router = APIRouter(tags=["orders"])
 
@@ -13,6 +13,11 @@ router = APIRouter(tags=["orders"])
 @router.get("/api/orders", response_model=list[OrderSummary])
 def list_orders(conn: Conn, user: CurrentUser):
     return service.list_orders(conn)
+
+
+@router.get("/api/orders/{code}/yarn-check", response_model=YarnCheck)
+def yarn_check(code: str, conn: Conn, user: CurrentUser):
+    return service.yarn_check(conn, code)
 
 
 @router.post("/api/dispatches", response_model=DispatchResponse, status_code=201)

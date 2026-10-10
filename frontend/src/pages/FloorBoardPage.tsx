@@ -5,6 +5,7 @@ import type { MachineNow, MachineState, FloorEvent } from "@/api/types";
 import { useApi, useAction } from "@/hooks/useApi";
 import { machineStateTone } from "@/lib/tones";
 import { formatDate, formatDateTime, formatPct } from "@/lib/format";
+import { LowStockBadge } from "@/components/YarnLowStock";
 import {
   Badge,
   Button,
@@ -178,17 +179,20 @@ export default function FloorBoardPage() {
         title="Floor Board"
         subtitle="Live production-floor status across spinning, weaving, dyeing and finishing."
         actions={
-          <Button
-            variant="secondary"
-            onClick={refreshMachines}
-            loading={
-              machinesState.loading ||
-              outputState.loading ||
-              availabilityState.loading
-            }
-          >
-            Refresh data
-          </Button>
+          <>
+            <LowStockBadge />
+            <Button
+              variant="secondary"
+              onClick={refreshMachines}
+              loading={
+                machinesState.loading ||
+                outputState.loading ||
+                availabilityState.loading
+              }
+            >
+              Refresh data
+            </Button>
+          </>
         }
       />
 

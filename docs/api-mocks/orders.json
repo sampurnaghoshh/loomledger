@@ -16,7 +16,11 @@
       "dispatched_m": 1500.0,
       "quality_check_m": 0
     },
-    "tracking_token": "bd8db814-f234-55a9-a001-d0f6af766b89"
+    "tracking_token": "bd8db814-f234-55a9-a001-d0f6af766b89",
+    "yarn_status": null,
+    "yarn_required_kg": null,
+    "yarn_shortfall_kg": null,
+    "yarn_short_of": null
   },
   {
     "code": "SO-0412",
@@ -35,7 +39,11 @@
       "dispatched_m": 600.0,
       "quality_check_m": 0
     },
-    "tracking_token": "4155711b-d0c4-5f02-a2b5-bfd8dd09045d"
+    "tracking_token": "4155711b-d0c4-5f02-a2b5-bfd8dd09045d",
+    "yarn_status": "ok",
+    "yarn_required_kg": 312.0,
+    "yarn_shortfall_kg": 0.0,
+    "yarn_short_of": null
   },
   {
     "code": "SO-0419",
@@ -54,7 +62,11 @@
       "dispatched_m": 0,
       "quality_check_m": 0
     },
-    "tracking_token": "8b1ab95b-593a-5796-b23b-a7bdfc0cddd4"
+    "tracking_token": "8b1ab95b-593a-5796-b23b-a7bdfc0cddd4",
+    "yarn_status": "short",
+    "yarn_required_kg": 312.0,
+    "yarn_shortfall_kg": 312.0,
+    "yarn_short_of": "Cotton 40s Combed Yarn"
   },
   {
     "code": "SO-0405",
@@ -73,6 +85,10 @@
       "dispatched_m": 0,
       "quality_check_m": 0
     },
-    "tracking_token": "c1be7402-1f2c-5c3e-8c64-3eae94fdc565"
+    "tracking_token": "c1be7402-1f2c-5c3e-8c64-3eae94fdc565",
+    "yarn_status": "short",
+    "yarn_required_kg": 112.32,
+    "yarn_shortfall_kg": 83.02,
+    "yarn_short_of": "Cotton 40s Combed Yarn"
   }
 ]

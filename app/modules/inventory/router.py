@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Response
 
 from app.auth import Conn, CurrentUser, require_role
 from app.modules.inventory import service
-from app.modules.inventory.schemas import Masters, ReceiptRequest, ReceiptResponse, StockSnapshot
+from app.modules.inventory.schemas import LowStock, Masters, ReceiptRequest, ReceiptResponse, StockSnapshot
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
@@ -20,6 +20,11 @@ def masters(conn: Conn, user: dict = Depends(require_role("store"))):
 @router.get("/stock", response_model=StockSnapshot)
 def stock(conn: Conn, user: CurrentUser, as_of: datetime | None = None):
     return service.stock(conn, as_of)
+
+
+@router.get("/low-stock", response_model=list[LowStock])
+def low_stock(conn: Conn, user: CurrentUser):
+    return service.low_stock(conn)
 
 
 @router.post("/receipts", response_model=ReceiptResponse, status_code=201)
