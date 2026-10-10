@@ -68,13 +68,14 @@ export default function WorkforcePage() {
 
 // ---------------------------------------------------------------- register
 function RegisterView() {
-  const [day, setDay] = useState(istToday);
+  const [day, setDay] = useState<string>();           // undefined = the API's default (the last working day)
   const register = useApi(() => api.workforce.register(day), [day]);
   return (
     <>
       <div className="max-w-xs">
         <Field label="Day" hint="Today or an earlier day">
-          <Input type="date" value={day} max={istToday()} onChange={(e) => e.target.value && setDay(e.target.value)} />
+          <Input type="date" value={day ?? register.data?.day ?? ""} max={istToday()}
+            onChange={(e) => e.target.value && setDay(e.target.value)} />
         </Field>
       </div>
       <Loadable state={register}>

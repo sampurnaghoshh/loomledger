@@ -418,12 +418,11 @@ class Seeder:
                 reserve(r.code, order, r.inspected_at)
 
         # Dispatches
-        dispatches = [
-            ("DSP-0398-1", "SO-0398", self.at(-2, 11), [r.code for r in alloc["SO-0398"]]),
-            ("DSP-0412-1", "SO-0412", self.at(-1, 16),
-             ["R-1204", "R-1205"] + [r.code for r in alloc["SO-0412"][:10]]),
-        ]
-        for code, order, when, lots in dispatches:
+        shipped = {"DSP-0398-1": [r.code for r in alloc["SO-0398"]],
+                   "DSP-0412-1": ["R-1204", "R-1205"] + [r.code for r in alloc["SO-0412"][:10]]}
+        for code, (order, day, hour, n_rolls) in S.DISPATCHES.items():
+            when, lots = self.at(day, hour), shipped[code]
+            assert len(lots) == n_rolls, f"{code}: {len(lots)} rolls, scenario says {n_rolls}"
             late = [c for c in lots if self.rolls[c].inspected_at is None or self.rolls[c].inspected_at >= when]
             assert not late, f"{code}: rolls not inspected before dispatch: {late}"
             # these historical shipments mix dye batches; Shade Guard (008) needs the approval on record
@@ -440,20 +439,34 @@ class Seeder:
                 self.c.execute("UPDATE lot SET status = 'dispatched' WHERE id = %s", (self.id["lot"][c],))
             family = next(o.family for o in S.ORDERS if o.code == order)
             amount = S.PRICE_PER_M[family] * S.ROLL_LENGTH_M * len(lots)
-            inv = self.one(
+            assert amount == S.expected_invoices()[S.invoice_code(code)][1]
+            self.id["invoice"][S.invoice_code(code)] = self.one(
                 """INSERT INTO invoice (code, order_id, dispatch_id, amount, issued_at)
                    VALUES (%s, %s, %s, %s, %s) RETURNING id""",
-                (code.replace("DSP", "INV"), self.id["order"][order], did, amount, when))
-            if order == "SO-0398":
-                self.c.execute(
-                    "INSERT INTO payment (invoice_id, amount, paid_at, method) VALUES (%s, %s, %s, 'bank_transfer')",
-                    (inv, amount, self.at(-1, 12)))
+                (S.invoice_code(code), self.id["order"][order], did, amount, when))
             self.c.execute(
                 """INSERT INTO order_event (order_id, kind, message, visible_to_buyer, created_at)
                    VALUES (%s, 'dispatched', %s, true, %s)""",
                 (self.id["order"][order],
                  f"Dispatched {len(lots)} rolls ({len(lots) * int(S.ROLL_LENGTH_M):,} m) on vehicle KA-05-TR-7781.",
                  when))
+
+    # ------------------------------------------------------------------ money
+    def payments(self) -> None:
+        """Buyer payments against invoices and supplier payments against yarn bills (scenario.BUYER_PAYMENTS,
+        SUPPLIER_PAYMENTS). The database refuses anything above the outstanding amount (LL009)."""
+        invoices, bills = S.expected_invoices(), S.expected_bills()
+        for n, (inv, amount, day, hour, method) in enumerate(S.BUYER_PAYMENTS):
+            self.c.execute(
+                """INSERT INTO payment (invoice_id, amount, paid_at, method, idempotency_key)
+                   VALUES (%s, %s, %s, %s, %s)""",
+                (self.id["invoice"][inv], amount or invoices[inv][1], self.at(day, hour), method, f"seed:pay:{n}:{inv}"))
+        for n, (lot, amount, day, hour, method) in enumerate(S.SUPPLIER_PAYMENTS):
+            grn = f"GRN-{lot}"
+            self.c.execute(
+                """INSERT INTO supplier_payment (goods_receipt_id, amount, paid_at, method, idempotency_key)
+                   SELECT goods_receipt_id, %s, %s, %s, %s FROM lot WHERE id = %s""",
+                (amount or bills[grn][1], self.at(day, hour), method, f"seed:bill:{n}:{grn}", self.id["lot"][lot]))
 
     # ------------------------------------------------------------------ floor, people, portal
     def floor_and_people(self) -> None:
@@ -518,6 +531,7 @@ class Seeder:
         self.busy_floor()
         self.dye_and_inspect()
         self.orders()
+        self.payments()
         self.floor_and_people()
 
 

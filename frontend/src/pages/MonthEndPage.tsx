@@ -1,14 +1,14 @@
-// Close of the demo: the yarn mass balance to date (where every issued kilo went, and which loom loses it)
-// and the true cost of every roll on an order. Accounts and the owner only.
+// Close of the demo: the yarn mass balance to date (where every issued kilo went, and which loom loses it),
+// the true cost of every roll on an order, and the month's profit & loss. Accounts and the owner only.
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Lock } from "lucide-react";
 import { api } from "@/api/client";
-import type { MassBalance, OrderSummary, RollCost } from "@/api/types";
+import type { MassBalance, OrderSummary, Pnl, RollCost } from "@/api/types";
 import { Badge, Card, DataTable, EmptyState, Field, Loadable, PageHeader, Select, StatTile, type Column } from "@/components/ui";
 import { useApi } from "@/hooks/useApi";
 import { getSession } from "@/lib/auth";
-import { formatDate, formatINR, formatMonth, formatPct, formatQty, humanize } from "@/lib/format";
+import { formatDate, formatDateTime, formatINR, formatMonth, formatPct, formatQty, humanize } from "@/lib/format";
 import { custodyLabel, custodyTone, lotStatusTone } from "@/lib/tones";
 
 const ALLOWED_ROLES = ["owner", "accounts"];
@@ -19,7 +19,7 @@ export default function MonthEndPage() {
   const role = getSession()?.user.role;
   return (
     <div className="grid gap-6">
-      <PageHeader title="Month-end" subtitle="Yarn mass balance and the true cost of every roll" />
+      <PageHeader title="Month-end" subtitle="Yarn mass balance, the true cost of every roll, and profit & loss" />
       {role && ALLOWED_ROLES.includes(role) ? <MonthEnd /> : <NotAllowed />}
     </div>
   );
@@ -30,7 +30,7 @@ function NotAllowed() {
     <Card>
       <EmptyState
         title="Month-end figures are for Accounts"
-        body="Sign in as accounts@ or owner@ to see the mass balance and roll costs."
+        body="Sign in as accounts@ or owner@ to see the mass balance, roll costs and profit & loss."
         action={<Lock className="size-5 text-muted" aria-hidden />}
       />
     </Card>
@@ -101,6 +101,8 @@ function MonthEnd() {
       </Loadable>
 
       <RollCosts />
+
+      <ProfitAndLoss months={months} />
     </>
   );
 }
@@ -255,5 +257,147 @@ function CostTable({ orderCode }: { orderCode: string }) {
         );
       }}
     </Loadable>
+  );
+}
+
+// ---------------------------------------------------------------- profit & loss
+const MONTH_TO_DATE = "";      // the API default: this month up to the last working day
+
+/** A whole month, both ends inclusive (P&L takes mill dates, not timestamps). */
+function monthDates(ym: string): { from: string; to: string } {
+  const [y, m] = ym.split("-").map(Number);
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return { from: `${ym}-01`, to: `${ym}-${String(last).padStart(2, "0")}` };
+}
+
+/** One plain sentence for the owner, built only from the response. */
+function pnlSentence(p: Pnl): string {
+  const a = p.accrual;
+  const c = p.cash;
+  const result = a.profit >= 0 ? `a profit of ${formatINR(a.profit)}` : `a loss of ${formatINR(-a.profit)}`;
+  const sales = a.invoices === 0 ? "Nothing was invoiced" : `${formatINR(a.revenue)} invoiced for ${a.rolls_invoiced} rolls`;
+  const cash = c.net_cash >= 0 ? `cash grew by ${formatINR(c.net_cash)}` : `cash went down by ${formatINR(-c.net_cash)}`;
+  let out = `${sales}: ${result} after the cost of the rolls sold and wages; ${cash}.`;
+  if (p.receivables_total > 0 || p.payables_total > 0)
+    out += ` Buyers owe ${formatINR(p.receivables_total)}; we owe suppliers ${formatINR(p.payables_total)}.`;
+  const exposure = p.recalls.reduce((s, r) => s + r.total_exposure, 0);
+  if (exposure > 0) out += ` A recall this period puts ${formatINR(exposure)} at risk, not yet in the profit.`;
+  return out;
+}
+
+function ProfitAndLoss({ months }: { months: string[] }) {
+  const [period, setPeriod] = useState(MONTH_TO_DATE);
+  const pnl = useApi(() => {
+    if (period === MONTH_TO_DATE) return api.finance.pnl();
+    const w = monthDates(period);
+    return api.finance.pnl(w.from, w.to);
+  }, [period]);
+
+  return (
+    <section className="grid gap-6" aria-labelledby="pnl-heading">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 id="pnl-heading" className="text-xl font-semibold tracking-tight text-ink">Profit &amp; loss</h2>
+          <p className="mt-1 text-sm text-muted">Did the mill make money? Two honest views: profit as booked, and cash as it moved.</p>
+        </div>
+        <div className="w-full max-w-xs">
+          <Field label="Month">
+            <Select value={period} onChange={(e) => setPeriod(e.target.value)}>
+              <option value={MONTH_TO_DATE}>This month to date</option>
+              {months.slice(1).map((ym) => (
+                <option key={ym} value={ym}>
+                  {formatMonth(ym)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+      </div>
+      <Loadable state={pnl}>{(p) => <PnlView p={p} />}</Loadable>
+    </section>
+  );
+}
+
+function PnlView({ p }: { p: Pnl }) {
+  const a = p.accrual;
+  const c = p.cash;
+  const receivableCols: Column<Pnl["receivables"][number]>[] = [
+    {
+      key: "buyer",
+      header: "Buyer",
+      render: (r) => (
+        <span className="whitespace-nowrap"><span className="font-medium">{r.buyer}</span> <span className="font-mono text-muted">{r.buyer_code}</span></span>
+      ),
+    },
+    { key: "invoices", header: "Invoices", align: "right", render: (r) => r.invoices },
+    { key: "outstanding", header: "Owed to us", align: "right", render: (r) => <span className="font-semibold">{formatINR(r.outstanding)}</span> },
+  ];
+  const payableCols: Column<Pnl["payables"][number]>[] = [
+    {
+      key: "supplier",
+      header: "Supplier",
+      render: (r) => (
+        <span className="whitespace-nowrap"><span className="font-medium">{r.supplier}</span> <span className="font-mono text-muted">{r.supplier_code}</span></span>
+      ),
+    },
+    { key: "bills", header: "Yarn bills", align: "right", render: (r) => r.bills },
+    { key: "outstanding", header: "We owe", align: "right", render: (r) => <span className="font-semibold">{formatINR(r.outstanding)}</span> },
+  ];
+  const basis = `${c.wages_paid_basis.charAt(0).toUpperCase()}${c.wages_paid_basis.slice(1)}`;
+
+  return (
+    <>
+      <p role="status" className="rounded-lg border border-line bg-surface px-4 py-3 text-sm text-ink">
+        <span className="font-medium">{formatDate(p.from)} – {formatDate(p.to)}.</span> {pnlSentence(p)}
+      </p>
+
+      <Card
+        title="Profit · accrual"
+        subtitle={`Revenue invoiced − cost of the rolls sold − wages. Labour is counted once: the ${formatINR(a.labour_in_lot_cost_excluded)} of operator time inside these rolls' cost is left out, because the period's wages already pay it.`}
+      >
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatTile label="Revenue" value={formatINR(a.revenue)} hint={`${a.invoices} invoices · ${a.rolls_invoiced} rolls`} tone="brand" />
+          <StatTile
+            label="Cost of rolls sold"
+            value={formatINR(a.cost_of_goods_sold)}
+            hint={`Yarn ${formatINR(a.material)} · machine ${formatINR(a.machine)} · chemicals ${formatINR(a.chemicals)}`}
+          />
+          <StatTile label="Wages" value={formatINR(a.wages)} hint="Everyone on the register, this period" />
+          <StatTile label={a.profit >= 0 ? "Profit" : "Loss"} value={formatINR(Math.abs(a.profit))} tone={a.profit >= 0 ? "ok" : "bad"} />
+        </div>
+      </Card>
+
+      <Card title="Cash" subtitle="Money that actually came in and went out in the period.">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatTile label="Received from buyers" value={formatINR(c.received_from_buyers)} tone="brand" />
+          <StatTile label="Yarn bills paid" value={formatINR(c.yarn_bills_paid)} />
+          <StatTile label="Wages paid" value={formatINR(c.wages_paid)} hint={basis} />
+          <StatTile label={c.net_cash >= 0 ? "Net cash in" : "Net cash out"} value={formatINR(Math.abs(c.net_cash))} tone={c.net_cash >= 0 ? "ok" : "bad"} />
+        </div>
+      </Card>
+
+      {p.recalls.map((r) => (
+        <div key={r.recall_code} className="rounded-xl border border-hold bg-hold-soft px-4 py-3 text-sm text-ink">
+          <p className="font-medium">
+            <Badge tone="hold">Contingent</Badge> Recall <span className="font-mono">{r.recall_code}</span> on yarn lot{" "}
+            <span className="font-mono">{r.lot_code}</span>, {formatDateTime(r.applied_at)}: {formatINR(r.total_exposure)} total exposure
+          </p>
+          <p className="mt-1 text-muted">
+            Already lost {formatINR(r.cost_already_incurred)} · newly exposed {formatINR(r.recall_exposure)} · recoverable yarn{" "}
+            {formatINR(r.quarantined_material_value)}. Shown beside the profit, not subtracted: the rolls already at the buyer are
+            inside the cost of rolls sold.
+          </p>
+        </div>
+      ))}
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card title={`Receivables · ${formatINR(p.receivables_total)}`} subtitle={`Invoiced, not yet paid, as of ${formatDate(p.to)}`} padded={false}>
+          <DataTable columns={receivableCols} rows={p.receivables} rowKey={(r) => r.buyer_code} emptyText="Every invoice is paid." />
+        </Card>
+        <Card title={`Payables · ${formatINR(p.payables_total)}`} subtitle={`Yarn bills not yet paid, as of ${formatDate(p.to)}`} padded={false}>
+          <DataTable columns={payableCols} rows={p.payables} rowKey={(r) => r.supplier_code} emptyText="Every yarn bill is paid." />
+        </Card>
+      </div>
+    </>
   );
 }

@@ -12,7 +12,7 @@ from app.modules.workforce.schemas import MarkRequest
 
 
 def register(conn: psycopg.Connection, day: date | None) -> dict:
-    day = day or repo.today(conn)
+    day = day or repo.last_working_day(conn)
     return {"day": day, "shifts": repo.shifts(conn), "workers": repo.register(conn, day)}
 
 

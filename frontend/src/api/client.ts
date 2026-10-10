@@ -23,6 +23,9 @@ import type {
   MachineNow,
   MachineState,
   MassBalance,
+  PaymentRequest,
+  PaymentResponse,
+  Pnl,
   OrderSummary,
   QualityQueueItem,
   ReceiptRequest,
@@ -142,6 +145,8 @@ const real = {
       request<MassBalance>("GET", `/api/finance/mass-balance${qs({ from, to })}`),
     rollCosts: (orderCode: string) =>
       request<RollCost[]>("GET", `/api/finance/roll-costs${qs({ order_code: orderCode })}`),
+    pnl: (from?: string, to?: string) => request<Pnl>("GET", `/api/finance/pnl${qs({ from, to })}`),
+    recordPayment: (req: PaymentRequest) => request<PaymentResponse>("POST", "/api/finance/payments", req),
   },
 };
 

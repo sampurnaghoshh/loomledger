@@ -1,0 +1,58 @@
+{
+  "to": "2026-10-10",
+  "cash": {
+    "net_cash": -230380.0,
+    "wages_paid": 115380.0,
+    "yarn_bills_paid": 365000.0,
+    "wages_paid_basis": "assumed paid as earned",
+    "received_from_buyers": 250000.0
+  },
+  "from": "2026-10-01",
+  "accrual": {
+    "wages": 115380.0,
+    "profit": -29812.56,
+    "machine": 87030.0,
+    "revenue": 321000.0,
+    "invoices": 2,
+    "material": 120322.56,
+    "chemicals": 28080.0,
+    "rolls_invoiced": 42,
+    "cost_of_goods_sold": 235432.56,
+    "labour_in_lot_cost_excluded": 28800.0
+  },
+  "recalls": [
+    {
+      "lot_code": "Y-112",
+      "applied_at": "2026-10-10T09:45:00+05:30",
+      "recall_code": "RC-Y-112",
+      "total_exposure": 123640.0,
+      "recall_exposure": 64024.0,
+      "cost_already_incurred": 22488.0,
+      "quarantined_material_value": 37128.0
+    }
+  ],
+  "payables": [
+    {
+      "bills": 2,
+      "supplier": "Kaveri Yarn Traders",
+      "outstanding": 115920.0,
+      "supplier_code": "SUP-KAV"
+    },
+    {
+      "bills": 2,
+      "supplier": "Narmada Spinners",
+      "outstanding": 41900.0,
+      "supplier_code": "SUP-NAR"
+    }
+  ],
+  "receivables": [
+    {
+      "buyer": "Meridian Apparels",
+      "invoices": 1,
+      "buyer_code": "BUY-MER",
+      "outstanding": 71000.0
+    }
+  ],
+  "payables_total": 157820.0,
+  "receivables_total": 71000.0
+}

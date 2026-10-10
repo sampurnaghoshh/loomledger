@@ -36,6 +36,7 @@ regenerate, update `frontend/src/api/types.ts`, and tell the team in the group c
 | SQLSTATE `08xxx` / DB unreachable / pool timeout | 503 | `DB_UNAVAILABLE` |
 | SQLSTATE `LL007` (attendance for a future day) | 422 | `ATTENDANCE_FUTURE_DATE` + `fields.day` |
 | SQLSTATE `LL008` (attendance for an inactive worker) | 422 | `WORKER_INACTIVE` + `fields.marks` |
+| SQLSTATE `LL009` (payment above what is still outstanding on the invoice / yarn bill) | 422 | `OVERPAYMENT` + `fields.amount: "at most <outstanding>"` |
 | SQLSTATE `LL006` (dispatch mixes dye batches, no `shade_override_reason`) | 409 | `SHADE_MISMATCH` + `fields: {batches: "DB-08, DB-14"}` |
 | bad login | 401 | `INVALID_CREDENTIALS` |
 | missing/expired token | 401 | `UNAUTHENTICATED` |
@@ -125,7 +126,7 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 ### Workforce (attendance + wages)
 | Method & path | Body / query | Response | Owner | Screen |
 |---|---|---|---|---|
-| `GET /api/workforce/attendance` | `?day=YYYY-MM-DD` (default today IST). Role `floor_supervisor` | `workforce_attendance.json`: `{day, shifts[], workers[{worker_code, full_name, skill, status, shift_code}]}` (`status: null` = not marked) | Sampurna | Sampurna |
+| `GET /api/workforce/attendance` | `?day=YYYY-MM-DD` (default: the last working day in IST — a Sunday opens Saturday's register). Role `floor_supervisor` | `workforce_attendance.json`: `{day, shifts[], workers[{worker_code, full_name, skill, status, shift_code}]}` (`status: null` = not marked) | Sampurna | Sampurna |
 | `POST /api/workforce/attendance` | `{day, shift_code, marks: [{worker_code, status: present\|absent\|half_day\|leave}], idempotency_key}` — one transaction; one row per worker per day (marking again corrects it). Role `floor_supervisor` | `201 {batch_id, day, shift_code, marked, marked_at}`; replay → `200` original; `404` unknown shift/worker; `422 ATTENDANCE_FUTURE_DATE` (LL007), `422 WORKER_INACTIVE` (LL008), `422` duplicate worker / empty marks | Sampurna | Sampurna |
 | `GET /api/workforce/wages` | `?from=&to=` (inclusive; default this month to date). Role `accounts` | `workforce_wages.json`: `{from, to, totals{workers, days_worked, shifts_worked, gross_wage}, workers[…]}` — `wages()` (012): a shift pays `hourly_wage` × shift length, half day ½, absent/leave 0 | Sampurna | Sampurna |
 
@@ -134,6 +135,8 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 |---|---|---|---|---|
 | `GET /api/finance/mass-balance` | `?from=&to=` (default all time = `null`; date or timestamp, naive = IST; window = runs **started** in `[from, to)`; `by_machine` uses the same window, worst first, ties by machine code; empty window → zeros + `unaccounted_pct: null`; `first_run_at` = earliest weaving run in the window, null if none). Role `accounts` | `finance_mass_balance.json`; `422` bad window | Sampurna | Dhruva |
 | `GET /api/finance/roll-costs` | `?order_code=SO-0412` (required) — every roll reserved for the order, `v_roll_cost` (material + machine + labour + chemicals) + custody. Role `accounts` | `finance_roll_costs_SO-0412.json` (exported after the recall; costs are the same before it); `404` unknown order, `422` missing `order_code` | Sampurna | Dhruva |
+| `GET /api/finance/pnl` | `?from=&to=` (mill dates, both inclusive; default: the month of the last working day, up to that day) → `monthly_pnl()` (013). **Accrual:** revenue = invoices issued in the period; `cost_of_goods_sold` = `lot_cost()` material + machine + chemicals of the invoiced rolls (its labour is reported as `labour_in_lot_cost_excluded`, not added); `wages` = `wages(from, to)`; `profit` = revenue − COGS − wages. **Cash:** buyer payments received − yarn bills paid − wages (`wages_paid_basis`: "assumed paid as earned"). `receivables` per buyer / `payables` per supplier as of `to`, largest first. `recalls`: recalls applied in the period with their exposure — contingent, **not** subtracted from profit. Role `accounts` | `finance_pnl.json`, `finance_pnl_after_recall.json` (month to the demo day); `422` from after to | Sampurna | Sampurna |
+| `POST /api/finance/payments` | `{invoice_code: INV-dddd-n, amount > 0 (≤ 2 decimals), method: bank_transfer\|cheque\|upi\|cash, idempotency_key}` — a buyer payment against an invoice, paid now. Role `accounts` | `201 {payment_id, invoice_code, amount, method, paid_at, invoice_amount, outstanding_after}`; replay → `200` original; `404` unknown invoice; `422 OVERPAYMENT` (LL009); `422 VALIDATION_FAILED` | Sampurna | — |
 
 ## Contract test (backend)
 

@@ -283,6 +283,64 @@ def test_wages_pay_shift_hours_times_rate(db):
     assert db.execute("SELECT shift_hours(id) FROM shift WHERE code = 'B'").fetchone()[0] == S.SHIFT_HOURS   # across midnight
 
 
+# ---------------------------------------------------------------- money (013)
+PAY = """INSERT INTO payment (invoice_id, amount, paid_at, method, idempotency_key)
+         SELECT id, %s, now(), 'upi', %s FROM invoice WHERE code = %s"""
+BILL = """INSERT INTO supplier_payment (goods_receipt_id, amount, paid_at, method, idempotency_key)
+          SELECT id, %s, now(), 'cheque', %s FROM goods_receipt WHERE code = %s"""
+
+
+def _outstanding_invoice(db, code: str) -> D:
+    return db.execute("SELECT outstanding FROM v_invoice_balance WHERE code = %s", (code,)).fetchone()[0]
+
+
+def test_buyer_cannot_pay_more_than_is_outstanding(db):
+    left = _outstanding_invoice(db, "INV-0412-1")
+    _, paid, *_ = S.BUYER_PAYMENTS[1]
+    assert left == S.expected_invoices()["INV-0412-1"][1] - paid
+    err = expect_sqlstate(db, "LL009", PAY, (left + D("0.01"), "t:over", "INV-0412-1"))
+    assert "exceeds" in str(err) and err.diag.message_detail == f"{left:.2f}"
+    expect_sqlstate(db, "LL009", PAY, (D("1"), "t:paid", "INV-0398-1"))                 # already paid in full
+
+
+def test_two_payments_cannot_together_exceed_the_invoice(db):
+    left = _outstanding_invoice(db, "INV-0412-1")
+    with db.transaction(force_rollback=True):
+        db.execute(PAY, (left - D("100"), "t:part1", "INV-0412-1"))
+        with pytest.raises(psycopg.Error) as err:
+            db.execute(PAY, (D("100.01"), "t:part2", "INV-0412-1"))
+        assert err.value.sqlstate == "LL009"
+
+
+def test_cannot_pay_a_supplier_more_than_the_bill(db):
+    lot, part, *_ = S.SUPPLIER_PAYMENTS[-1]                                               # the part-paid bill
+    _, bill = S.expected_bills()[f"GRN-{lot}"]
+    expect_sqlstate(db, "LL009", BILL, (bill - part + D("0.01"), "t:bill-over", f"GRN-{lot}"))
+    expect_sqlstate(db, "LL009", BILL, (D("1"), "t:bill-paid", "GRN-Y-101"))              # paid in full
+
+
+@pytest.mark.parametrize("sql,code", [(PAY, "INV-0412-1"), (BILL, "GRN-Y-112")])
+def test_payments_are_positive_and_keyed_once(db, sql, code):
+    expect_sqlstate(db, "23514", sql, (D("0"), "t:zero", code))
+    expect_sqlstate(db, "23514", sql, (D("-5"), "t:negative", code))
+    with db.transaction(force_rollback=True):
+        db.execute(sql, (D("10"), "t:once", code))
+        with pytest.raises(psycopg.errors.UniqueViolation):
+            db.execute(sql, (D("10"), "t:once", code))
+
+
+def test_pnl_counts_labour_once(db):
+    p = db.execute("SELECT monthly_pnl(%s, %s)", (S.ANCHOR_DATE.replace(day=1), S.ANCHOR_DATE)).fetchone()[0]
+    a = p["accrual"]
+    # COGS = lot_cost without its labour; labour enters only as wages() for the period
+    assert a["cost_of_goods_sold"] == pytest.approx(a["material"] + a["machine"] + a["chemicals"])
+    assert a["profit"] == pytest.approx(a["revenue"] - a["cost_of_goods_sold"] - a["wages"])
+    assert a["labour_in_lot_cost_excluded"] > 0
+    wages = db.execute("SELECT SUM(gross_wage) FROM wages(%s, %s)",
+                       (S.ANCHOR_DATE.replace(day=1), S.ANCHOR_DATE)).fetchone()[0]
+    assert D(str(a["wages"])) == wages
+
+
 def test_add_working_days_skips_sundays(db):
     # Sat 10 Oct 2026 + 1 working day = Mon 12 Oct
     assert db.execute("SELECT add_working_days('2026-10-10', 1)").fetchone()[0].isoformat() == "2026-10-12"

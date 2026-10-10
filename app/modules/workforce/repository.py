@@ -6,8 +6,9 @@ from datetime import date
 import psycopg
 
 
-def today(conn: psycopg.Connection) -> date:
-    return conn.execute("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date AS d").fetchone()["d"]
+def last_working_day(conn: psycopg.Connection) -> date:
+    """Today in mill time, or the Saturday before on a Sunday (the mill works Mon–Sat)."""
+    return conn.execute("SELECT last_working_day((now() AT TIME ZONE 'Asia/Kolkata')::date) AS d").fetchone()["d"]
 
 
 def shifts(conn: psycopg.Connection) -> list[dict]:

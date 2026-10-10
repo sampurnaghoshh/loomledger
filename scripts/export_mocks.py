@@ -194,6 +194,11 @@ def export(conn) -> None:
         write(f"track_{order}_before", conn.execute("SELECT buyer_order_status(%s) AS j",
                                                     (buyer_token(order),)).fetchone()["j"])
 
+    # ---- monthly P&L (G2): the month to the demo day, before and after the recall
+    month_from = date(anchor.year, anchor.month, 1)
+    pnl = lambda: conn.execute("SELECT monthly_pnl(%s, %s) AS p", (month_from, anchor)).fetchone()["p"]  # noqa: E731
+    write("finance_pnl", pnl())
+
     with conn.transaction():
         conn.execute("SELECT apply_recall(%s, 'Colour mismatch traced to yarn lot Y-112', "
                      "(SELECT id FROM app_user WHERE role = 'qc'))", (y112,))
@@ -220,6 +225,7 @@ def export(conn) -> None:
     for order in ("SO-0412", "SO-0419"):
         write(f"track_{order}_after", conn.execute("SELECT buyer_order_status(%s) AS j",
                                                    (buyer_token(order),)).fetchone()["j"])
+    write("finance_pnl_after_recall", pnl())
     write("error_not_found", {"error": {"code": "NOT_FOUND", "message": "This tracking link is invalid or has expired."}})
 
     # ---- orders

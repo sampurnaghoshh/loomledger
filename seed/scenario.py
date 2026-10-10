@@ -303,3 +303,69 @@ def expected_register(anchor: date = ANCHOR_DATE) -> dict[str, dict[date, tuple[
         out[code] = days
     return out
 
+
+
+# ---------------------------------------------------------------------------
+# Money in and money out (G2: monthly P&L). An invoice is raised per dispatch at price/m x 50 m x rolls; a goods
+# receipt is the yarn bill (kg x ₹/kg). Payments below are what the seed records; nothing else pays anything.
+# ---------------------------------------------------------------------------
+DISPATCHES = {                     # dispatch: (order, day offset, hour, rolls shipped)
+    "DSP-0398-1": ("SO-0398", -2, 11, 30),
+    "DSP-0412-1": ("SO-0412", -1, 16, 12),     # includes R-1204 and R-1205 (EXPECTED_AT_CUSTOMER)
+}
+BUYER_PAYMENTS = [                 # (invoice, ₹ or None = in full, day offset, hour, method)
+    ("INV-0398-1", None, -1, 12, "bank_transfer"),
+    ("INV-0412-1", D("40000"), -1, 18, "upi"),  # Meridian's part payment on delivery
+]
+SUPPLIER_PAYMENTS = [              # (yarn lot whose GRN is paid, ₹ or None = in full, day offset, hour, method)
+    *[(lot, None, -8, 11, "bank_transfer") for lot in
+      ("Y-101", "Y-102", "Y-103", "Y-104", "Y-105", "Y-106", "Y-107", "Y-108")],
+    ("Y-109", D("15000"), -3, 11, "cheque"),
+]                                  # Y-110, Y-111 on 30-day credit; Y-112 held back (the quality claim)
+
+
+def invoice_code(dispatch: str) -> str:
+    return dispatch.replace("DSP", "INV")
+
+
+def expected_invoices() -> dict[str, tuple[str, D, int]]:
+    """invoice -> (order, amount, issue day offset)."""
+    family = {o.code: o.family for o in ORDERS}
+    return {invoice_code(d): (order, PRICE_PER_M[family[order]] * ROLL_LENGTH_M * rolls, day)
+            for d, (order, day, _, rolls) in DISPATCHES.items()}
+
+
+def expected_bills() -> dict[str, tuple[str, D]]:
+    """goods receipt -> (supplier, amount); every yarn bill is received before day -18."""
+    return {f"GRN-{lot}": (supplier, kg * price) for lot, (_, kg, price, supplier, _) in YARN_LOTS.items()}
+
+
+def expected_pnl(anchor: date, frm: date, to: date) -> dict:
+    """Independent revenue, cash and balances for [frm, to]. Wages and COGS come from wages()/lot_cost(), which
+    have their own independent tests; the API test checks P&L agrees with them."""
+    on = lambda offset: frm <= anchor + timedelta(days=offset) <= to          # noqa: E731
+    upto = lambda offset: anchor + timedelta(days=offset) <= to               # noqa: E731
+    invoices, bills = expected_invoices(), expected_bills()
+    buyer = {o.code: o.buyer for o in ORDERS}
+    in_period = {k: v for k, v in invoices.items() if on(v[2])}
+    paid_in = {inv: sum((amt or invoices[inv][1] for i, amt, d, _, _ in BUYER_PAYMENTS if i == inv and upto(d)), D(0))
+               for inv in invoices}
+    bill_paid = {grn: sum((amt or bills[grn][1] for lot, amt, d, _, _ in SUPPLIER_PAYMENTS
+                           if f"GRN-{lot}" == grn and upto(d)), D(0)) for grn in bills}
+    receivables: dict[str, D] = {}
+    for inv, (order, amount, day) in invoices.items():
+        if upto(day) and amount - paid_in[inv] > 0:
+            receivables[buyer[order]] = receivables.get(buyer[order], D(0)) + amount - paid_in[inv]
+    payables: dict[str, D] = {}
+    for grn, (supplier, amount) in bills.items():       # all bills predate any demo period end
+        if amount - bill_paid[grn] > 0:
+            payables[supplier] = payables.get(supplier, D(0)) + amount - bill_paid[grn]
+    return {
+        "invoices": len(in_period),
+        "rolls_invoiced": sum(DISPATCHES[d][3] for d in DISPATCHES if invoice_code(d) in in_period),
+        "revenue": sum((v[1] for v in in_period.values()), D(0)),
+        "received_from_buyers": sum((amt or invoices[i][1] for i, amt, d, _, _ in BUYER_PAYMENTS if on(d)), D(0)),
+        "yarn_bills_paid": sum((amt or bills[f"GRN-{lot}"][1] for lot, amt, d, _, _ in SUPPLIER_PAYMENTS if on(d)), D(0)),
+        "receivables": receivables,
+        "payables": payables,
+    }
