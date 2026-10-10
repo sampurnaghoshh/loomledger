@@ -108,7 +108,7 @@ export default function FloorBoardPage() {
       if (event.state === "breakdown") {
         setNotice(`${event.machine_code} has reported a breakdown.`);
       }
-    });
+    }, refreshMachines); // after a reconnect, re-fetch what was missed while the socket was down
 
     return unsubscribe;
   }, []);
