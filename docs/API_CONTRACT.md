@@ -63,6 +63,16 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 | `POST /api/floor/machines/{code}/state` | `{state, reason?}` — closes the open state row, opens a new one, in one transaction | `{machine_code, state, started_at}` | Sampurna | Adithi, simulator |
 | `WS /ws/floor` | – | stream of `ws_floor_event.json` (relay of `LISTEN loomledger_floor`) | Sampurna | Adithi |
 
+**`WS /ws/floor`** details (`app/realtime.py`):
+- Auth: `ws://<host>/ws/floor?token=<login token>` (browsers can't set headers on a WebSocket). Missing/invalid/expired
+  token → the server accepts, then closes with code **4401** (`unauthenticated`): send the user to login.
+- Server → client only; each message is one JSON text frame shaped exactly like `ws_floor_event.json`. The payload is
+  built by the database trigger (migration 006). A state change produces **two** events: the old row closing
+  (`ended_at` set) and then the new open row (`ended_at: null`) — apply them in order; the open one is the machine's state now.
+- No hello/snapshot message: on every (re)connect, call `GET /api/floor/machines` for the current board, then apply events.
+  Events that happen while you're disconnected are not replayed.
+- Close **1013** = client fell >100 messages behind; reconnect. Any other close: reconnect with backoff (e.g. 1 s → 30 s).
+
 ### Inventory
 | Method & path | Body / query | Response | Owner | Screen |
 |---|---|---|---|---|

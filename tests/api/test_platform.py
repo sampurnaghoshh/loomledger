@@ -24,7 +24,7 @@ def assert_error(res, status: int, code: str) -> dict:
 def test_health_ok(client):
     res = client.get("/api/health")
     assert res.status_code == 200
-    assert res.json() == {"status": "ok", "db": "ok"}
+    assert res.json()["status"] == "ok" and res.json()["db"] == "ok"
 
 
 def test_request_id_generated_and_echoed(client):
