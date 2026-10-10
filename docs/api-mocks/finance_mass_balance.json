@@ -1,6 +1,7 @@
 {
   "from": null,
   "to": null,
+  "first_run_at": "2026-09-22T08:00:00+05:30",
   "totals": {
     "received_kg": 2030.0,
     "issued_kg": 1545.9,

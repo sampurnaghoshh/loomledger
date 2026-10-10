@@ -203,6 +203,8 @@ def export(conn) -> None:
 
     # ---- finance (month-end)
     write("finance_mass_balance", {"from": None, "to": None,
+                                   "first_run_at": conn.execute(
+                                       "SELECT min(started_at) AS t FROM v_yarn_balance_by_run").fetchone()["t"],
                                    "totals": q(conn, "SELECT * FROM mass_balance('-infinity', 'infinity')")[0],
                                    "by_machine": q(conn, "SELECT * FROM v_yarn_unaccounted_by_machine")})
     write("finance_roll_costs_SO-0412", q(conn, """

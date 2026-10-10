@@ -31,6 +31,7 @@ class MassBalance(BaseModel):
 
     from_: datetime | None = Field(serialization_alias="from")    # null = all time
     to: datetime | None
+    first_run_at: datetime | None         # earliest weaving run in the window; null when there are none
     totals: BalanceTotals
     by_machine: list[MachineUnaccounted]  # worst first
 
