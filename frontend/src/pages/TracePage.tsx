@@ -1,15 +1,14 @@
 // Find Cause: walk the ancestry of the rejected rolls and rank every shared factor by how much it lifts the defect rate.
 import { useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowRight, GitBranch } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { api } from "@/api/client";
 import type { CauseFactor, LotGraph } from "@/api/types";
+import { LotGraph as GenealogyGraph } from "@/components/LotGraph";
 import { Badge, Button, Card, EmptyState, Loadable, PageHeader, StatTile } from "@/components/ui";
 import { useApi } from "@/hooks/useApi";
 import { formatLift, formatPct, humanize } from "@/lib/format";
 import { verdictLabel, verdictTone, type Tone } from "@/lib/tones";
-
-const DEFAULT_LOTS = ["R-1201", "R-1202", "R-1203"];
 
 /** "1 roll" / "3 rolls" */
 const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -30,12 +29,12 @@ function parseLots(raw: string | null): string[] {
     .split(",")
     .map((s) => s.trim().toUpperCase())
     .filter(Boolean);
-  return lots.length ? [...new Set(lots)] : DEFAULT_LOTS;
+  return [...new Set(lots)];
 }
 
-/** The yarn node whose code appears as a whole word in the top factor's label (e.g. "Yarn Lot Y-112" → Y-112). */
+/** Only for a yarn-lot factor: the yarn node whose code appears as a whole word in its label ("Yarn Lot Y-112" → Y-112). */
 function rootYarnCode(top: CauseFactor | undefined, graph: LotGraph | null): string | null {
-  if (!top || !graph) return null;
+  if (!top || top.factor_kind !== "yarn_lot" || !graph) return null;
   const words = top.factor_label.split(/\s+/);
   return graph.nodes.find((n) => n.kind === "yarn" && words.includes(n.code))?.code ?? null;
 }
@@ -60,14 +59,17 @@ export default function TracePage() {
   const lots = useMemo(() => parseLots(params.get("lots")), [params]);
   const lotsKey = lots.join(",");
 
-  const cause = useApi(() => api.trace.findCause(lots), [lotsKey]);
-  const graph = useApi(() => api.trace.ancestors(lots), [lotsKey]);
+  // No rolls picked: don't call the trace endpoints at all.
+  const cause = useApi(() => (lots.length ? api.trace.findCause(lots) : Promise.resolve(null)), [lotsKey]);
+  const graph = useApi(() => (lots.length ? api.trace.ancestors(lots) : Promise.resolve(null)), [lotsKey]);
 
   const top = cause.data?.factors[0];
   const rootCode = rootYarnCode(top, graph.data);
 
+  if (lots.length === 0) return <PickRejectedRolls />;
+
   return (
-    <div className="grid gap-6">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
       <PageHeader
         title="Find Cause"
         subtitle="Walks the family tree of the selected rolls and compares defect rates through each shared factor against everything else."
@@ -76,7 +78,7 @@ export default function TracePage() {
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted">Selected rolls</span>
         {lots.map((code) => (
-          <span key={code} className="rounded-full border border-line bg-surface px-2.5 py-0.5 font-mono text-sm text-ink">
+          <span key={code} className="whitespace-nowrap rounded-full border border-line bg-surface px-2.5 py-0.5 font-mono text-sm text-ink">
             {code}
           </span>
         ))}
@@ -84,7 +86,7 @@ export default function TracePage() {
 
       <Loadable state={cause}>
         {(data) =>
-          data.factors.length === 0 ? (
+          !data ? null : data.factors.length === 0 ? (
             <Card>
               <EmptyState title="No shared factors found" body="These rolls have no common yarn lot, machine or shift with inspection history to compare." />
             </Card>
@@ -98,31 +100,77 @@ export default function TracePage() {
         }
       </Loadable>
 
-      {/* PLACEHOLDER: genealogy graph (yarn → greige → finished) goes here, built later with @xyflow/react. */}
-      <Card
-        title="Genealogy"
-        subtitle="Yarn lot → greige roll → finished roll, with machine and shift on each node."
-        actions={<Badge tone="idle">Coming soon</Badge>}
-      >
+      <Card title="Genealogy" subtitle="Yarn lot → greige roll → finished roll, with machine and shift on each lot. Drag to pan, pinch or use the buttons to zoom.">
         <Loadable state={graph}>
           {(g) =>
-            g.nodes.length === 0 ? (
+            !g ? null : g.nodes.length === 0 ? (
               <EmptyState title="No ancestry recorded for these rolls" />
             ) : (
-              <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-line bg-canvas px-4 py-10 text-center">
-                <GitBranch className="size-6 text-muted" aria-hidden />
-                <p className="font-medium text-ink">Genealogy graph placeholder</p>
-                <p className="text-sm text-muted">
-                  {count(g.nodes.length, "lot")} and {count(g.edges.length, "link")} loaded
-                  {rootCode && (
-                    <>
-                      {" "}· root cause <span className="font-mono">{rootCode}</span> will be highlighted
-                    </>
-                  )}
-                </p>
-              </div>
+              <GenealogyGraph graph={g} colorBy="kind" highlight={lots} rootCause={rootCode ?? undefined} />
             )
           }
+        </Loadable>
+      </Card>
+    </div>
+  );
+}
+
+/** Find Cause needs rejected rolls: offer the QC rejections as a starting point. */
+function PickRejectedRolls() {
+  const navigate = useNavigate();
+  const rejections = useApi(() => api.quality.rejections(), []);
+  const go = (codes: string[]) => navigate(`/trace?${new URLSearchParams({ lots: codes.join(",") })}`);
+
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
+      <PageHeader title="Find Cause" subtitle="Walks the family tree of rejected rolls and compares defect rates through every shared factor." />
+      <Card>
+        <EmptyState
+          title="Pick the rejected rolls to investigate"
+          body="Find Cause needs one or more rejected rolls. Trace one roll, or every roll with the same defect. Mixing unrelated defects skews the comparison."
+        />
+        <Loadable state={rejections}>
+          {(rows) => {
+            // Latest rejection per roll (rows are newest first), grouped by defect type, biggest group first.
+            const latest = rows.filter((r, i) => rows.findIndex((x) => x.lot_code === r.lot_code) === i);
+            if (latest.length === 0) return <EmptyState title="No rejected rolls yet" body="Rolls rejected at QC will appear here." />;
+            const byDefect = new Map<string, typeof latest>();
+            for (const r of latest) byDefect.set(r.defect_type, [...(byDefect.get(r.defect_type) ?? []), r]);
+            const groups = [...byDefect].sort(
+              ([a, x], [b, y]) => y.length - x.length || a.localeCompare(b),
+            );
+            return (
+              <ul className="grid gap-3">
+                {groups.map(([defect, items], gi) => {
+                  const name = defect.replace(/_/g, " ");
+                  return (
+                    <li key={defect} className="grid gap-3 rounded-lg border border-line p-4 sm:flex sm:items-center sm:justify-between">
+                      <div className="grid gap-2">
+                        <p className="text-sm font-medium text-ink">
+                          {humanize(defect)} <span className="font-normal text-muted">· {count(items.length, "roll")}</span>
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {items.map((r) => (
+                            <Button key={r.lot_code} variant="secondary" size="sm" onClick={() => go([r.lot_code])}>
+                              <span className="whitespace-nowrap font-mono">{r.lot_code}</span>
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                      <Button
+                        variant={gi === 0 ? "primary" : "secondary"}
+                        icon={<ArrowRight className="size-4" />}
+                        onClick={() => go(items.map((r) => r.lot_code))}
+                        className="shrink-0"
+                      >
+                        {items.length === 1 ? `Trace the ${name} roll` : `Trace the ${items.length} ${name} rolls`}
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            );
+          }}
         </Loadable>
       </Card>
     </div>
@@ -156,7 +204,7 @@ function Headline({ factor, rootCode, onRecall }: { factor: CauseFactor; rootCod
         {rootCode && (
           <div>
             <Button variant="danger" icon={<ArrowRight className="size-4" />} onClick={() => onRecall(rootCode)}>
-              Recall <span className="font-mono">{rootCode}</span>
+              Recall <span className="whitespace-nowrap font-mono">{rootCode}</span>
             </Button>
           </div>
         )}

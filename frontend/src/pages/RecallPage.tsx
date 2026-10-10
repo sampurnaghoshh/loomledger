@@ -1,17 +1,19 @@
 // Recall: everything a root lot touched, what it costs, which buyers wait longer, and one button to quarantine it all.
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { Ban, Factory, GitFork, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Ban, Factory, ShieldAlert, ShieldCheck } from "lucide-react";
 import { api } from "@/api/client";
 import type { ApiError } from "@/api/errors";
 import type { Custody, RecallOrderImpact, RecallResponse, RecallRoll } from "@/api/types";
+import { LotGraph } from "@/components/LotGraph";
 import { Badge, Button, Card, DataTable, EmptyState, ErrorBanner, Field, Loadable, Modal, PageHeader, StatTile, Textarea, type Column } from "@/components/ui";
 import { useAction, useApi } from "@/hooks/useApi";
 import { formatDate, formatDateTime, formatINR, formatQty, humanize, newIdempotencyKey } from "@/lib/format";
 import { custodyLabel, custodyTone } from "@/lib/tones";
 
 // Greige product woven from yarn. No endpoint exposes product codes yet; this is the contract's example
-// for POST /api/production/weaving-runs (docs/API_CONTRACT.md). Replace once a products endpoint exists.
+// for POST /api/production/weaving-runs (docs/API_CONTRACT.md). Only valid for twill lots (poplin yarn weaves
+// GRG-POP). Replace once a products endpoint exists.
 const GREIGE_PRODUCT_CODE = "GRG-TWL";
 
 // Most urgent first: what's already bad, what's already left the building, then what we can still stop.
@@ -22,7 +24,8 @@ const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? on
 
 export default function RecallPage() {
   const { lotCode = "" } = useParams<{ lotCode: string }>();
-  const recall = useApi(() => api.recalls.preview(lotCode), [lotCode]);
+  // No lot in the URL: skip the request entirely.
+  const recall = useApi(() => (lotCode ? api.recalls.preview(lotCode) : Promise.resolve(null)), [lotCode]);
 
   if (!lotCode) {
     return (
@@ -34,7 +37,7 @@ export default function RecallPage() {
 
   return (
     <Loadable state={recall}>
-      {(data) => <RecallView data={data} onApplied={(next) => recall.setData(next)} />}
+      {(data) => data && <RecallView data={data} onApplied={(next) => recall.setData(next)} />}
     </Loadable>
   );
 }
@@ -126,17 +129,7 @@ function RecallView({ data, onApplied }: { data: RecallResponse; onApplied: (nex
         />
       )}
 
-      {/* PLACEHOLDER: descendants genealogy graph (api.trace.descendants(lot)), built next with @xyflow/react. */}
-      <Card
-        title="Everything this lot touched"
-        subtitle={<>Descendants of <span className="whitespace-nowrap font-mono">{data.lot_code}</span>: greige rolls, finished rolls, dispatches</>}
-        actions={<Badge tone="idle">Coming soon</Badge>}
-      >
-        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-line bg-canvas px-4 py-10 text-center">
-          <GitFork className="size-6 text-muted" aria-hidden />
-          <p className="font-medium text-ink">Genealogy graph placeholder</p>
-        </div>
-      </Card>
+      <RecallGenealogy lotCode={data.lot_code} applied={data.applied} />
 
       <ApplyModal
         open={confirmOpen}
@@ -149,6 +142,28 @@ function RecallView({ data, onApplied }: { data: RecallResponse; onApplied: (nex
         }}
       />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------- genealogy
+function RecallGenealogy({ lotCode, applied }: { lotCode: string; applied: boolean }) {
+  // Re-fetch when the recall is applied so quarantine shows on every node.
+  const graph = useApi(() => api.trace.descendants(lotCode), [lotCode, applied]);
+  return (
+    <Card
+      title="Everything this lot touched"
+      subtitle={<>Every lot made from <span className="whitespace-nowrap font-mono">{lotCode}</span>, coloured by where it is now</>}
+    >
+      <Loadable state={graph}>
+        {(g) =>
+          g.nodes.length <= 1 ? (
+            <EmptyState title="Nothing has been made from this lot yet" />
+          ) : (
+            <LotGraph graph={g} colorBy="custody" rootCause={lotCode} rootLabel="Recall source" />
+          )
+        }
+      </Loadable>
+    </Card>
   );
 }
 
@@ -367,6 +382,7 @@ function TryIssuePanel({
   }
 
   const refused = attempt.error?.code === "LOT_QUARANTINED" ? attempt.error : null;
+  const forbidden = attempt.error?.code === "FORBIDDEN";
   const sqlstate = refused ? (refused as ApiError & { sqlstate?: string }).sqlstate : undefined;
 
   return (
@@ -406,7 +422,12 @@ function TryIssuePanel({
             )}
 
             {recheck.error && <ErrorBanner error={recheck.error} onRetry={tryIssue} />}
-            {attempt.error && !refused && <ErrorBanner error={attempt.error} onRetry={tryIssue} />}
+            {forbidden && (
+              <div role="status" className="rounded-lg border border-line bg-idle-soft px-4 py-3 text-sm text-ink">
+                Your role can't start weaving runs. Sign in as owner or floor supervisor to run this check.
+              </div>
+            )}
+            {attempt.error && !refused && !forbidden && <ErrorBanner error={attempt.error} onRetry={tryIssue} />}
 
             {started && (
               <div role="alert" className="rounded-lg border border-warn bg-warn-soft px-4 py-3 text-sm text-warn">
