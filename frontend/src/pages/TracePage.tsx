@@ -1,9 +1,10 @@
 // Find Cause: walk the ancestry of the rejected rolls and rank every shared factor by how much it lifts the defect rate.
 import { useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowRight, GitBranch } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { api } from "@/api/client";
 import type { CauseFactor, LotGraph } from "@/api/types";
+import { LotGraph as GenealogyGraph } from "@/components/LotGraph";
 import { Badge, Button, Card, EmptyState, Loadable, PageHeader, StatTile } from "@/components/ui";
 import { useApi } from "@/hooks/useApi";
 import { formatLift, formatPct, humanize } from "@/lib/format";
@@ -67,7 +68,7 @@ export default function TracePage() {
   const rootCode = rootYarnCode(top, graph.data);
 
   return (
-    <div className="grid gap-6">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
       <PageHeader
         title="Find Cause"
         subtitle="Walks the family tree of the selected rolls and compares defect rates through each shared factor against everything else."
@@ -76,7 +77,7 @@ export default function TracePage() {
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted">Selected rolls</span>
         {lots.map((code) => (
-          <span key={code} className="rounded-full border border-line bg-surface px-2.5 py-0.5 font-mono text-sm text-ink">
+          <span key={code} className="whitespace-nowrap rounded-full border border-line bg-surface px-2.5 py-0.5 font-mono text-sm text-ink">
             {code}
           </span>
         ))}
@@ -98,29 +99,13 @@ export default function TracePage() {
         }
       </Loadable>
 
-      {/* PLACEHOLDER: genealogy graph (yarn → greige → finished) goes here, built later with @xyflow/react. */}
-      <Card
-        title="Genealogy"
-        subtitle="Yarn lot → greige roll → finished roll, with machine and shift on each node."
-        actions={<Badge tone="idle">Coming soon</Badge>}
-      >
+      <Card title="Genealogy" subtitle="Yarn lot → greige roll → finished roll, with machine and shift on each lot. Drag to pan, pinch or use the buttons to zoom.">
         <Loadable state={graph}>
           {(g) =>
             g.nodes.length === 0 ? (
               <EmptyState title="No ancestry recorded for these rolls" />
             ) : (
-              <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-line bg-canvas px-4 py-10 text-center">
-                <GitBranch className="size-6 text-muted" aria-hidden />
-                <p className="font-medium text-ink">Genealogy graph placeholder</p>
-                <p className="text-sm text-muted">
-                  {count(g.nodes.length, "lot")} and {count(g.edges.length, "link")} loaded
-                  {rootCode && (
-                    <>
-                      {" "}· root cause <span className="font-mono">{rootCode}</span> will be highlighted
-                    </>
-                  )}
-                </p>
-              </div>
+              <GenealogyGraph graph={g} colorBy="kind" highlight={lots} rootCause={rootCode ?? undefined} />
             )
           }
         </Loadable>
@@ -156,7 +141,7 @@ function Headline({ factor, rootCode, onRecall }: { factor: CauseFactor; rootCod
         {rootCode && (
           <div>
             <Button variant="danger" icon={<ArrowRight className="size-4" />} onClick={() => onRecall(rootCode)}>
-              Recall <span className="font-mono">{rootCode}</span>
+              Recall <span className="whitespace-nowrap font-mono">{rootCode}</span>
             </Button>
           </div>
         )}

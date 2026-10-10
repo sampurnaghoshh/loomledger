@@ -1,10 +1,11 @@
 // Recall: everything a root lot touched, what it costs, which buyers wait longer, and one button to quarantine it all.
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { Ban, Factory, GitFork, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Ban, Factory, ShieldAlert, ShieldCheck } from "lucide-react";
 import { api } from "@/api/client";
 import type { ApiError } from "@/api/errors";
 import type { Custody, RecallOrderImpact, RecallResponse, RecallRoll } from "@/api/types";
+import { LotGraph } from "@/components/LotGraph";
 import { Badge, Button, Card, DataTable, EmptyState, ErrorBanner, Field, Loadable, Modal, PageHeader, StatTile, Textarea, type Column } from "@/components/ui";
 import { useAction, useApi } from "@/hooks/useApi";
 import { formatDate, formatDateTime, formatINR, formatQty, humanize, newIdempotencyKey } from "@/lib/format";
@@ -126,17 +127,7 @@ function RecallView({ data, onApplied }: { data: RecallResponse; onApplied: (nex
         />
       )}
 
-      {/* PLACEHOLDER: descendants genealogy graph (api.trace.descendants(lot)), built next with @xyflow/react. */}
-      <Card
-        title="Everything this lot touched"
-        subtitle={<>Descendants of <span className="whitespace-nowrap font-mono">{data.lot_code}</span>: greige rolls, finished rolls, dispatches</>}
-        actions={<Badge tone="idle">Coming soon</Badge>}
-      >
-        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-line bg-canvas px-4 py-10 text-center">
-          <GitFork className="size-6 text-muted" aria-hidden />
-          <p className="font-medium text-ink">Genealogy graph placeholder</p>
-        </div>
-      </Card>
+      <RecallGenealogy lotCode={data.lot_code} applied={data.applied} />
 
       <ApplyModal
         open={confirmOpen}
@@ -149,6 +140,28 @@ function RecallView({ data, onApplied }: { data: RecallResponse; onApplied: (nex
         }}
       />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------- genealogy
+function RecallGenealogy({ lotCode, applied }: { lotCode: string; applied: boolean }) {
+  // Re-fetch when the recall is applied so quarantine shows on every node.
+  const graph = useApi(() => api.trace.descendants(lotCode), [lotCode, applied]);
+  return (
+    <Card
+      title="Everything this lot touched"
+      subtitle={<>Every lot made from <span className="whitespace-nowrap font-mono">{lotCode}</span>, coloured by where it is now</>}
+    >
+      <Loadable state={graph}>
+        {(g) =>
+          g.nodes.length <= 1 ? (
+            <EmptyState title="Nothing has been made from this lot yet" />
+          ) : (
+            <LotGraph graph={g} colorBy="custody" />
+          )
+        }
+      </Loadable>
+    </Card>
   );
 }
 
