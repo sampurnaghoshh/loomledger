@@ -7,15 +7,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-import socket
-import threading
 import time
 import uuid
 
 import httpx
 import psycopg
 import pytest
-import uvicorn
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import connect
 
@@ -35,21 +32,9 @@ def wait_until(cond, timeout: float = TIMEOUT, what: str = "condition") -> None:
 
 
 @pytest.fixture(scope="module")
-def live(app):                      # `app` points settings at the freshly seeded test DB
-    from app.main import create_app
-    server_app = create_app()       # own instance: its own pool, listener and broadcaster
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        port = s.getsockname()[1]
-    server = uvicorn.Server(uvicorn.Config(server_app, host="127.0.0.1", port=port, log_level="warning"))
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    wait_until(lambda: server.started, 10, "uvicorn to start")
-    wait_until(server_app.state.floor_listener.connected.is_set, 5, "LISTEN")
-    yield server_app, f"ws://127.0.0.1:{port}/ws/floor"
-    server.should_exit = True
-    thread.join(timeout=5)
-    assert not thread.is_alive(), "server (and floor listener) did not shut down"
+def live(live_server):
+    app, base = live_server
+    return app, base.replace("http://", "ws://") + "/ws/floor"
 
 
 @pytest.fixture(scope="module")

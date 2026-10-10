@@ -125,6 +125,39 @@ def reseed_after_module(app):
     _fresh().close()
 
 
+@pytest.fixture(scope="module")
+def live_server(app):
+    """A real uvicorn server in a thread (real sockets, real lifespan) on the test DB: (app, base_url)."""
+    import socket
+    import threading
+    import time
+
+    import uvicorn
+
+    from app.main import create_app
+
+    def wait_until(cond, timeout: float, what: str) -> None:
+        deadline = time.monotonic() + timeout
+        while not cond():
+            if time.monotonic() > deadline:
+                raise AssertionError(f"timed out waiting for {what}")
+            time.sleep(0.02)
+
+    server_app = create_app()       # own instance: its own pool, listener and broadcaster
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    server = uvicorn.Server(uvicorn.Config(server_app, host="127.0.0.1", port=port, log_level="warning"))
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    wait_until(lambda: server.started, 10, "uvicorn to start")
+    wait_until(server_app.state.floor_listener.connected.is_set, 5, "LISTEN")
+    yield server_app, f"http://127.0.0.1:{port}"
+    server.should_exit = True
+    thread.join(timeout=5)
+    assert not thread.is_alive(), "server (and floor listener) did not shut down"
+
+
 def login(client: TestClient, email: str) -> str:
     res = client.post("/api/auth/login", json={"email": email, "password": PASSWORD})
     assert res.status_code == 200, res.text
