@@ -15,6 +15,7 @@ from app import auth, realtime
 from app.config import get_settings
 from app.db import create_pool
 from app.modules.floor import router as floor
+from app.modules.inventory import router as inventory
 from app.errors import handle_unexpected, install_exception_handlers
 
 log = logging.getLogger("loomledger.request")
@@ -90,6 +91,7 @@ def create_app() -> FastAPI:
     # ---- AREA ROUTERS ---------------------------------------------------------------------------
     # Each area lives in app/modules/<area>/ (router -> service -> repository). Include them here:
     app.include_router(floor.router)
+    app.include_router(inventory.router)
     # still to come:
     #   from app.modules.production.router import router as production_router; app.include_router(production_router)
     #   from app.modules.quality.router import router as quality_router;       app.include_router(quality_router)
