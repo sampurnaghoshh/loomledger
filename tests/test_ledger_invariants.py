@@ -239,6 +239,18 @@ def test_find_cause_does_not_blame_a_partial_factor(db):
     assert loom2["selected_covered"] == 2 and loom2["verdict"] == "partial"
 
 
+def test_working_days_between_is_the_inverse_of_add_working_days(db):
+    start = S.ANCHOR_DATE - timedelta(days=10)
+    for n in range(0, 15):
+        end = db.execute("SELECT add_working_days(%s, %s)", (start, n)).fetchone()[0]
+        assert db.execute("SELECT working_days_between(%s, %s)", (start, end)).fetchone()[0] == n
+    sunday = next(start + timedelta(days=i) for i in range(7) if (start + timedelta(days=i)).isoweekday() == 7)
+    saturday, monday = sunday - timedelta(days=1), sunday + timedelta(days=1)
+    assert db.execute("SELECT working_days_between(%s, %s)", (saturday, monday)).fetchone()[0] == 1   # Sunday skipped
+    for a, b in ((monday, monday), (monday, saturday), (monday, None)):                                   # not later -> 0
+        assert db.execute("SELECT working_days_between(%s, %s)", (a, b)).fetchone()[0] == 0
+
+
 def test_add_working_days_skips_sundays(db):
     # Sat 10 Oct 2026 + 1 working day = Mon 12 Oct
     assert db.execute("SELECT add_working_days('2026-10-10', 1)").fetchone()[0].isoformat() == "2026-10-12"

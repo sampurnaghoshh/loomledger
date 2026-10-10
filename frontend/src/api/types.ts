@@ -225,6 +225,7 @@ export interface OrderSummary {
   unit_price: number;
   promised_date: string;
   revised_promise_date: string | null;
+  delay_days: number; // working days (Mon–Sat) from promised to revised; 0 when on time
   status: "confirmed" | "in_production" | "partially_dispatched" | "dispatched" | "cancelled";
   progress: OrderProgress;
   tracking_token: string; // buyer page: /track/<tracking_token>
