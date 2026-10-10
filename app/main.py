@@ -20,6 +20,7 @@ from app.modules.inventory import router as inventory
 from app.modules.orders import router as orders
 from app.modules.production import router as production
 from app.modules.quality import router as quality
+from app.modules.recalls import router as recalls
 from app.modules.trace import router as trace
 from app.errors import handle_unexpected, install_exception_handlers
 
@@ -102,6 +103,7 @@ def create_app() -> FastAPI:
     app.include_router(orders.router)            # /api/orders, /api/dispatches, /api/track (public)
     app.include_router(finance.router)
     app.include_router(trace.router)
+    app.include_router(recalls.router)
     # ---------------------------------------------------------------------------------------------
 
     return app
