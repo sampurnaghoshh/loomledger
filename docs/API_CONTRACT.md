@@ -25,8 +25,13 @@ regenerate, update `frontend/src/api/types.ts`, and tell the team in the group c
 | SQLSTATE `LL003` | 405 | `LEDGER_IMMUTABLE` |
 | SQLSTATE `23P01` (exclusion) | 409 | `MACHINE_BUSY` |
 | SQLSTATE `23505` on `one_dispatch_per_roll` | 409 | `ALREADY_DISPATCHED` |
-| SQLSTATE `23505` on `idempotency_key` | 200 | (return the original result) |
+| SQLSTATE `23505` on `idempotency_key` | 200 | (return the original result — services catch it with `app.errors.is_idempotency_replay`) |
+| SQLSTATE `23505` on `idempotency_key`, not caught by the service | 409 | `DUPLICATE_REQUEST` |
 | other `23xxx` / Pydantic validation | 422 | `VALIDATION_FAILED` + `fields: {name: message}` |
+| SQLSTATE `22xxx` (bad enum text, out of range, invalid parameter e.g. `22023`) | 422 | `VALIDATION_FAILED` |
+| SQLSTATE `P0002` (`lot % does not exist` in 004) | 404 | `NOT_FOUND` |
+| SQLSTATE `40001` / `40P01` (serialization failure / deadlock) | 409 | `CONFLICT_RETRY` (safe to resubmit with the same idempotency key) |
+| SQLSTATE `08xxx` / DB unreachable / pool timeout | 503 | `DB_UNAVAILABLE` |
 | shade check fails, no override | 409 | `SHADE_MISMATCH` |
 | bad login | 401 | `INVALID_CREDENTIALS` |
 | missing/expired token | 401 | `UNAUTHENTICATED` |
@@ -34,7 +39,9 @@ regenerate, update `frontend/src/api/types.ts`, and tell the team in the group c
 | unknown id/code/token | 404 | `NOT_FOUND` |
 | anything else | 500 | `INTERNAL` (log with request id; never leak SQL to the client) |
 
-Examples: `error_lot_quarantined.json`, `error_not_found.json`.
+All five keys are always present (`null` when not applicable). `sqlstate` is set only for errors raised by PostgreSQL.
+Messages of our own `LL0xx` exceptions are passed through; every other DB error gets a fixed message (no SQL, no row data).
+Implementation: `app/errors.py` (`map_db_error`). Examples: `error_lot_quarantined.json`, `error_not_found.json`.
 
 ## Endpoints
 
