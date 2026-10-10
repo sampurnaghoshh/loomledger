@@ -636,3 +636,18 @@ export interface UserRow {
   active: boolean;
   created_at: string;
 }
+
+/** GET /api/validation-log (owner, qc) — every write a business rule refused (018), newest first. */
+export interface ValidationLogRow {
+  id: number;
+  at: string;
+  user_email: string | null;
+  role: string | null;
+  method: string;
+  path: string;
+  status: number;
+  error_code: string;
+  sqlstate: string | null;
+  message: string;
+  input_summary: unknown;
+}

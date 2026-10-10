@@ -124,6 +124,7 @@ PostgreSQL 16 (14+ works). Extensions: `btree_gist`, `pgcrypto`. Session timezon
 | 015_run_progress | **`run_progress(at)`**: each open run's estimated progress (running time ÷ planned m at rated speed; breakdowns pause it), ETA, `woven_to_plan_at` (due off the loom since) |
 | 016_owner_alerts | channel `loomledger_alerts` (→ `WS /ws/alerts`, owner/qc): **`recall_alert_payload(recall)`** sent by a deferred trigger at COMMIT of a recall (never on rollback, once per recall), `breakdown_alert_payload(...)` on state → breakdown |
 | 017_rbac | `permission` + **`role_permission`** (the matrix the API checks: `require_permission("area.action")`), `app_user.active` (deactivated = no login, tokens refused), last active owner guard (`LL011`), **`set_user_access(actor, user, role, active)`**: no self-deactivation (`LL012`) + audit with the acting user |
+| 018_phase_guard | production order guard: lineage (greige from yarn; dyeing only a woven greige roll that is off the loom) + QC only on a dyed roll out of the vat → `LL013 PHASE_SKIPPED` (DETAIL = missing phase); **`validation_log`**: every refused write, recorded by the API on a separate connection (`GET /api/validation-log`) |
 
 Conventions for new migrations:
 - File `db/migrations/00N_short_name.sql`, one concern per file, comment header explaining *why*.

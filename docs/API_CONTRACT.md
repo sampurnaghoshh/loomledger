@@ -40,6 +40,7 @@ regenerate, update `frontend/src/api/types.ts`, and tell the team in the group c
 | SQLSTATE `LL010` (gate entry for an order that is dispatched / cancelled) | 422 | `ORDER_CLOSED` + `fields.order_code` |
 | SQLSTATE `LL011` (would leave no active owner: deactivate / demote / delete the last one) | 409 | `LAST_OWNER` |
 | SQLSTATE `LL012` (deactivating your own account) | 409 | `SELF_DEACTIVATION` + `fields.active` |
+| SQLSTATE `LL013` (a production phase skipped: dyeing an unwoven / still-on-the-loom roll, QC on greige or a roll still in the vat) | 409 | `PHASE_SKIPPED` + `fields.missing_phase` (`yarn` / `weaving` / `dyeing`) |
 | SQLSTATE `LL006` (dispatch mixes dye batches, no `shade_override_reason`) | 409 | `SHADE_MISMATCH` + `fields: {batches: "DB-08, DB-14"}` |
 | bad login | 401 | `INVALID_CREDENTIALS` |
 | missing/expired token | 401 | `UNAUTHENTICATED` |
@@ -172,4 +173,11 @@ keys) plus typed filters (a bad value → 422). Response: `{items, total, page, 
 | `GET /api/quality/rejections/list` | = rejections (newest first) | inspected_at, lot_code, defect_type, inspector | defect_type, order_code, inspector | any |
 | `GET /api/finance/invoices` | code, order_code, buyer, dispatch_code, dispatched_at, rolls, amount, paid, outstanding, issued_at | issued_at, code, amount, outstanding, buyer | buyer, order_code, unpaid (bool) | accounts |
 | `GET /api/workforce/workers` | code, full_name, skill, hourly_wage, active | code, full_name, hourly_wage, skill | skill, active (bool) | floor_supervisor |
+| `GET /api/validation-log` | every write a business rule refused (018), newest first: at, user_email, role, method, path, status, error_code, sqlstate, message, input_summary (redacted, truncated) | at, error_code, user_email, status, path | code, sqlstate, user, since, before (timestamps) | owner, qc (`validation_log.view`) |
+
+**Validation log rules:** a write (POST/PUT/PATCH/DELETE) that ends 409/422 because of a business rule (an `LL0xx`
+SQLSTATE, or any 409/422 code except `VALIDATION_FAILED`) is recorded once, on a separate pooled autocommit connection
+after the refused transaction rolled back. Successful writes, malformed requests (`VALIDATION_FAILED`), 401/403/404 are
+not logged. Secrets (`password`, `token`, `secret`, `key`…) are redacted; the summary keeps ≤12 keys, ≤5 list items,
+strings ≤60 chars. A failure to record never changes the response.
 

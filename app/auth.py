@@ -11,7 +11,7 @@ from collections.abc import Callable
 from typing import Annotated, Any
 
 import psycopg
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Request
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from pydantic import BaseModel, Field
 
@@ -102,13 +102,14 @@ def permission_matrix(conn: psycopg.Connection) -> list[dict]:
 Conn = Annotated[psycopg.Connection, Depends(get_conn)]
 
 
-def require_user(conn: Conn, authorization: Annotated[str | None, Header()] = None) -> dict[str, Any]:
+def require_user(request: Request, conn: Conn, authorization: Annotated[str | None, Header()] = None) -> dict[str, Any]:
     scheme, _, token = (authorization or "").partition(" ")
     if scheme.lower() != "bearer" or not token.strip():
         raise unauthenticated()
     user = find_user(conn, read_token(token.strip()))
     if user is None:
         raise unauthenticated()
+    request.state.user = user          # who made a refused write (validation log, 018)
     return user
 
 

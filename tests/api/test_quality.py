@@ -118,7 +118,7 @@ def test_rejecting_a_roll_not_in_fg_store_is_ll002(client, auth):
 @pytest.mark.parametrize("body,field", [
     ({"result": "reject"}, "defect_type"), ({"result": "rework", "defect_type": "  "}, "defect_type"),
     ({"result": "pass", "defect_type": "slub"}, "defect_type"), ({"result": "great"}, "result"),
-    ({"result": "pass", "lot_code": "R-1212-G"}, "lot_code"), ({"result": "pass", "defect_meters": -1}, "defect_meters"),
+    ({"result": "pass", "lot_code": "R-1212-X"}, "lot_code"), ({"result": "pass", "defect_meters": -1}, "defect_meters"),
     ({"result": "reject", "defect_type": "slub", "idempotency_key": "x"}, "idempotency_key")])
 def test_bad_body_is_422(client, auth, body, field):
     res = client.post(INSPECT, json={"lot_code": "R-1101", **body}, headers=auth["qc"])

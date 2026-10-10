@@ -2,6 +2,7 @@
 // Show error.message to the user. Branch on error.code, never on the message text.
 
 export type ApiErrorCode =
+  | "PHASE_SKIPPED"
   | "LAST_OWNER"
   | "SELF_DEACTIVATION"
   | "LOT_QUARANTINED" //      409  quarantined/recalled stock cannot move

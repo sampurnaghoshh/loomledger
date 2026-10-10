@@ -15,6 +15,7 @@ import MonthEndPage from "@/pages/MonthEndPage";
 import RecordsPage from "@/pages/RecordsPage";
 import UsersPage from "@/pages/UsersPage";
 import RolesPage from "@/pages/RolesPage";
+import ValidationLogPage from "@/pages/ValidationLogPage";
 import RollPassportPage from "@/pages/RollPassportPage";
 import QrLabelsPage from "@/pages/QrLabelsPage";
 import AlertsPage from "@/pages/AlertsPage";
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="/records" element={<RecordsPage />} />
           <Route path="/admin/users" element={<UsersPage />} />
           <Route path="/admin/roles" element={<RolesPage />} />
+          <Route path="/admin/validation-log" element={<ValidationLogPage />} />
           <Route path="/labels" element={<QrLabelsPage />} />
         </Route>
       </Route>

@@ -46,6 +46,7 @@ import type {
   WorkerRow,
   PermissionsInfo,
   UserRow,
+  ValidationLogRow,
 } from "./types";
 
 const TOKENS = {
@@ -54,6 +55,7 @@ const TOKENS = {
 } as const;
 
 let recallApplied = false;
+const mockValidationLog: ValidationLogRow[] = [];
 // Users & roles in mock mode: the five demo accounts, changed in memory with the database's two rules (017).
 const mockUsers: UserRow[] = [
   ["owner@everest.test", "Rajesh Mehta", "owner"], ["store@everest.test", "Anil Kumar", "store"],
@@ -146,6 +148,10 @@ export const mock: Api = {
       const role = getSession()?.user.role ?? "owner";
       return { ...m, me: { role, permissions: m.permissions.filter((p) => p.roles.includes(role)).map((p) => p.code) } };
     },
+  },
+  validationLog: {
+    list: async (p) => mockPage(structuredClone(mockValidationLog), { ...p, code: undefined, user: undefined, since: undefined, before: undefined,
+      error_code: p.code, user_email: p.user }, ["message", "path", "user_email", "error_code"], "-at"),
   },
   users: {
     list: async (p) => mockPage(structuredClone(mockUsers), p, ["email", "full_name"], "email"),
@@ -247,6 +253,15 @@ export const mock: Api = {
     latestRejections: () => load<LatestRejections>(() => import("@mocks/quality_latest_rejections.json")),
     inspect: async (req) => {
       await delay();
+      if (req.lot_code.endsWith("-G")) {
+        const err = new ApiError("PHASE_SKIPPED", `QC inspects dyed rolls: ${req.lot_code} is greige, so dyeing was skipped`, 409,
+          "Dye the greige roll first; QC inspects the finished roll that comes out of the vat.", { missing_phase: "dyeing" }, "LL013");
+        const u = getSession()?.user;
+        mockValidationLog.unshift({ id: mockValidationLog.length + 1, at: new Date().toISOString(), user_email: u?.email ?? null,
+          role: u?.role ?? null, method: "POST", path: "/api/quality/inspections", status: 409, error_code: err.code,
+          sqlstate: "LL013", message: err.message, input_summary: { lot_code: req.lot_code, result: req.result } });
+        throw err;
+      }
       if (req.result !== "pass" && !req.defect_type) {
         throw new ApiError("VALIDATION_FAILED", "Choose a defect type for a failed roll.", 422, undefined, {
           defect_type: "Required when the roll does not pass",

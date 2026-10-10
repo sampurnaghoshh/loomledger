@@ -24,6 +24,7 @@ from app.modules.recalls import router as recalls
 from app.modules.rolls import router as rolls
 from app.modules.trace import router as trace
 from app.modules.users import router as users
+from app.modules.validation import router as validation
 from app.modules.workforce import router as workforce
 from app.errors import handle_unexpected, install_exception_handlers
 
@@ -57,6 +58,30 @@ async def lifespan(app: FastAPI):
         pool.close()
 
 
+class CaptureWriteBody:
+    """Pure ASGI: keeps the first 16 KB of a write request's body in scope["state"]["raw_body"], so a refusal can be
+    summarised in the validation log after the route has consumed the stream (018)."""
+    LIMIT = 16_384
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["method"] not in ("POST", "PUT", "PATCH", "DELETE"):
+            return await self.app(scope, receive, send)
+        state = scope.setdefault("state", {})
+        chunks: list[bytes] = []
+
+        async def capture():
+            message = await receive()
+            if message["type"] == "http.request" and sum(map(len, chunks)) < self.LIMIT:
+                chunks.append(message.get("body", b""))
+                state["raw_body"] = b"".join(chunks)[: self.LIMIT]
+            return message
+
+        await self.app(scope, capture, send)
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -78,6 +103,8 @@ def create_app() -> FastAPI:
         response.headers["X-Request-ID"] = rid
         log.info("rid=%s %s %s %s %.1fms", rid, request.method, request.url.path, response.status_code, ms)
         return response
+
+    app.add_middleware(CaptureWriteBody)
 
     # CORS is added last so it wraps everything, including error responses.
     app.add_middleware(
@@ -114,6 +141,7 @@ def create_app() -> FastAPI:
     app.include_router(trace.router)
     app.include_router(recalls.router)
     app.include_router(workforce.router)
+    app.include_router(validation.router)        # /api/validation-log (018)
     app.include_router(users.router)             # /api/users (owner: users.manage, 017)
     app.include_router(rolls.router)             # /api/rolls/{code}/passport, /api/rolls/labels (QR)
     # ---------------------------------------------------------------------------------------------

@@ -9,6 +9,8 @@ import type {
 } from "@/api/types";
 import { useApi } from "@/hooks/useApi";
 import { usePermissions } from "@/hooks/usePermissions";
+import { InspectByCode } from "@/components/InspectByCode";
+import { ApiError } from "@/api/errors";
 import { formatDate, formatDateTime, formatQty } from "@/lib/format";
 import {
   Badge,
@@ -133,9 +135,11 @@ export default function QualityPage() {
       await Promise.all([queueState.reload(), rejectionState.reload(), latestState.reload()]);
     } catch (error) {
       setFormError(
-        error instanceof Error
-          ? error.message
-          : "Inspection could not be saved. Please try again.",
+        error instanceof ApiError
+          ? [error.message, error.hint].filter(Boolean).join(" ")   // the database's rule + what to do
+          : error instanceof Error
+            ? error.message
+            : "Inspection could not be saved. Please try again.",
       );
     } finally {
       setSaving(false);
@@ -215,6 +219,10 @@ export default function QualityPage() {
             </Button>
           </div>
         </section>
+      )}
+
+      {can("quality.inspect") && (
+        <InspectByCode onRecorded={() => void Promise.all([queueState.reload(), rejectionState.reload(), latestState.reload()])} />
       )}
 
       {queueState.error && (

@@ -15,6 +15,7 @@ import {
   Table2,
   UserCog,
   KeyRound,
+  ListX,
   Truck,
   X,
   Users,
@@ -58,6 +59,7 @@ const NAV: { section: string; items: NavItem[] }[] = [
     items: [
       { to: "/admin/users", label: "Users & roles", icon: UserCog, perm: ["users.manage"] },
       { to: "/admin/roles", label: "Roles & permissions", icon: KeyRound },
+      { to: "/admin/validation-log", label: "Validation log", icon: ListX, perm: ["validation_log.view"] },
     ],
   },
 ];

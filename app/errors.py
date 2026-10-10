@@ -103,6 +103,10 @@ def map_db_error(exc: psycopg.Error) -> ApiError:
     if state == "LL012":
         return ApiError("SELF_DEACTIVATION", diag.message_primary or "You can't deactivate your own account.", 409,
                         hint=diag.message_hint or None, fields={"active": "not for your own account"}, sqlstate=state)
+    if state == "LL013":
+        return ApiError("PHASE_SKIPPED", diag.message_primary or "A production phase was skipped.", 409,
+                        hint=diag.message_hint or None, fields={"missing_phase": diag.message_detail or ""},
+                        sqlstate=state)
     if state == "LL003":
         return ApiError("LEDGER_IMMUTABLE", diag.message_primary or "The stock ledger is append-only.", 405,
                         hint="Post a correcting movement instead.", sqlstate=state)
@@ -173,13 +177,28 @@ def _db_error_response(request: Request, exc: psycopg.Error) -> JSONResponse:
 _HTTP_CODES = {401: "UNAUTHENTICATED", 403: "FORBIDDEN", 404: "NOT_FOUND", 405: "METHOD_NOT_ALLOWED"}
 
 
+async def _record_refusal(request: Request, err: ApiError) -> None:
+    """A write refused by a business rule goes to the validation log (018). Never breaks the response."""
+    try:
+        from starlette.concurrency import run_in_threadpool
+
+        from app.modules.validation import service as validation_log
+        if validation_log.is_refusal(request, err.status, err.code, err.sqlstate):
+            body = getattr(request.state, "raw_body", b"") or b""
+            await run_in_threadpool(validation_log.record, request, body, err.status, err.code, err.message, err.sqlstate)
+    except Exception:  # noqa: BLE001 — the log is best effort; the client still gets the real refusal
+        log.warning("validation log skipped rid=%s", _request_id(request), exc_info=True)
+
+
 def install_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def _api_error(request: Request, exc: ApiError) -> JSONResponse:
+        await _record_refusal(request, exc)
         return JSONResponse(exc.body(), status_code=exc.status)
 
     @app.exception_handler(psycopg.Error)
     async def _psycopg_error(request: Request, exc: psycopg.Error) -> JSONResponse:
+        await _record_refusal(request, map_db_error(exc))
         return _db_error_response(request, exc)
 
     @app.exception_handler(RequestValidationError)

@@ -50,8 +50,9 @@ def rejections(conn: psycopg.Connection, day: date | None = None) -> list[dict]:
             ORDER BY q.inspected_at DESC""", {"day": day}).fetchall()
 
 
-def finished_lot(conn: psycopg.Connection, code: str) -> dict | None:
-    return conn.execute("SELECT id, code, qty FROM lot WHERE code = %s AND kind = 'finished'", (code,)).fetchone()
+def roll_lot(conn: psycopg.Connection, code: str) -> dict | None:
+    """Any roll (greige or finished): whether it may be inspected yet is the database's call (018 LL013)."""
+    return conn.execute("SELECT id, code, qty FROM lot WHERE code = %s AND kind <> 'yarn'", (code,)).fetchone()
 
 
 def inspector(conn: psycopg.Connection, code: str | None) -> dict | None:

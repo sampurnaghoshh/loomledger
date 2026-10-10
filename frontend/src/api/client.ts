@@ -52,6 +52,7 @@ import type {
   PermissionsInfo,
   Role,
   UserRow,
+  ValidationLogRow,
 } from "./types";
 import { getSession } from "@/lib/auth";
 import { openFloorSocket, type SocketStatus } from "./floorSocket";
@@ -91,6 +92,9 @@ const real = {
     login: (email: string, password: string) =>
       request<LoginResponse>("POST", "/api/auth/login", { email, password }, false),
     permissions: () => request<PermissionsInfo>("GET", "/api/auth/permissions"),
+  },
+  validationLog: {
+    list: (p: ListQuery) => request<Page<ValidationLogRow>>("GET", `/api/validation-log${qs(p)}`), // validation_log.view
   },
   users: {
     list: (p: ListQuery) => request<Page<UserRow>>("GET", `/api/users${qs(p)}`), // users.manage
