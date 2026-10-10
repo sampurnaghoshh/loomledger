@@ -1,0 +1,74 @@
+[
+  {
+    "code": "SO-0398",
+    "buyer": "Bluebird Uniforms",
+    "product": "Sky Blue Poplin",
+    "ordered_m": 1500.0,
+    "unit_price": 140.0,
+    "promised_date": "2026-10-08",
+    "revised_promise_date": null,
+    "status": "dispatched",
+    "progress": {
+      "ready_m": 0,
+      "on_hold_m": 0,
+      "weaving_m": 0,
+      "dispatched_m": 1500.0,
+      "quality_check_m": 0
+    },
+    "tracking_token": "bd8db814-f234-55a9-a001-d0f6af766b89"
+  },
+  {
+    "code": "SO-0412",
+    "buyer": "Meridian Apparels",
+    "product": "Navy Twill",
+    "ordered_m": 2000.0,
+    "unit_price": 185.0,
+    "promised_date": "2026-10-14",
+    "revised_promise_date": "2026-10-16",
+    "status": "partially_dispatched",
+    "progress": {
+      "ready_m": 500.0,
+      "on_hold_m": 200.0,
+      "weaving_m": 0,
+      "dispatched_m": 600.0,
+      "quality_check_m": 0
+    },
+    "tracking_token": "4155711b-d0c4-5f02-a2b5-bfd8dd09045d"
+  },
+  {
+    "code": "SO-0419",
+    "buyer": "Coastline Garments",
+    "product": "Navy Twill",
+    "ordered_m": 1500.0,
+    "unit_price": 185.0,
+    "promised_date": "2026-10-17",
+    "revised_promise_date": "2026-10-21",
+    "status": "in_production",
+    "progress": {
+      "ready_m": 500.0,
+      "on_hold_m": 300.0,
+      "weaving_m": 0,
+      "dispatched_m": 0,
+      "quality_check_m": 0
+    },
+    "tracking_token": "8b1ab95b-593a-5796-b23b-a7bdfc0cddd4"
+  },
+  {
+    "code": "SO-0405",
+    "buyer": "Saffron Home Linen",
+    "product": "Sky Blue Poplin",
+    "ordered_m": 1500.0,
+    "unit_price": 140.0,
+    "promised_date": "2026-10-20",
+    "revised_promise_date": null,
+    "status": "in_production",
+    "progress": {
+      "ready_m": 900.0,
+      "on_hold_m": 0,
+      "weaving_m": 0,
+      "dispatched_m": 0,
+      "quality_check_m": 0
+    },
+    "tracking_token": "c1be7402-1f2c-5c3e-8c64-3eae94fdc565"
+  }
+]

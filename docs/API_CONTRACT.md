@@ -1,0 +1,110 @@
+# LoomLedger API contract
+
+**The JSON files in `docs/api-mocks/` are the contract.** They are real responses exported from the seeded database
+(`python -m scripts.export_mocks`). The frontend builds against them in mock mode; every backend endpoint must return
+exactly the same shape (same keys, same types, same nesting). If a shape must change: change the export script,
+regenerate, update `frontend/src/api/types.ts`, and tell the team in the group chat.
+
+- Base path `/api`. JSON in, JSON out. snake_case keys. Numbers are JSON numbers (₹ and kg are not strings).
+- Dates `"2026-10-16"`; timestamps ISO-8601 with offset (`"2026-10-10T09:12:00+05:30"`).
+- Auth: `Authorization: Bearer <token>` on everything except `POST /api/auth/login` and `GET /api/track/{token}`.
+- Every write that creates stock movement takes an `idempotency_key` (UUID made once per form submit). Replaying the same key returns the original result with `200`, never a duplicate.
+
+## Error envelope (every non-2xx)
+
+```json
+{ "error": { "code": "LOT_QUARANTINED", "message": "stock movement blocked: lot Y-112 is quarantined",
+             "hint": "Quarantined stock can only go to quarantine, scrap, or back to the supplier.",
+             "sqlstate": "LL001", "fields": null } }
+```
+
+| Source | HTTP | code |
+|---|---|---|
+| SQLSTATE `LL001` | 409 | `LOT_QUARANTINED` |
+| SQLSTATE `LL002` | 422 | `INSUFFICIENT_STOCK` |
+| SQLSTATE `LL003` | 405 | `LEDGER_IMMUTABLE` |
+| SQLSTATE `23P01` (exclusion) | 409 | `MACHINE_BUSY` |
+| SQLSTATE `23505` on `one_dispatch_per_roll` | 409 | `ALREADY_DISPATCHED` |
+| SQLSTATE `23505` on `idempotency_key` | 200 | (return the original result) |
+| other `23xxx` / Pydantic validation | 422 | `VALIDATION_FAILED` + `fields: {name: message}` |
+| shade check fails, no override | 409 | `SHADE_MISMATCH` |
+| bad login | 401 | `INVALID_CREDENTIALS` |
+| missing/expired token | 401 | `UNAUTHENTICATED` |
+| role not allowed | 403 | `FORBIDDEN` |
+| unknown id/code/token | 404 | `NOT_FOUND` |
+| anything else | 500 | `INTERNAL` (log with request id; never leak SQL to the client) |
+
+Examples: `error_lot_quarantined.json`, `error_not_found.json`.
+
+## Endpoints
+
+Owner = who builds the backend endpoint. Screen = who builds the page that uses it.
+
+### Auth
+| Method & path | Body / query | Response | Owner |
+|---|---|---|---|
+| `POST /api/auth/login` | `{email, password}` | `auth_login.json` | Sampurna |
+
+Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND password_hash = crypt(%s, password_hash)`.
+
+### Floor (Act 1)
+| Method & path | Body / query | Response | Owner | Screen |
+|---|---|---|---|---|
+| `GET /api/floor/machines` | – | `floor_machines.json` (`v_machine_now`) | Sampurna | Adithi |
+| `GET /api/floor/output` | `?day=YYYY-MM-DD` (default today IST) | `floor_output.json` | Sampurna | Adithi |
+| `GET /api/floor/availability` | `?from=&to=` (default last 30 days) | `floor_availability.json` | Sampurna | Adithi |
+| `POST /api/floor/machines/{code}/state` | `{state, reason?}` — closes the open state row, opens a new one, in one transaction | `{machine_code, state, started_at}` | Sampurna | Adithi, simulator |
+| `WS /ws/floor` | – | stream of `ws_floor_event.json` (relay of `LISTEN loomledger_floor`) | Sampurna | Adithi |
+
+### Inventory
+| Method & path | Body / query | Response | Owner | Screen |
+|---|---|---|---|---|
+| `GET /api/inventory/stock` | `?as_of=<ISO timestamp>` (omit = now) | `inventory_stock_now.json` / `inventory_stock_as_of.json` | Sampurna | Adithi |
+| `POST /api/inventory/receipts` | `{supplier_code, lot_code, kg, price_per_kg, vehicle_no?, challan_no?, idempotency_key}` → goods_receipt + yarn lot + receipt move | `201 {receipt_code, lot_code, kg, location}` | Sampurna | Adithi |
+
+### Production
+| Method & path | Body | Response | Owner |
+|---|---|---|---|
+| `POST /api/production/weaving-runs` | `{machine_code, yarn_lot_code, product_code, meters_planned, order_code?, idempotency_key}` → run (shift from current IST hour), greige lot `wip`, yarn issue (kg = m × width × GSM/1000 × 1.04), lineage, reservation | `201 {run_code, lot_code, yarn_issued_kg}`; `409 LOT_QUARANTINED` (this is the stage demo), `409 MACHINE_BUSY`, `422 INSUFFICIENT_STOCK` | Sampurna |
+| `POST /api/production/weaving-runs/{run_code}/finish` | `{waste_kg, idempotency_key}` → end run, waste move, greige into GREIGE-STORE, lot `active` | `{run_code, lot_code, meters}` | Sampurna |
+| `POST /api/production/dye-batches` | `{machine_code, greige_lot_codes[], chemical_cost, idempotency_key}` | `201 {batch_code}` | Sampurna (stretch) |
+| `POST /api/production/dye-batches/{code}/finish` | `{idempotency_key}` → finished lots | `{batch_code, lot_codes[]}` | Sampurna (stretch) |
+
+### Quality
+| Method & path | Body / query | Response | Owner | Screen |
+|---|---|---|---|---|
+| `GET /api/quality/queue` | – | `quality_queue.json` | Sampurna | Adithi |
+| `GET /api/quality/rejections` | – | `quality_rejections.json` | Sampurna | Adithi |
+| `POST /api/quality/inspections` | `{lot_code, result, defect_type?, defect_meters?, notes?}`; reject also moves the roll FG-STORE → REJECT-BAY | `201 {inspection_id, lot_code, result}` | Sampurna | Adithi |
+
+### Trace (Act 2)
+| Method & path | Body | Response | Owner | Screen |
+|---|---|---|---|---|
+| `POST /api/trace/find-cause` | `{lot_codes: ["R-1201", ...]}` | `trace_find_cause.json` (`find_cause()`) | Nooman | Nooman |
+| `POST /api/trace/graph` | `{lot_codes, direction: "up"}` | `trace_graph_ancestors.json` | Nooman | Nooman |
+| `GET /api/trace/lots/{code}/descendants` | – | `trace_graph_descendants.json` | Nooman | Nooman |
+
+### Recall (Acts 3–4)
+| Method & path | Body / query | Response | Owner | Screen |
+|---|---|---|---|---|
+| `GET /api/recalls/preview` | `?lot_code=Y-112` | `recall_preview.json` (or `recall_applied.json` if already applied) | Nooman | Nooman |
+| `POST /api/recalls` | `{lot_code, reason}` → `apply_recall()`; idempotent | `recall_applied.json` | Nooman | Nooman |
+
+### Orders, dispatch, buyer portal
+| Method & path | Body | Response | Owner | Screen |
+|---|---|---|---|---|
+| `GET /api/orders` | – | `orders.json` | Sampurna | Dhruva |
+| `POST /api/dispatches` | `{order_code, lot_codes[], vehicle_no, idempotency_key, shade_override_reason?}` — Shade Guard: all rolls of the line from one dye batch, else `409 SHADE_MISMATCH` with `fields.batches` unless an override reason is given | `201 {dispatch_code, invoice_code, amount}` | Nooman (Shade Guard) | Dhruva (stretch) |
+| `GET /api/track/{token}` | public | `track_SO-0412_before.json` / `_after.json`; `404 error_not_found.json` | Sampurna | Dhruva |
+
+### Finance (month-end)
+| Method & path | Query | Response | Owner | Screen |
+|---|---|---|---|---|
+| `GET /api/finance/mass-balance` | `?from=&to=` (default all time) | `finance_mass_balance.json` | Sampurna | Dhruva |
+| `GET /api/finance/roll-costs` | `?order_code=SO-0412` | `finance_roll_costs_SO-0412.json` | Sampurna | Dhruva |
+
+## Contract test (backend)
+
+For every GET above: seed, call the endpoint, compare with the mock file. Ignore only wall-clock fields
+(`applied_at`, `at` of events created during the test, `state_since` of rows the test changed). A red contract test means
+the frontend will break when mocks are switched off.

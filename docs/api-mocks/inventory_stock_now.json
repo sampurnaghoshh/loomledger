@@ -1,0 +1,677 @@
+{
+  "as_of": null,
+  "rows": [
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1001",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1002",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1003",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1005",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1006",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1007",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1010",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1012",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1013",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1015",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1016",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1019",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1020",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1021",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1022",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1024",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1025",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1028",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1029",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1032",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1033",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1034",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1035",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1036",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1037",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1038",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1039",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1040",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1041",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1042",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1043",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1044",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1045",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1046",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1047",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1048",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1049",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1050",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1051",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1052",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1053",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1060",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1062",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1063",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1070",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1071",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1072",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1076",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1080",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1082",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1089",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1090",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1091",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1092",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1099",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1100",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1101",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1102",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1103",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1206",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1207",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1208",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1209",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1210",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "FG-STORE",
+      "lot_code": "R-1211",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "REJECT-BAY",
+      "lot_code": "R-1011",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "REJECT-BAY",
+      "lot_code": "R-1031",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "REJECT-BAY",
+      "lot_code": "R-1061",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "REJECT-BAY",
+      "lot_code": "R-1081",
+      "lot_kind": "finished",
+      "product_code": "FIN-POP-SKY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "REJECT-BAY",
+      "lot_code": "R-1201",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "REJECT-BAY",
+      "lot_code": "R-1202",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "REJECT-BAY",
+      "lot_code": "R-1203",
+      "lot_kind": "finished",
+      "product_code": "FIN-TWL-NVY",
+      "qty": 50.0,
+      "uom": "m"
+    },
+    {
+      "location_code": "YARN-STORE",
+      "lot_code": "Y-101",
+      "lot_kind": "yarn",
+      "product_code": "YRN-C40",
+      "qty": 41.3,
+      "uom": "kg"
+    },
+    {
+      "location_code": "YARN-STORE",
+      "lot_code": "Y-102",
+      "lot_kind": "yarn",
+      "product_code": "YRN-C40",
+      "qty": 42.2,
+      "uom": "kg"
+    },
+    {
+      "location_code": "YARN-STORE",
+      "lot_code": "Y-103",
+      "lot_kind": "yarn",
+      "product_code": "YRN-C40",
+      "qty": 42.2,
+      "uom": "kg"
+    },
+    {
+      "location_code": "YARN-STORE",
+      "lot_code": "Y-104",
+      "lot_kind": "yarn",
+      "product_code": "YRN-C40",
+      "qty": 42.2,
+      "uom": "kg"
+    },
+    {
+      "location_code": "YARN-STORE",
+      "lot_code": "Y-105",
+      "lot_kind": "yarn",
+      "product_code": "YRN-C40",
+      "qty": 43.1,
+      "uom": "kg"
+    },
+    {
+      "location_code": "YARN-STORE",
+      "lot_code": "Y-106",
+      "lot_kind": "yarn",
+      "product_code": "YRN-C40",
+      "qty": 24.6,
+      "uom": "kg"
+    },
+    {
+      "location_code": "YARN-STORE",
+      "lot_code": "Y-107",
+      "lot_kind": "yarn",
+      "product_code": "YRN-C40",
+      "qty": 24.6,
+      "uom": "kg"
+    },
+    {
+      "location_code": "YARN-STORE",
+      "lot_code": "Y-108",
+      "lot_kind": "yarn",
+      "product_code": "YRN-C40",
+      "qty": 25.5,
+      "uom": "kg"
+    },
+    {
+      "location_code": "YARN-STORE",
+      "lot_code": "Y-109",
+      "lot_kind": "yarn",
+      "product_code": "YRN-C40",
+      "qty": 24.6,
+      "uom": "kg"
+    },
+    {
+      "location_code": "YARN-STORE",
+      "lot_code": "Y-110",
+      "lot_kind": "yarn",
+      "product_code": "YRN-C40",
+      "qty": 24.6,
+      "uom": "kg"
+    },
+    {
+      "location_code": "YARN-STORE",
+      "lot_code": "Y-111",
+      "lot_kind": "yarn",
+      "product_code": "YRN-C40",
+      "qty": 53.2,
+      "uom": "kg"
+    },
+    {
+      "location_code": "YARN-STORE",
+      "lot_code": "Y-112",
+      "lot_kind": "yarn",
+      "product_code": "YRN-C40",
+      "qty": 142.8,
+      "uom": "kg"
+    }
+  ]
+}

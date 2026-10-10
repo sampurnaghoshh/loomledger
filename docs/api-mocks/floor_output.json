@@ -1,0 +1,75 @@
+{
+  "day": "2026-10-10",
+  "machines": [
+    {
+      "machine_code": "LOOM-1",
+      "machine_name": "Loom 1",
+      "stage": "weaving",
+      "runs_completed": 0,
+      "meters": 0.0
+    },
+    {
+      "machine_code": "LOOM-2",
+      "machine_name": "Loom 2",
+      "stage": "weaving",
+      "runs_completed": 0,
+      "meters": 0.0
+    },
+    {
+      "machine_code": "LOOM-3",
+      "machine_name": "Loom 3",
+      "stage": "weaving",
+      "runs_completed": 0,
+      "meters": 0.0
+    },
+    {
+      "machine_code": "LOOM-4",
+      "machine_name": "Loom 4",
+      "stage": "weaving",
+      "runs_completed": 0,
+      "meters": 0.0
+    },
+    {
+      "machine_code": "LOOM-5",
+      "machine_name": "Loom 5",
+      "stage": "weaving",
+      "runs_completed": 0,
+      "meters": 0.0
+    },
+    {
+      "machine_code": "LOOM-6",
+      "machine_name": "Loom 6",
+      "stage": "weaving",
+      "runs_completed": 0,
+      "meters": 0.0
+    },
+    {
+      "machine_code": "RF-1",
+      "machine_name": "Ring Frame 1",
+      "stage": "spinning",
+      "runs_completed": 0,
+      "meters": 0.0
+    },
+    {
+      "machine_code": "VAT-1",
+      "machine_name": "Dye Vat 1",
+      "stage": "dyeing",
+      "runs_completed": 0,
+      "meters": 0.0
+    },
+    {
+      "machine_code": "VAT-2",
+      "machine_name": "Dye Vat 2",
+      "stage": "dyeing",
+      "runs_completed": 0,
+      "meters": 0.0
+    },
+    {
+      "machine_code": "VAT-3",
+      "machine_name": "Dye Vat 3",
+      "stage": "dyeing",
+      "runs_completed": 1,
+      "meters": 300.0
+    }
+  ]
+}

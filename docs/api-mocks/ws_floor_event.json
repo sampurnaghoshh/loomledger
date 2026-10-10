@@ -1,0 +1,8 @@
+{
+  "machine_id": 4,
+  "machine_code": "LOOM-4",
+  "state": "breakdown",
+  "reason": "Warp beam bearing failure",
+  "started_at": "2026-10-10T09:12:00+05:30",
+  "ended_at": null
+}

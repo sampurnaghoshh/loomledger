@@ -1,0 +1,482 @@
+{
+  "lot_code": "Y-112",
+  "nodes": [
+    {
+      "code": "Y-112",
+      "kind": "yarn",
+      "product": "Cotton 40s Combed Yarn",
+      "qty": 330.0,
+      "uom": "kg",
+      "status": "active",
+      "custody": null,
+      "machine": null,
+      "stage": null,
+      "shift": null,
+      "run_code": null,
+      "produced_at": "2026-09-20T10:45:00+05:30",
+      "supplier": "Kaveri Yarn Traders"
+    },
+    {
+      "code": "R-1201-G",
+      "kind": "greige",
+      "product": "Greige Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "consumed",
+      "custody": "consumed",
+      "machine": "Loom 2",
+      "stage": "weaving",
+      "shift": "Day Shift A",
+      "run_code": "WV-R-1201",
+      "produced_at": "2026-09-22T14:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1202-G",
+      "kind": "greige",
+      "product": "Greige Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "consumed",
+      "custody": "consumed",
+      "machine": "Loom 5",
+      "stage": "weaving",
+      "shift": "Day Shift A",
+      "run_code": "WV-R-1202",
+      "produced_at": "2026-09-22T14:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1203-G",
+      "kind": "greige",
+      "product": "Greige Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "consumed",
+      "custody": "consumed",
+      "machine": "Loom 2",
+      "stage": "weaving",
+      "shift": "Day Shift A",
+      "run_code": "WV-R-1203",
+      "produced_at": "2026-09-22T20:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1204-G",
+      "kind": "greige",
+      "product": "Greige Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "consumed",
+      "custody": "consumed",
+      "machine": "Loom 5",
+      "stage": "weaving",
+      "shift": "Day Shift A",
+      "run_code": "WV-R-1204",
+      "produced_at": "2026-09-22T20:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1205-G",
+      "kind": "greige",
+      "product": "Greige Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "consumed",
+      "custody": "consumed",
+      "machine": "Loom 2",
+      "stage": "weaving",
+      "shift": "Day Shift A",
+      "run_code": "WV-R-1205",
+      "produced_at": "2026-09-23T14:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1206-G",
+      "kind": "greige",
+      "product": "Greige Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "consumed",
+      "custody": "consumed",
+      "machine": "Loom 5",
+      "stage": "weaving",
+      "shift": "Day Shift A",
+      "run_code": "WV-R-1206",
+      "produced_at": "2026-09-23T14:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1207-G",
+      "kind": "greige",
+      "product": "Greige Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "consumed",
+      "custody": "consumed",
+      "machine": "Loom 2",
+      "stage": "weaving",
+      "shift": "Day Shift A",
+      "run_code": "WV-R-1207",
+      "produced_at": "2026-09-23T20:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1208-G",
+      "kind": "greige",
+      "product": "Greige Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "consumed",
+      "custody": "consumed",
+      "machine": "Loom 5",
+      "stage": "weaving",
+      "shift": "Day Shift A",
+      "run_code": "WV-R-1208",
+      "produced_at": "2026-09-23T20:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1209-G",
+      "kind": "greige",
+      "product": "Greige Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "consumed",
+      "custody": "consumed",
+      "machine": "Loom 2",
+      "stage": "weaving",
+      "shift": "Day Shift A",
+      "run_code": "WV-R-1209",
+      "produced_at": "2026-09-24T14:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1210-G",
+      "kind": "greige",
+      "product": "Greige Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "consumed",
+      "custody": "consumed",
+      "machine": "Loom 5",
+      "stage": "weaving",
+      "shift": "Day Shift A",
+      "run_code": "WV-R-1210",
+      "produced_at": "2026-09-24T14:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1211-G",
+      "kind": "greige",
+      "product": "Greige Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "consumed",
+      "custody": "consumed",
+      "machine": "Loom 2",
+      "stage": "weaving",
+      "shift": "Day Shift A",
+      "run_code": "WV-R-1211",
+      "produced_at": "2026-09-24T20:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1212-G",
+      "kind": "greige",
+      "product": "Greige Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "wip",
+      "custody": "wip",
+      "machine": "Loom 5",
+      "stage": "weaving",
+      "shift": "Day Shift A",
+      "run_code": "WV-R-1212",
+      "produced_at": "2026-10-10T08:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1201",
+      "kind": "finished",
+      "product": "Navy Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "active",
+      "custody": "rejected",
+      "machine": "Dye Vat 3",
+      "stage": "dyeing",
+      "shift": "Night Shift B",
+      "run_code": "DB-01",
+      "produced_at": "2026-10-10T02:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1202",
+      "kind": "finished",
+      "product": "Navy Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "active",
+      "custody": "rejected",
+      "machine": "Dye Vat 3",
+      "stage": "dyeing",
+      "shift": "Night Shift B",
+      "run_code": "DB-01",
+      "produced_at": "2026-10-10T02:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1203",
+      "kind": "finished",
+      "product": "Navy Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "active",
+      "custody": "rejected",
+      "machine": "Dye Vat 3",
+      "stage": "dyeing",
+      "shift": "Night Shift B",
+      "run_code": "DB-01",
+      "produced_at": "2026-10-10T02:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1204",
+      "kind": "finished",
+      "product": "Navy Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "dispatched",
+      "custody": "at_customer",
+      "machine": "Dye Vat 1",
+      "stage": "dyeing",
+      "shift": "Day Shift A",
+      "run_code": "DB-02",
+      "produced_at": "2026-10-05T14:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1205",
+      "kind": "finished",
+      "product": "Navy Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "dispatched",
+      "custody": "at_customer",
+      "machine": "Dye Vat 1",
+      "stage": "dyeing",
+      "shift": "Day Shift A",
+      "run_code": "DB-02",
+      "produced_at": "2026-10-05T14:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1206",
+      "kind": "finished",
+      "product": "Navy Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "active",
+      "custody": "passed_in_store",
+      "machine": "Dye Vat 1",
+      "stage": "dyeing",
+      "shift": "Day Shift A",
+      "run_code": "DB-02",
+      "produced_at": "2026-10-05T14:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1207",
+      "kind": "finished",
+      "product": "Navy Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "active",
+      "custody": "passed_in_store",
+      "machine": "Dye Vat 1",
+      "stage": "dyeing",
+      "shift": "Day Shift A",
+      "run_code": "DB-02",
+      "produced_at": "2026-10-05T14:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1208",
+      "kind": "finished",
+      "product": "Navy Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "active",
+      "custody": "passed_in_store",
+      "machine": "Dye Vat 1",
+      "stage": "dyeing",
+      "shift": "Day Shift A",
+      "run_code": "DB-02",
+      "produced_at": "2026-10-05T14:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1209",
+      "kind": "finished",
+      "product": "Navy Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "active",
+      "custody": "awaiting_qc",
+      "machine": "Dye Vat 2",
+      "stage": "dyeing",
+      "shift": "Day Shift A",
+      "run_code": "DB-03",
+      "produced_at": "2026-10-09T20:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1210",
+      "kind": "finished",
+      "product": "Navy Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "active",
+      "custody": "awaiting_qc",
+      "machine": "Dye Vat 2",
+      "stage": "dyeing",
+      "shift": "Day Shift A",
+      "run_code": "DB-03",
+      "produced_at": "2026-10-09T20:00:00+05:30",
+      "supplier": null
+    },
+    {
+      "code": "R-1211",
+      "kind": "finished",
+      "product": "Navy Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "status": "active",
+      "custody": "awaiting_qc",
+      "machine": "Dye Vat 2",
+      "stage": "dyeing",
+      "shift": "Day Shift A",
+      "run_code": "DB-03",
+      "produced_at": "2026-10-09T20:00:00+05:30",
+      "supplier": null
+    }
+  ],
+  "edges": [
+    {
+      "from": "R-1201-G",
+      "to": "R-1201",
+      "qty_consumed": 50.0
+    },
+    {
+      "from": "R-1202-G",
+      "to": "R-1202",
+      "qty_consumed": 50.0
+    },
+    {
+      "from": "R-1203-G",
+      "to": "R-1203",
+      "qty_consumed": 50.0
+    },
+    {
+      "from": "R-1204-G",
+      "to": "R-1204",
+      "qty_consumed": 50.0
+    },
+    {
+      "from": "R-1205-G",
+      "to": "R-1205",
+      "qty_consumed": 50.0
+    },
+    {
+      "from": "R-1206-G",
+      "to": "R-1206",
+      "qty_consumed": 50.0
+    },
+    {
+      "from": "R-1207-G",
+      "to": "R-1207",
+      "qty_consumed": 50.0
+    },
+    {
+      "from": "R-1208-G",
+      "to": "R-1208",
+      "qty_consumed": 50.0
+    },
+    {
+      "from": "R-1209-G",
+      "to": "R-1209",
+      "qty_consumed": 50.0
+    },
+    {
+      "from": "R-1210-G",
+      "to": "R-1210",
+      "qty_consumed": 50.0
+    },
+    {
+      "from": "R-1211-G",
+      "to": "R-1211",
+      "qty_consumed": 50.0
+    },
+    {
+      "from": "Y-112",
+      "to": "R-1201-G",
+      "qty_consumed": 15.6
+    },
+    {
+      "from": "Y-112",
+      "to": "R-1202-G",
+      "qty_consumed": 15.6
+    },
+    {
+      "from": "Y-112",
+      "to": "R-1203-G",
+      "qty_consumed": 15.6
+    },
+    {
+      "from": "Y-112",
+      "to": "R-1204-G",
+      "qty_consumed": 15.6
+    },
+    {
+      "from": "Y-112",
+      "to": "R-1205-G",
+      "qty_consumed": 15.6
+    },
+    {
+      "from": "Y-112",
+      "to": "R-1206-G",
+      "qty_consumed": 15.6
+    },
+    {
+      "from": "Y-112",
+      "to": "R-1207-G",
+      "qty_consumed": 15.6
+    },
+    {
+      "from": "Y-112",
+      "to": "R-1208-G",
+      "qty_consumed": 15.6
+    },
+    {
+      "from": "Y-112",
+      "to": "R-1209-G",
+      "qty_consumed": 15.6
+    },
+    {
+      "from": "Y-112",
+      "to": "R-1210-G",
+      "qty_consumed": 15.6
+    },
+    {
+      "from": "Y-112",
+      "to": "R-1211-G",
+      "qty_consumed": 15.6
+    },
+    {
+      "from": "Y-112",
+      "to": "R-1212-G",
+      "qty_consumed": 15.6
+    }
+  ]
+}

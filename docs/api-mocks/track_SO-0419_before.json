@@ -1,0 +1,22 @@
+{
+  "buyer": "Coastline Garments",
+  "order": "SO-0419",
+  "delayed": false,
+  "product": "Navy Twill",
+  "updates": [
+    {
+      "at": "2026-09-25T11:00:00+05:30",
+      "message": "Order confirmed: 1,500 m. Promised dispatch 17 Oct 2026."
+    }
+  ],
+  "progress": {
+    "ready_m": 600.0,
+    "on_hold_m": 0,
+    "weaving_m": 50.0,
+    "dispatched_m": 0,
+    "quality_check_m": 150.0
+  },
+  "ordered_m": 1500.0,
+  "expected_date": "2026-10-17",
+  "promised_date": "2026-10-17"
+}

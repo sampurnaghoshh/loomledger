@@ -1,0 +1,183 @@
+{
+  "applied": true,
+  "recall_code": "RC-Y-112",
+  "applied_at": "2026-10-10T11:01:15.030497+05:30",
+  "lot_code": "Y-112",
+  "impact": {
+    "root_lot_code": "Y-112",
+    "rolls_total": 12,
+    "rolls_rejected": 3,
+    "rolls_at_risk": 9,
+    "rolls_passed_in_store": 3,
+    "rolls_awaiting_qc": 3,
+    "rolls_wip": 1,
+    "rolls_at_customer": 2,
+    "orders_affected": 2,
+    "buyers_affected": 2,
+    "buyers_holding_goods": 1,
+    "remake_m": 600.0,
+    "bottleneck_stage": "weaving",
+    "throughput_m_per_day": 250.0,
+    "additional_delay_days": 3,
+    "cost_already_incurred": 22488.0,
+    "cost_in_factory": 44976.0,
+    "cost_wip": 4056.0,
+    "cost_at_customer": 14992.0,
+    "recall_exposure": 64024.0,
+    "quarantined_material_qty": 142.8,
+    "quarantined_material_value": 37128.0,
+    "total_exposure": 123640.0
+  },
+  "orders": [
+    {
+      "order_id": 3,
+      "order_code": "SO-0412",
+      "buyer_name": "Meridian Apparels",
+      "product_code": "FIN-TWL-NVY",
+      "affected_rolls": 6,
+      "rolls_at_customer": 2,
+      "at_customer_codes": "R-1204, R-1205",
+      "remake_m": 300.0,
+      "bottleneck_stage": "weaving",
+      "throughput_m_per_day": 250.0,
+      "cumulative_remake_m": 300.0,
+      "delay_days": 2,
+      "promised_date": "2026-10-14",
+      "revised_promise_date": "2026-10-16"
+    },
+    {
+      "order_id": 4,
+      "order_code": "SO-0419",
+      "buyer_name": "Coastline Garments",
+      "product_code": "FIN-TWL-NVY",
+      "affected_rolls": 6,
+      "rolls_at_customer": 0,
+      "at_customer_codes": null,
+      "remake_m": 300.0,
+      "bottleneck_stage": "weaving",
+      "throughput_m_per_day": 250.0,
+      "cumulative_remake_m": 600.0,
+      "delay_days": 3,
+      "promised_date": "2026-10-17",
+      "revised_promise_date": "2026-10-21"
+    }
+  ],
+  "rolls": [
+    {
+      "lot_code": "R-1201",
+      "kind": "finished",
+      "qty_m": 50.0,
+      "custody": "rejected",
+      "order_code": "SO-0412",
+      "buyer_name": "Meridian Apparels",
+      "cost": 7496.0
+    },
+    {
+      "lot_code": "R-1202",
+      "kind": "finished",
+      "qty_m": 50.0,
+      "custody": "rejected",
+      "order_code": "SO-0412",
+      "buyer_name": "Meridian Apparels",
+      "cost": 7496.0
+    },
+    {
+      "lot_code": "R-1203",
+      "kind": "finished",
+      "qty_m": 50.0,
+      "custody": "rejected",
+      "order_code": "SO-0412",
+      "buyer_name": "Meridian Apparels",
+      "cost": 7496.0
+    },
+    {
+      "lot_code": "R-1204",
+      "kind": "finished",
+      "qty_m": 50.0,
+      "custody": "at_customer",
+      "order_code": "SO-0412",
+      "buyer_name": "Meridian Apparels",
+      "cost": 7496.0
+    },
+    {
+      "lot_code": "R-1205",
+      "kind": "finished",
+      "qty_m": 50.0,
+      "custody": "at_customer",
+      "order_code": "SO-0412",
+      "buyer_name": "Meridian Apparels",
+      "cost": 7496.0
+    },
+    {
+      "lot_code": "R-1206",
+      "kind": "finished",
+      "qty_m": 50.0,
+      "custody": "passed_in_store",
+      "order_code": "SO-0412",
+      "buyer_name": "Meridian Apparels",
+      "cost": 7496.0
+    },
+    {
+      "lot_code": "R-1207",
+      "kind": "finished",
+      "qty_m": 50.0,
+      "custody": "passed_in_store",
+      "order_code": "SO-0419",
+      "buyer_name": "Coastline Garments",
+      "cost": 7496.0
+    },
+    {
+      "lot_code": "R-1208",
+      "kind": "finished",
+      "qty_m": 50.0,
+      "custody": "passed_in_store",
+      "order_code": "SO-0419",
+      "buyer_name": "Coastline Garments",
+      "cost": 7496.0
+    },
+    {
+      "lot_code": "R-1209",
+      "kind": "finished",
+      "qty_m": 50.0,
+      "custody": "awaiting_qc",
+      "order_code": "SO-0419",
+      "buyer_name": "Coastline Garments",
+      "cost": 7496.0
+    },
+    {
+      "lot_code": "R-1210",
+      "kind": "finished",
+      "qty_m": 50.0,
+      "custody": "awaiting_qc",
+      "order_code": "SO-0419",
+      "buyer_name": "Coastline Garments",
+      "cost": 7496.0
+    },
+    {
+      "lot_code": "R-1211",
+      "kind": "finished",
+      "qty_m": 50.0,
+      "custody": "awaiting_qc",
+      "order_code": "SO-0419",
+      "buyer_name": "Coastline Garments",
+      "cost": 7496.0
+    },
+    {
+      "lot_code": "R-1212-G",
+      "kind": "greige",
+      "qty_m": 50.0,
+      "custody": "wip",
+      "order_code": "SO-0419",
+      "buyer_name": "Coastline Garments",
+      "cost": 4056.0
+    }
+  ],
+  "calculation": {
+    "formula": "additional_delay_days = ceil(remake_m / throughput_m_per_day)",
+    "remake_m": 600.0,
+    "throughput_m_per_day": 250.0,
+    "raw_days": 2.4,
+    "additional_delay_days": 3,
+    "display": "600 ÷ 250 = 2.4 → ceil = 3 working days"
+  }
+}

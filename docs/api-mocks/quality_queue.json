@@ -1,0 +1,56 @@
+[
+  {
+    "lot_code": "R-1101",
+    "product": "Navy Twill",
+    "qty_m": 50.0,
+    "dye_batch": "DB-03",
+    "dyed_on": "Dye Vat 2",
+    "dyed_at": "2026-10-09T20:00:00+05:30",
+    "order_code": null
+  },
+  {
+    "lot_code": "R-1102",
+    "product": "Navy Twill",
+    "qty_m": 50.0,
+    "dye_batch": "DB-03",
+    "dyed_on": "Dye Vat 2",
+    "dyed_at": "2026-10-09T20:00:00+05:30",
+    "order_code": null
+  },
+  {
+    "lot_code": "R-1103",
+    "product": "Navy Twill",
+    "qty_m": 50.0,
+    "dye_batch": "DB-03",
+    "dyed_on": "Dye Vat 2",
+    "dyed_at": "2026-10-09T20:00:00+05:30",
+    "order_code": null
+  },
+  {
+    "lot_code": "R-1209",
+    "product": "Navy Twill",
+    "qty_m": 50.0,
+    "dye_batch": "DB-03",
+    "dyed_on": "Dye Vat 2",
+    "dyed_at": "2026-10-09T20:00:00+05:30",
+    "order_code": "SO-0419"
+  },
+  {
+    "lot_code": "R-1210",
+    "product": "Navy Twill",
+    "qty_m": 50.0,
+    "dye_batch": "DB-03",
+    "dyed_on": "Dye Vat 2",
+    "dyed_at": "2026-10-09T20:00:00+05:30",
+    "order_code": "SO-0419"
+  },
+  {
+    "lot_code": "R-1211",
+    "product": "Navy Twill",
+    "qty_m": 50.0,
+    "dye_batch": "DB-03",
+    "dyed_on": "Dye Vat 2",
+    "dyed_at": "2026-10-09T20:00:00+05:30",
+    "order_code": "SO-0419"
+  }
+]

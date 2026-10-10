@@ -1,0 +1,112 @@
+[
+  {
+    "code": "LOOM-1",
+    "name": "Loom 1",
+    "stage": "weaving",
+    "state": "idle",
+    "state_since": "2026-10-01T14:00:00+05:30",
+    "reason": null,
+    "current_run": null,
+    "current_lot": null,
+    "current_order": null
+  },
+  {
+    "code": "LOOM-2",
+    "name": "Loom 2",
+    "stage": "weaving",
+    "state": "idle",
+    "state_since": "2026-10-01T14:00:00+05:30",
+    "reason": null,
+    "current_run": null,
+    "current_lot": null,
+    "current_order": null
+  },
+  {
+    "code": "LOOM-3",
+    "name": "Loom 3",
+    "stage": "weaving",
+    "state": "idle",
+    "state_since": "2026-10-01T14:00:00+05:30",
+    "reason": null,
+    "current_run": null,
+    "current_lot": null,
+    "current_order": null
+  },
+  {
+    "code": "LOOM-4",
+    "name": "Loom 4",
+    "stage": "weaving",
+    "state": "idle",
+    "state_since": "2026-10-01T14:00:00+05:30",
+    "reason": null,
+    "current_run": null,
+    "current_lot": null,
+    "current_order": null
+  },
+  {
+    "code": "LOOM-5",
+    "name": "Loom 5",
+    "stage": "weaving",
+    "state": "running",
+    "state_since": "2026-10-10T08:00:00+05:30",
+    "reason": null,
+    "current_run": "WV-R-1212",
+    "current_lot": "R-1212-G",
+    "current_order": "SO-0419"
+  },
+  {
+    "code": "LOOM-6",
+    "name": "Loom 6",
+    "stage": "weaving",
+    "state": "idle",
+    "state_since": "2026-10-01T14:00:00+05:30",
+    "reason": null,
+    "current_run": null,
+    "current_lot": null,
+    "current_order": null
+  },
+  {
+    "code": "RF-1",
+    "name": "Ring Frame 1",
+    "stage": "spinning",
+    "state": "idle",
+    "state_since": "2026-09-20T06:00:00+05:30",
+    "reason": null,
+    "current_run": null,
+    "current_lot": null,
+    "current_order": null
+  },
+  {
+    "code": "VAT-1",
+    "name": "Dye Vat 1",
+    "stage": "dyeing",
+    "state": "idle",
+    "state_since": "2026-10-06T14:00:00+05:30",
+    "reason": null,
+    "current_run": null,
+    "current_lot": null,
+    "current_order": null
+  },
+  {
+    "code": "VAT-2",
+    "name": "Dye Vat 2",
+    "stage": "dyeing",
+    "state": "idle",
+    "state_since": "2026-10-09T20:00:00+05:30",
+    "reason": null,
+    "current_run": null,
+    "current_lot": null,
+    "current_order": null
+  },
+  {
+    "code": "VAT-3",
+    "name": "Dye Vat 3",
+    "stage": "dyeing",
+    "state": "idle",
+    "state_since": "2026-10-10T02:00:00+05:30",
+    "reason": null,
+    "current_run": null,
+    "current_lot": null,
+    "current_order": null
+  }
+]

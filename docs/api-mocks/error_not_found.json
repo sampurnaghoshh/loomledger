@@ -1,0 +1,6 @@
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "This tracking link is invalid or has expired."
+  }
+}

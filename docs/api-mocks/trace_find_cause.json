@@ -1,0 +1,93 @@
+{
+  "selected": [
+    "R-1201",
+    "R-1202",
+    "R-1203"
+  ],
+  "factors": [
+    {
+      "factor_kind": "yarn_lot",
+      "factor_label": "Yarn Lot Y-112",
+      "selected_covered": 3,
+      "selected_total": 3,
+      "inspected_through": 8,
+      "rejected_through": 3,
+      "rate_through_pct": 37.5,
+      "inspected_outside": 100,
+      "rejected_outside": 4,
+      "rate_outside_pct": 4.0,
+      "lift": 9.38,
+      "verdict": "root_cause"
+    },
+    {
+      "factor_kind": "machine",
+      "factor_label": "Dye Vat 3",
+      "selected_covered": 3,
+      "selected_total": 3,
+      "inspected_through": 33,
+      "rejected_through": 3,
+      "rate_through_pct": 9.09,
+      "inspected_outside": 75,
+      "rejected_outside": 4,
+      "rate_outside_pct": 5.33,
+      "lift": 1.71,
+      "verdict": "coincidental"
+    },
+    {
+      "factor_kind": "shift",
+      "factor_label": "Night Shift B",
+      "selected_covered": 3,
+      "selected_total": 3,
+      "inspected_through": 43,
+      "rejected_through": 3,
+      "rate_through_pct": 6.98,
+      "inspected_outside": 65,
+      "rejected_outside": 4,
+      "rate_outside_pct": 6.15,
+      "lift": 1.13,
+      "verdict": "coincidental"
+    },
+    {
+      "factor_kind": "shift",
+      "factor_label": "Day Shift A",
+      "selected_covered": 3,
+      "selected_total": 3,
+      "inspected_through": 108,
+      "rejected_through": 7,
+      "rate_through_pct": 6.48,
+      "inspected_outside": 0,
+      "rejected_outside": 0,
+      "rate_outside_pct": null,
+      "lift": null,
+      "verdict": "no_comparison"
+    },
+    {
+      "factor_kind": "machine",
+      "factor_label": "Loom 2",
+      "selected_covered": 2,
+      "selected_total": 3,
+      "inspected_through": 17,
+      "rejected_through": 3,
+      "rate_through_pct": 17.65,
+      "inspected_outside": 91,
+      "rejected_outside": 4,
+      "rate_outside_pct": 4.4,
+      "lift": 4.01,
+      "verdict": "partial"
+    },
+    {
+      "factor_kind": "machine",
+      "factor_label": "Loom 5",
+      "selected_covered": 1,
+      "selected_total": 3,
+      "inspected_through": 17,
+      "rejected_through": 1,
+      "rate_through_pct": 5.88,
+      "inspected_outside": 91,
+      "rejected_outside": 6,
+      "rate_outside_pct": 6.59,
+      "lift": 0.89,
+      "verdict": "partial"
+    }
+  ]
+}

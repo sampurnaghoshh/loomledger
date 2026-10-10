@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "LOT_QUARANTINED",
+    "sqlstate": "LL001",
+    "message": "stock movement blocked: lot Y-112 is quarantined",
+    "hint": "Quarantined stock can only go to quarantine, scrap, or back to the supplier."
+  }
+}

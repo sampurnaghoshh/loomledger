@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* LoomLedger design tokens. Use ONLY these colours (as Tailwind classes: bg-brand, text-ok, border-line ...). */
+@theme {
+  --color-canvas: #f6f7f9;        /* page background */
+  --color-surface: #ffffff;       /* cards */
+  --color-ink: #0f172a;           /* primary text */
+  --color-muted: #64748b;         /* secondary text */
+  --color-line: #e2e8f0;          /* borders, dividers */
+
+  --color-brand: #1e3a8a;         /* loom navy: primary actions, active nav */
+  --color-brand-soft: #e0e7ff;
+  --color-accent: #c2410c;        /* saffron: customer-facing / money highlights */
+  --color-accent-soft: #ffedd5;
+
+  --color-ok: #15803d;            /* running, passed */
+  --color-ok-soft: #dcfce7;
+  --color-warn: #b45309;          /* changeover, awaiting QC */
+  --color-warn-soft: #fef3c7;
+  --color-bad: #b91c1c;           /* breakdown, rejected, blocked */
+  --color-bad-soft: #fee2e2;
+  --color-hold: #6d28d9;          /* quarantined / recalled */
+  --color-hold-soft: #ede9fe;
+  --color-idle: #64748b;          /* idle, unknown */
+  --color-idle-soft: #f1f5f9;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* numbers line up in tables and tiles */
+.num {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,9 @@
+{
+  "token": "<signed token>",
+  "user": {
+    "id": 1,
+    "email": "owner@everest.test",
+    "full_name": "Rajesh Mehta",
+    "role": "owner"
+  }
+}

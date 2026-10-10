@@ -1,0 +1,26 @@
+{
+  "buyer": "Meridian Apparels",
+  "order": "SO-0412",
+  "delayed": false,
+  "product": "Navy Twill",
+  "updates": [
+    {
+      "at": "2026-10-09T16:00:00+05:30",
+      "message": "Dispatched 12 rolls (600 m) on vehicle KA-05-TR-7781."
+    },
+    {
+      "at": "2026-09-20T11:00:00+05:30",
+      "message": "Order confirmed: 2,000 m. Promised dispatch 14 Oct 2026."
+    }
+  ],
+  "progress": {
+    "ready_m": 550.0,
+    "on_hold_m": 0,
+    "weaving_m": 0,
+    "dispatched_m": 600.0,
+    "quality_check_m": 0
+  },
+  "ordered_m": 2000.0,
+  "expected_date": "2026-10-14",
+  "promised_date": "2026-10-14"
+}
