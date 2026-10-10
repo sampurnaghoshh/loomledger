@@ -96,6 +96,7 @@ PostgreSQL 16 (14+ works). Extensions: `btree_gist`, `pgcrypto`. Session timezon
 | 003_traceability | `lot_ancestors`, `lot_descendants` (recursive CTE with CYCLE), `lot_on_hand`, `stock_on_hand(as_of)` = time travel, `v_latest_qc`, `v_roll_custody`, `v_roll_factor`, **`find_cause(lot_ids[])`**, `recall_scope(root)` |
 | 004_costing_impact | **`lot_cost(lot)`** recursive cost roll-up, `v_roll_cost`, `add_working_days` (Mon–Sat), **`recall_order_impact(root)`**, **`recall_impact(root)`**, **`apply_recall(root, reason, user)`** (idempotent) |
 | 005_floor_portal_balance | `v_machine_now`, `floor_output(day)`, `machine_availability(from,to)`, `v_yarn_balance_by_run`, **`mass_balance(from,to)`**, `v_yarn_unaccounted_by_machine`, **`buyer_order_status(token)`** |
+| 006_floor_notify_payload | `ist_iso(ts)`; `loomledger_floor` NOTIFY payload = `ws_floor_event.json` (adds `machine_code`, `reason`) |
 
 Conventions for new migrations:
 - File `db/migrations/00N_short_name.sql`, one concern per file, comment header explaining *why*.
@@ -118,7 +119,7 @@ app/
   db.py           ConnectionPool(dict_row, autocommit); get_conn() dependency; `with write_tx(conn):` once per write request
   errors.py       ApiError(code, message, status, hint, fields); map psycopg errors by sqlstate/constraint name (table in API_CONTRACT.md)
   auth.py         POST /api/auth/login (crypt() check in SQL), sign/verify token, require_user, require_role(*roles)
-  realtime.py     async LISTEN loomledger_floor → broadcast to /ws/floor clients
+  realtime.py     dedicated LISTEN loomledger_floor connection (thread; reconnects) → Broadcaster → /ws/floor?token=
   modules/<area>/router.py     HTTP only: parse, auth, call service, return schema
   modules/<area>/service.py    business flow + the single transaction
   modules/<area>/repository.py SQL only (calls the DB functions/views); returns dicts
