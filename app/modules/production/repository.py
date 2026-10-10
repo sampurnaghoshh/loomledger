@@ -11,7 +11,8 @@ SCRAP = "SCRAP"
 
 # ---------- lookups ----------
 def machine(conn: psycopg.Connection, code: str) -> dict | None:
-    return conn.execute("SELECT id, code, stage::text AS stage FROM machine WHERE code = %s AND active",
+    """Row-locked, so a run start and a floor state change on the same machine apply one after the other."""
+    return conn.execute("SELECT id, code, stage::text AS stage FROM machine WHERE code = %s AND active FOR UPDATE",
                         (code,)).fetchone()
 
 
@@ -98,12 +99,14 @@ def finish_replay(conn: psycopg.Connection, idempotency_key: str) -> dict | None
 
 def lock_weaving_run(conn: psycopg.Connection, run_code: str) -> dict | None:
     return conn.execute(
-        """SELECT r.id, r.code, r.ended_at, g.id AS lot_id, g.code AS lot_code, g.qty AS meters,
+        """SELECT r.id, r.code, r.ended_at, r.machine_id, g.id AS lot_id, g.code AS lot_code, g.qty AS meters,
                   (SELECT m.lot_id FROM stock_move m WHERE m.process_run_id = r.id AND m.kind = 'issue'
                     ORDER BY m.id LIMIT 1) AS yarn_lot_id
-             FROM process_run r JOIN lot g ON g.produced_by_run_id = r.id
+             FROM process_run r
+             JOIN lot g     ON g.produced_by_run_id = r.id
+             JOIN machine m ON m.id = r.machine_id
             WHERE r.code = %s AND r.stage = 'weaving'
-              FOR UPDATE OF r""", (run_code,)).fetchone()
+              FOR UPDATE OF r, m""", (run_code,)).fetchone()
 
 
 def end_run(conn: psycopg.Connection, run_id: int) -> None:

@@ -7,6 +7,7 @@ import psycopg
 from app import ledger
 from app.db import write_tx
 from app.errors import ApiError, is_idempotency_replay
+from app.modules.floor import repository as floor_repo
 from app.modules.production import repository as repo
 from app.modules.production.schemas import FinishWeavingRequest, StartWeavingRequest
 
@@ -15,9 +16,15 @@ def _not_found(field: str, message: str) -> ApiError:
     return ApiError("NOT_FOUND", message, 404, fields={field: "not found"})
 
 
+def _set_machine_state(conn: psycopg.Connection, machine_id: int, state: str) -> None:
+    """Same facts as POST /api/floor/machines/{code}/state, so the floor board's ws event fires on commit."""
+    floor_repo.close_open_state(conn, machine_id)
+    floor_repo.open_state(conn, machine_id, state, None)
+
+
 def start_weaving(conn: psycopg.Connection, req: StartWeavingRequest, user: dict) -> tuple[dict, bool]:
-    """Put a loom to work: open a run, create its greige roll (WIP), issue the yarn to it and record
-    that the roll descends from that yarn lot. Returns (result, created)."""
+    """Put a loom to work: open a run, create its greige roll (WIP), issue the yarn to it, record
+    that the roll descends from that yarn lot, and mark the loom running. Returns (result, created)."""
     original = repo.start_replay(conn, req.idempotency_key)
     if original:
         return original, False
@@ -54,6 +61,7 @@ def start_weaving(conn: psycopg.Connection, req: StartWeavingRequest, user: dict
             repo.insert_lineage(conn, yarn["id"], lot_id, kg)
             if line_id is not None:
                 repo.reserve(conn, lot_id, line_id)
+            _set_machine_state(conn, machine["id"], "running")
     except psycopg.errors.UniqueViolation as exc:
         if is_idempotency_replay(exc) and (original := repo.start_replay(conn, req.idempotency_key)):
             return original, False
@@ -68,7 +76,7 @@ def start_weaving(conn: psycopg.Connection, req: StartWeavingRequest, user: dict
 
 def finish_weaving(conn: psycopg.Connection, run_code: str, req: FinishWeavingRequest, user: dict) -> dict:
     """Take the roll off the loom: close the run (its machine and labour hours now count in lot_cost),
-    scrap the recorded waste, and move the greige roll into the greige store."""
+    scrap the recorded waste, move the greige roll into the greige store, and mark the loom idle."""
     original = repo.finish_replay(conn, req.idempotency_key)
     if original:
         return original
@@ -89,6 +97,7 @@ def finish_weaving(conn: psycopg.Connection, run_code: str, req: FinishWeavingRe
                              qty=run["meters"], kind="production", idempotency_key=req.idempotency_key,
                              user_id=user["id"], run_id=run["id"])
             repo.activate_lot(conn, run["lot_id"])
+            _set_machine_state(conn, run["machine_id"], "idle")
     except psycopg.errors.UniqueViolation as exc:
         if is_idempotency_replay(exc) and (original := repo.finish_replay(conn, req.idempotency_key)):
             return original
