@@ -402,10 +402,12 @@ class Seeder:
         for code, order, when, lots in dispatches:
             late = [c for c in lots if self.rolls[c].inspected_at is None or self.rolls[c].inspected_at >= when]
             assert not late, f"{code}: rolls not inspected before dispatch: {late}"
+            # these historical shipments mix dye batches; Shade Guard (008) needs the approval on record
             did = self.one(
-                """INSERT INTO dispatch (code, order_id, vehicle_no, dispatched_at)
-                   VALUES (%s, %s, %s, %s) RETURNING id""",
-                (code, self.id["order"][order], "KA-05-TR-7781", when))
+                """INSERT INTO dispatch (code, order_id, vehicle_no, dispatched_at, shade_override_reason)
+                   VALUES (%s, %s, %s, %s, %s) RETURNING id""",
+                (code, self.id["order"][order], "KA-05-TR-7781", when,
+                 "Buyer approved mixed dye lots for this shipment."))
             for c in lots:
                 self.c.execute("INSERT INTO dispatch_line (dispatch_id, lot_id) VALUES (%s, %s)",
                                (did, self.id["lot"][c]))

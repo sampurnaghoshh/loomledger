@@ -57,11 +57,56 @@ def test_a_roll_can_never_ship_twice(db):
         assert "one_dispatch_per_roll" in str(err.value)
 
 
-def _dispatch_for(db, order_code: str) -> int:
+def _dispatch_for(db, order_code: str, shade_override_reason: str | None = None) -> int:
     return db.execute(
-        """INSERT INTO dispatch (code, order_id, dispatched_at)
-           VALUES ('DSP-TEST', (SELECT id FROM sales_order WHERE code = %s), now()) RETURNING id""",
-        (order_code,)).fetchone()[0]
+        """INSERT INTO dispatch (code, order_id, dispatched_at, shade_override_reason)
+           VALUES ('DSP-TEST', (SELECT id FROM sales_order WHERE code = %s), now(), %s) RETURNING id""",
+        (order_code, shade_override_reason)).fetchone()[0]
+
+
+def _ready_rolls_by_batch(db, order_code: str) -> dict[str, list[str]]:
+    """Rolls of an order that passed QC and wait in the store, grouped by dye batch."""
+    rows = db.execute(
+        """SELECT r.code, c.lot_code FROM v_roll_custody c
+             JOIN lot l ON l.id = c.lot_id JOIN process_run r ON r.id = l.produced_by_run_id
+             JOIN reservation rs ON rs.lot_id = c.lot_id JOIN order_line ol ON ol.id = rs.order_line_id
+             JOIN sales_order so ON so.id = ol.order_id
+            WHERE so.code = %s AND c.custody = 'passed_in_store' ORDER BY 1, 2""", (order_code,)).fetchall()
+    batches: dict[str, list[str]] = {}
+    for batch, roll in rows:
+        batches.setdefault(batch, []).append(roll)
+    return batches
+
+
+LINE = "INSERT INTO dispatch_line (dispatch_id, lot_id) VALUES (%s, %s)"
+
+
+def test_one_dispatch_ships_one_dye_batch(db):
+    batches = _ready_rolls_by_batch(db, "SO-0412")
+    (b1, rolls1), (b2, rolls2) = list(batches.items())[:2]
+    did = _dispatch_for(db, "SO-0412")
+    db.execute(LINE, (did, lot_id(db, rolls1[0])))
+    err = expect_sqlstate(db, "LL006", LINE, (did, lot_id(db, rolls2[0])))
+    assert err.diag.message_detail == f"{b1}, {b2}"          # the API turns this into fields.batches
+
+
+def test_a_recorded_shade_override_allows_mixing(db):
+    batches = _ready_rolls_by_batch(db, "SO-0412")
+    (_, rolls1), (_, rolls2) = list(batches.items())[:2]
+    with db.transaction(force_rollback=True):
+        did = _dispatch_for(db, "SO-0412", "Buyer approved mixed dye lots by email")
+        db.execute(LINE, (did, lot_id(db, rolls1[0])))
+        db.execute(LINE, (did, lot_id(db, rolls2[0])))       # accepted
+    expect_sqlstate(db, "23514", "INSERT INTO dispatch (code, order_id, dispatched_at, shade_override_reason) "
+                                 "VALUES ('DSP-BLANK', (SELECT id FROM sales_order WHERE code = 'SO-0412'), now(), '  ')")
+
+
+def test_seeded_mixed_shipments_carry_their_override(db):
+    rows = db.execute(
+        """SELECT d.code, count(DISTINCT l.produced_by_run_id) AS batches, d.shade_override_reason
+             FROM dispatch d JOIN dispatch_line dl ON dl.dispatch_id = d.id JOIN lot l ON l.id = dl.lot_id
+            GROUP BY d.id""").fetchall()
+    assert rows and all(reason for _, batches, reason in rows if batches > 1)
 
 
 @pytest.mark.parametrize("roll", ["R-1201",          # rejected
