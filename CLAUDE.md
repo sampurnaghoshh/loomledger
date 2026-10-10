@@ -72,6 +72,9 @@ python -m scripts.demo_smoke [URL]                     # just the walk-through; 
 ./scripts/reset_demo.sh --rehearsal                    # PRIVATE rehearsal: loomledger_rehearsal (auto-created) + own backend on :8001
                                                        #   → reset → smoke → stop → reset. Never touches the demo DB or :8000
 ./scripts/reset_demo.sh --db-url URL                   # reset any other database (created if missing)
+./scripts/reset_demo.sh --eval                         # EVALUATOR playground: loomledger_eval = story + ~300 rolls of history
+                                                       #   (seed --profile eval, all dated before the story); starts nothing —
+                                                       #   run it on backend :8002 + frontend :5174 (docs/DEMO_RUNBOOK.md §6)
 ./scripts/reset_demo.sh && python -m scripts.benchmark # measured query timings + index use → docs/BENCHMARK.md (rule 9: quote only these)
 python -m pytest -q                                    # golden + invariants + api tests (wipes + reseeds the TEST db itself)
 psql "$DATABASE_URL" -f docs/demo.sql                  # run the demo in SQL

@@ -6,6 +6,7 @@ Every row is derived from seed/scenario.py. Running it twice on a fresh schema p
 Usage:
     python -m seed.seed                       # migrate --reset, then seed (DATABASE_URL)
     python -m seed.seed --anchor 2026-10-12   # move the demo day (numbers stay identical)
+    python -m seed.seed --profile eval        # + ~300 rolls of history before the story (seed/eval_profile.py)
 """
 from __future__ import annotations
 
@@ -60,8 +61,9 @@ class Batch:
 
 
 class Seeder:
-    def __init__(self, conn: psycopg.Connection, anchor: date, qc_story_rejects: bool = True):
+    def __init__(self, conn: psycopg.Connection, anchor: date, qc_story_rejects: bool = True, profile: str = "demo"):
         self.c = conn
+        self.profile = profile
         self.anchor = anchor
         self.qc_story_rejects = qc_story_rejects   # False: R-1201..R-1203 wait for QC (rejected live / via the API)
         self.id: dict[str, dict[str, int]] = defaultdict(dict)
@@ -542,6 +544,9 @@ class Seeder:
         self.dye_and_inspect()
         self.orders()
         self.payments()
+        if self.profile == "eval":
+            from seed.eval_profile import add_history
+            add_history(self)     # history BEFORE the story; story rows above are identical to the demo profile
         self.floor_and_people()
 
 
@@ -550,17 +555,26 @@ def buyer_token(order_code: str) -> uuid.UUID:
     return uuid.uuid5(TOKEN_NAMESPACE, order_code)
 
 
-def seed(conn: psycopg.Connection, anchor: date = S.ANCHOR_DATE, *, qc_story_rejects: bool = True) -> None:
-    """qc_story_rejects=False leaves the three story rolls (R-1201..R-1203) awaiting QC instead of rejected."""
+PROFILES = ("demo", "eval")
+
+
+def seed(conn: psycopg.Connection, anchor: date = S.ANCHOR_DATE, *, qc_story_rejects: bool = True,
+         profile: str = "demo") -> None:
+    """qc_story_rejects=False leaves the three story rolls (R-1201..R-1203) awaiting QC instead of rejected.
+    profile="eval" adds ~300 rolls of history before the story (seed/eval_profile.py); "demo" is the story only."""
+    if profile not in PROFILES:
+        raise ValueError(f"unknown seed profile {profile!r}; use one of {PROFILES}")
     conn.commit()   # never nest inside a caller's open transaction: the seed is all-or-nothing on its own
     with conn.transaction():
-        Seeder(conn, anchor, qc_story_rejects).run()
+        Seeder(conn, anchor, qc_story_rejects, profile).run()
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--anchor", type=date.fromisoformat, default=S.ANCHOR_DATE,
                         help="demo day, YYYY-MM-DD (default: %(default)s)")
+    parser.add_argument("--profile", choices=PROFILES, default="demo",
+                        help="demo = the story only (default); eval = the story + ~300 rolls of history for evaluators")
     args = parser.parse_args()
     if args.anchor.isoweekday() == 7:
         parser.error(f"{args.anchor} is a Sunday and the mill works Monday-Saturday; "
@@ -568,8 +582,8 @@ def main() -> None:
     with psycopg.connect(database_url()) as conn:
         reset_schema(conn)
         migrate(conn)
-        seed(conn, args.anchor)
-    print(f"seeded Everest Textile Mills, demo day {args.anchor}")
+        seed(conn, args.anchor, profile=args.profile)
+    print(f"seeded Everest Textile Mills, demo day {args.anchor}" + (" + evaluator history" if args.profile == "eval" else ""))
     for o in S.ORDERS:
         print(f"  buyer link {o.code}: /track/{buyer_token(o.code)}")
 
