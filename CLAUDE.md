@@ -98,6 +98,8 @@ PostgreSQL 16 (14+ works). Extensions: `btree_gist`, `pgcrypto`. Session timezon
 | 005_floor_portal_balance | `v_machine_now`, `floor_output(day)`, `machine_availability(from,to)`, `v_yarn_balance_by_run`, **`mass_balance(from,to)`**, `v_yarn_unaccounted_by_machine`, **`buyer_order_status(token)`** |
 | 006_floor_notify_payload | `ist_iso(ts)`; `loomledger_floor` NOTIFY payload = `ws_floor_event.json` (adds `machine_code`, `reason`) |
 | 007_production_rules | `weaving_yarn_issue_kg(product, m)` (m × width × GSM/1000 × 1.04), `shift_at(ts)` (IST shift calendar) |
+| 008 | *reserved for Shade Guard (Nooman)* |
+| 009_dispatch_guard | dispatch_line trigger: latest QC must be `pass` (`LL004`), roll reserved for the dispatch's order (`LL005`) |
 
 Conventions for new migrations:
 - File `db/migrations/00N_short_name.sql`, one concern per file, comment header explaining *why*.
