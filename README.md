@@ -19,18 +19,22 @@ Database + tests:
 ```bash
 docker compose up -d                       # PostgreSQL 16 with loomledger + loomledger_test
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt            # backend + tests (incl. pydantic-settings)
 
 export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledger
 export TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledger_test
 ./scripts/reset_demo.sh                    # migrate from scratch + seed the Y-112 scenario
-python -m pytest -v                        # golden test + ledger invariants
+python -m pytest -v                        # golden test + ledger invariants + API tests
 psql "$DATABASE_URL" -f docs/demo.sql      # the whole demo as raw SQL
 python -m scripts.export_mocks             # regenerate docs/api-mocks (the API contract)
 ```
 
 Without Docker: any PostgreSQL **14+** with the `btree_gist` and `pgcrypto` contrib extensions.
-`TEST_DATABASE_URL` overrides the test database (its schema is wiped on every run).
+PowerShell: `$env:DATABASE_URL="postgresql://postgres:postgres@localhost:5432/loomledger"` and
+`$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/loomledger_test"`, then `python -m seed.seed` instead of the .sh script.
+
+`TEST_DATABASE_URL` is the test database (default `loomledger_test`, created empty by `docker compose`).
+pytest seeds it automatically: its schema is dropped, migrated and seeded on every run — never point it at the demo DB.
 
 ## Layout
 

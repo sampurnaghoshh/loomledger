@@ -56,11 +56,15 @@ frontend/                       React + Vite + TS + Tailwind v4 (skeleton built 
 ## 4. Commands
 
 ```bash
+# setup
+pip install -r requirements.txt                        # includes pydantic-settings (backend config)
+
 # database
 docker compose up -d                                   # Postgres 16 on :5432 (loomledger + loomledger_test)
 export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledger
+export TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledger_test
 ./scripts/reset_demo.sh                                # migrate from scratch + seed
-python -m pytest -q                                    # golden + invariants (+ api tests once they exist)
+python -m pytest -q                                    # golden + invariants + api tests (wipes + reseeds the TEST db itself)
 psql "$DATABASE_URL" -f docs/demo.sql                  # run the demo in SQL
 python -m scripts.export_mocks                         # regenerate the API contract files
 
@@ -74,7 +78,12 @@ npm run build                                          # typecheck + production 
 # real backend: create frontend/.env.local with VITE_USE_MOCKS=false
 ```
 
-Windows users: run the Python commands in PowerShell with `$env:DATABASE_URL="..."`, and run `python -m seed.seed` instead of the .sh script.
+Windows users: run the Python commands in PowerShell with `$env:DATABASE_URL="..."` and
+`$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/loomledger_test"`, and run `python -m seed.seed` instead of the .sh script.
+
+Test database: `docker compose` creates the empty `loomledger_test` database (scripts/init-test-db.sql). You never
+seed it by hand — the pytest fixtures drop its schema, migrate and seed it automatically (once per module for DB tests,
+once per session for `tests/api`). Never point `TEST_DATABASE_URL` at the demo database.
 
 ## 5. Database (done — extend, don't rewrite)
 
