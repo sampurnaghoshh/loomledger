@@ -320,8 +320,65 @@ export interface RollCost {
   custody: Custody;
   status: LotStatus;
 }
+/** GET /api/finance/pnl — the month's books, two honest views (migration 013 monthly_pnl). */
+export interface Pnl {
+  from: string;
+  to: string;
+  /** Profit, accrual basis: revenue - cost of the invoiced rolls (without labour) - the period's wages. */
+  accrual: {
+    invoices: number;
+    rolls_invoiced: number;
+    revenue: number;
+    material: number;
+    machine: number;
+    chemicals: number;
+    cost_of_goods_sold: number;
+    /** lot_cost's labour for the invoiced rolls — left out of COGS because wages already pay it. */
+    labour_in_lot_cost_excluded: number;
+    wages: number;
+    profit: number;
+  };
+  /** Cash: buyer payments received - yarn bills paid - wages. */
+  cash: {
+    received_from_buyers: number;
+    yarn_bills_paid: number;
+    wages_paid: number;
+    wages_paid_basis: string;
+    net_cash: number;
+  };
+  receivables: { buyer_code: string; buyer: string; invoices: number; outstanding: number }[];
+  receivables_total: number;
+  payables: { supplier_code: string; supplier: string; bills: number; outstanding: number }[];
+  payables_total: number;
+  /** Recalls applied in the period — contingent exposure, not subtracted from profit. */
+  recalls: {
+    recall_code: string;
+    lot_code: string;
+    applied_at: string;
+    total_exposure: number;
+    cost_already_incurred: number;
+    recall_exposure: number;
+    quarantined_material_value: number;
+  }[];
+}
+export type PaymentMethod = "bank_transfer" | "cheque" | "upi" | "cash";
+export interface PaymentResponse {
+  payment_id: number;
+  invoice_code: string;
+  amount: number;
+  method: PaymentMethod;
+  paid_at: string;
+  invoice_amount: number;
+  outstanding_after: number;
+}
 
 // ---------- write requests (see docs/API_CONTRACT.md)
+export interface PaymentRequest {
+  invoice_code: string;
+  amount: number;
+  method: PaymentMethod;
+  idempotency_key: string;
+}
 export interface ReceiptRequest {
   supplier_code: string;
   lot_code: string;

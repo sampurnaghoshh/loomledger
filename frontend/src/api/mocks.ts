@@ -19,6 +19,8 @@ import type {
   LotGraph,
   MachineNow,
   MassBalance,
+  PaymentResponse,
+  Pnl,
   OrderSummary,
   QualityQueueItem,
   RecallResponse,
@@ -239,5 +241,24 @@ export const mock: Api = {
   finance: {
     massBalance: () => load<MassBalance>(() => import("@mocks/finance_mass_balance.json")),
     rollCosts: () => load<RollCost[]>(() => import("@mocks/finance_roll_costs_SO-0412.json")),
+    pnl: () =>
+      recallApplied
+        ? load<Pnl>(() => import("@mocks/finance_pnl_after_recall.json"))
+        : load<Pnl>(() => import("@mocks/finance_pnl.json")),
+    recordPayment: async (req) => {
+      await delay();
+      if (!(req.amount > 0)) throw new ApiError("VALIDATION_FAILED", "Please correct the highlighted fields.", 422, undefined, { amount: "must be greater than 0" });
+      // The one open invoice in the seed is SO-0412's; its balance is Meridian's receivable in finance_pnl.json.
+      const pnl = await load<Pnl>(() => import("@mocks/finance_pnl.json"));
+      const left = req.invoice_code === "INV-0412-1" ? (pnl.receivables.find((r) => r.buyer_code === "BUY-MER")?.outstanding ?? 0) : 0;
+      if (!/^INV-0(398|412)-1$/.test(req.invoice_code))
+        throw new ApiError("NOT_FOUND", `Invoice ${req.invoice_code} not found.`, 404, undefined, { invoice_code: "not found" });
+      if (req.amount > left)
+        throw new ApiError("OVERPAYMENT", `payment of ${req.amount} exceeds the ${left} outstanding on ${req.invoice_code}`, 422,
+          "Record at most the outstanding amount.", { amount: `at most ${left}` }, "LL009");
+      const res: PaymentResponse = { payment_id: 3, invoice_code: req.invoice_code, amount: req.amount, method: req.method,
+        paid_at: new Date().toISOString(), invoice_amount: left, outstanding_after: left - req.amount };
+      return res;
+    },
   },
 };
