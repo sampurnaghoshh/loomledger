@@ -1,9 +1,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/api/client";
-import type { MachineNow, MachineState, FloorEvent } from "@/api/types";
+import type { MachineNow, MachineState, FloorEvent, RunProgress } from "@/api/types";
 import { useApi, useAction } from "@/hooks/useApi";
-import { machineStateTone } from "@/lib/tones";
+import { machineStateTone, runProgressTone } from "@/lib/tones";
 import { formatDate, formatDateTime, formatPct } from "@/lib/format";
 import { LowStockBadge } from "@/components/YarnLowStock";
 import {
@@ -57,6 +57,56 @@ function elapsedSince(value: string | null) {
   return `${mins}m`;
 }
 
+/** 4.5 → "~4h 30m left", 2 → "~2h left", 0.4 → "~24m left" */
+function timeLeft(hours: number) {
+  const mins = Math.max(1, Math.round(hours * 60));
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `~${h ? `${h}h` : ""}${h && m ? " " : ""}${m ? `${m}m` : ""} left`;
+}
+
+const progressFill = { brand: "bg-brand", idle: "bg-idle" } as const;
+
+/** Estimated progress of the run on this machine (no metre counter: running time vs the planned time). */
+function RunProgressBar({ run, state }: { run: RunProgress; state: MachineState }) {
+  const stopped = state !== "running" || run.state !== "running"; // live board state wins over the last fetch
+  const pct = Math.min(100, Math.max(0, run.progress_pct));
+  const due = run.woven_to_plan_at ? formatDateTime(run.woven_to_plan_at, { weekday: true }) : null;
+  const text = due
+    ? `Woven to plan · due off loom since ${due}`
+    : stopped
+      ? `${formatPct(pct)}`
+      : `${formatPct(pct)} · ${timeLeft(run.remaining_hours)}`;
+  return (
+    <div className="grid gap-1.5">
+      <div className="flex justify-between gap-3 text-xs text-muted">
+        <span>Run progress (est.)</span>
+        {stopped && <span className="font-medium text-ink">Paused</span>}
+      </div>
+      <div
+        className="h-2 overflow-hidden rounded-full bg-idle-soft"
+        role="progressbar"
+        aria-label={`${run.lot_code} progress`}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={pct}
+        aria-valuetext={stopped ? `${text}, paused` : text}
+      >
+        <div className={`h-full ${progressFill[runProgressTone(run, stopped)]}`} style={{ width: `${pct}%` }} />
+      </div>
+      <p className="num text-xs text-muted">
+        {due ? (
+          <>
+            Woven to plan · due off loom since <span className="whitespace-nowrap">{due}</span>
+          </>
+        ) : (
+          text
+        )}
+      </p>
+    </div>
+  );
+}
+
 function titleCase(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
@@ -65,6 +115,7 @@ export default function FloorBoardPage() {
   const machinesState = useApi(() => api.floor.machines(), []);
   const outputState = useApi(() => api.floor.output(), []);
   const availabilityState = useApi(() => api.floor.availability(), []);
+  const progressState = useApi(() => api.floor.progress(), []);
 
   const [machines, setMachines] = useState<MachineNow[]>([]);
   const [selected, setSelected] = useState<MachineNow | null>(null);
@@ -87,7 +138,19 @@ export default function FloorBoardPage() {
     void machinesState.reload();
     void outputState.reload();
     void availabilityState.reload();
-  }, [machinesState.reload, outputState.reload, availabilityState.reload]);
+    void progressState.reload();
+  }, [machinesState.reload, outputState.reload, availabilityState.reload, progressState.reload]);
+
+  // Progress is estimated from the clock: re-read it every minute so bars and "time left" keep moving.
+  useEffect(() => {
+    const t = setInterval(() => void progressState.reload(), 60_000);
+    return () => clearInterval(t);
+  }, [progressState.reload]);
+
+  const progressByMachine = useMemo(
+    () => new Map((progressState.data?.runs ?? []).map((run) => [run.machine_code, run])),
+    [progressState.data],
+  );
 
   useEffect(() => {
     const unsubscribe = api.floor.subscribe((event: FloorEvent) => {
@@ -107,6 +170,7 @@ export default function FloorBoardPage() {
       );
 
       setLastUpdated(Date.now());
+      void progressState.reload(); // a stop or restart changes the run's progress and ETA
 
       if (event.state === "breakdown") {
         setNotice(`${event.machine_code} has reported a breakdown.`);
@@ -214,6 +278,9 @@ export default function FloorBoardPage() {
       {machinesState.error && (
         <ErrorBanner error={machinesState.error} onRetry={refreshMachines} />
       )}
+      {!machinesState.error && progressState.error && (
+        <ErrorBanner error={progressState.error} onRetry={() => void progressState.reload()} />
+      )}
 
       <Loadable state={machinesState}>
         {() => (
@@ -292,6 +359,12 @@ export default function FloorBoardPage() {
                             <span className="text-muted">Run</span>
                             <span className="text-right">{machine.current_run ?? "—"}</span>
                           </div>
+                          {machine.current_run && progressByMachine.has(machine.code) && (
+                            <RunProgressBar run={progressByMachine.get(machine.code)!} state={machine.state} />
+                          )}
+                          {machine.current_run && progressState.loading && !progressState.data && (
+                            <p className="text-xs text-muted">Estimating run progress…</p>
+                          )}
                           {machine.reason && (
                             <p className="rounded-lg bg-canvas px-3 py-2 text-muted">
                               Reason: {machine.reason}

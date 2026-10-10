@@ -52,3 +52,9 @@ export const verdictLabel: Record<Verdict, string> = {
   partial: "Partial — doesn't explain every roll",
   no_comparison: "No comparison group",
 };
+
+/** Run progress bar on the Floor Board. A roll woven to plan (due off the loom) is information, not an alarm: neutral,
+ * like a stopped machine's bar, so a live breakdown stays the loudest thing on the board. */
+export function runProgressTone(run: { woven_to_plan_at: string | null }, stopped: boolean): "brand" | "idle" {
+  return run.woven_to_plan_at !== null || stopped ? "idle" : "brand";
+}

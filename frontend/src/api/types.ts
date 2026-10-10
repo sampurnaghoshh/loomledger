@@ -50,6 +50,31 @@ export interface FloorAvailability {
   to: string;
   machines: { machine_code: string; running_h: number; breakdown_h: number; availability_pct: number | null }[];
 }
+/** GET /api/floor/progress — estimated progress of every open run (no metre counter: running time vs planned time). */
+export interface RunProgress {
+  machine_code: string;
+  machine_name: string;
+  state: MachineState; // at `at`
+  run_code: string;
+  lot_code: string;
+  order_code: string | null;
+  started_at: string;
+  planned_m: number;
+  rated_m_per_hour: number;
+  planned_hours: number;
+  productive_hours: number; // time running since the run started
+  paused_hours: number; // breakdowns / changeovers since the run started
+  progress_pct: number; // capped at 100
+  est_done_m: number;
+  remaining_hours: number;
+  over_plan_hours: number;
+  expected_end: string | null; // null while the machine is stopped
+  woven_to_plan_at: string | null; // due off the loom since; null while under plan
+}
+export interface FloorProgress {
+  at: string;
+  runs: RunProgress[];
+}
 export interface FloorEvent {
   machine_id: number;
   machine_code: string;
@@ -251,6 +276,7 @@ export interface OrderSummary {
   yarn_required_kg: number | null;
   yarn_shortfall_kg: number | null;
   yarn_short_of: string | null; // yarn product name(s) it is short of
+  to_weave_m: number | null; // metres still to weave, remakes included; null = closed order
 }
 /** GET /api/orders/{code}/yarn-check — enough yarn to weave what the order still needs? */
 export interface YarnCheck {

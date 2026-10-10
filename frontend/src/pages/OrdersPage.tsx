@@ -65,6 +65,10 @@ export default function OrdersPage() {
                       {s.label}
                     </span>
                   ))}
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2.5 rounded-sm border border-line bg-idle-soft" aria-hidden />
+                    To weave
+                  </span>
                 </div>
                 <div className={`hidden gap-4 border-b border-line px-5 py-2 text-xs font-medium uppercase tracking-wide text-muted xl:grid ${COLUMNS}`}>
                   <span>Order</span>
@@ -186,25 +190,30 @@ function YarnStatus({ order: o }: { order: OrderSummary }) {
 function ProgressBar({ order }: { order: OrderSummary }) {
   const parts = SEGMENTS.map((s) => ({ ...s, m: order.progress[s.key] })).filter((s) => s.m > 0);
   const total = Math.max(order.ordered_m, 1);
+  // Still to weave (014 v_yarn_plan) counts remakes of held / recalled rolls too, so it can exceed the bar's empty part.
+  const toWeave = order.to_weave_m ?? 0;
+  const remakes = Math.max(0, toWeave - Math.max(0, order.ordered_m - parts.reduce((sum, p) => sum + p.m, 0)));
+  const toWeaveLabel = toWeave > 0 ? `To weave ${formatQty(toWeave, "m")}${remakes > 0 ? ` (incl. ${formatQty(remakes, "m")} remakes)` : ""}` : null;
   return (
     <div className="grid gap-1.5">
       <div
         className="flex h-2.5 overflow-hidden rounded-full bg-idle-soft"
         role="img"
-        aria-label={parts.map((p) => `${p.label} ${formatQty(p.m, "m")}`).join(", ") || "Not started"}
+        aria-label={[...parts.map((p) => `${p.label} ${formatQty(p.m, "m")}`), ...(toWeaveLabel ? [toWeaveLabel] : [])].join(", ") || "Not started"}
       >
         {parts.map((p) => (
           <div key={p.key} className={segmentFill[p.tone]} style={{ width: `${Math.min(100, (p.m / total) * 100)}%` }} />
         ))}
       </div>
       <p className="num flex flex-wrap gap-x-3 text-xs text-muted">
-        {parts.length === 0
+        {parts.length === 0 && !toWeaveLabel
           ? "Not started"
           : parts.map((p) => (
               <span key={p.key} className="whitespace-nowrap">
                 {p.label} {formatQty(p.m, "m")}
               </span>
             ))}
+        {toWeaveLabel && <span className="whitespace-nowrap">{toWeaveLabel}</span>}
       </p>
     </div>
   );

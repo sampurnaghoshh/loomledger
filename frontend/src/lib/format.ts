@@ -33,9 +33,12 @@ export function formatMonth(iso: string | null | undefined) {
   return d.toLocaleDateString("en-IN", { month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
 }
 
-/** 16 Oct, 09:12 (mill time) */
-export function formatDateTime(iso: string | null | undefined) {
+const weekday = new Intl.DateTimeFormat("en-IN", { weekday: "short", timeZone: "Asia/Kolkata" });
+
+/** 16 Oct, 09:12 (mill time) · with { weekday: true }: Fri 16 Oct, 09:12 */
+export function formatDateTime(iso: string | null | undefined, opts: { weekday?: boolean } = {}): string {
   if (!iso) return "—";
+  if (opts.weekday) return `${weekday.format(new Date(iso))} ${formatDateTime(iso)}`;
   return new Date(iso).toLocaleString("en-IN", {
     day: "numeric",
     month: "short",
