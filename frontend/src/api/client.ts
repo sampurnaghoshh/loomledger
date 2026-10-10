@@ -42,9 +42,10 @@ import type {
   YarnCheck,
   RollLabels,
   RollPassport,
+  OwnerAlert,
 } from "./types";
 import { getSession } from "@/lib/auth";
-import { openFloorSocket } from "./floorSocket";
+import { openFloorSocket, type SocketStatus } from "./floorSocket";
 import { mock } from "./mocks";
 
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== "false";
@@ -128,6 +129,18 @@ const real = {
       request<LotGraph & { lot_codes: string[] }>("POST", "/api/trace/graph", { lot_codes: lotCodes, direction: "up" }),
     descendants: (lotCode: string) =>
       request<LotGraph & { lot_code: string }>("GET", `/api/trace/lots/${encodeURIComponent(lotCode)}/descendants`),
+  },
+  alerts: {
+    // Live only (nothing is replayed). Owner / qc; other roles get "forbidden". Reconnects like the floor socket.
+    subscribe: (onAlert: (a: OwnerAlert) => void, onStatus?: (s: SocketStatus) => void): (() => void) =>
+      openFloorSocket<OwnerAlert>({
+        url: () => {
+          const proto = location.protocol === "https:" ? "wss" : "ws";
+          return `${proto}://${location.host}/ws/alerts?token=${encodeURIComponent(getSession()?.token ?? "")}`;
+        },
+        onEvent: onAlert,
+        onStatus,
+      }),
   },
   rolls: {
     passport: (code: string) => request<RollPassport>("GET", `/api/rolls/${encodeURIComponent(code)}/passport`),

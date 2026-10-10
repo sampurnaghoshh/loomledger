@@ -1,7 +1,7 @@
 // node --test tests/   (Node's built-in runner; no test dependency)
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BACKOFF_MS, openFloorSocket, UNAUTHORIZED_CLOSE, type SocketLike } from "../src/api/floorSocket.ts";
+import { BACKOFF_MS, FORBIDDEN_CLOSE, openFloorSocket, UNAUTHORIZED_CLOSE, type SocketLike, type SocketStatus } from "../src/api/floorSocket.ts";
 
 class FakeSocket implements SocketLike {
   onopen: ((ev: unknown) => void) | null = null;
@@ -122,4 +122,25 @@ test("unsubscribe closes the socket and cancels a pending retry", () => {
   h2.stop();                                               // ...and the page unmounts
   assert.equal(h2.timers.length, 0);
   assert.equal(h2.sockets.length, 1, "no new socket after unsubscribe");
+});
+
+test("stops on 4403 (role may not listen) and reports why; reports open and reconnecting", () => {
+  const statuses: SocketStatus[] = [];
+  const sockets: FakeSocket[] = [];
+  const timers: (() => void)[] = [];
+  openFloorSocket({
+    url: () => "ws://host/ws/alerts?token=t",
+    onEvent: () => {},
+    onStatus: (s) => statuses.push(s),
+    createSocket: (url) => { const s = new FakeSocket(url); sockets.push(s); return s; },
+    setTimer: (fn) => { timers.push(fn); return fn; },
+    clearTimer: () => {},
+  });
+  sockets[0].open();
+  sockets[0].drop();
+  timers.shift()!();
+  sockets[1].drop(FORBIDDEN_CLOSE);
+  assert.deepEqual(statuses, ["open", "reconnecting", "forbidden"]);
+  assert.equal(timers.length, 0);
+  assert.equal(sockets.length, 2);
 });

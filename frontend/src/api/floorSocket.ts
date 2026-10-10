@@ -3,6 +3,8 @@
 // Self-contained (no "@/" imports) so `node --test` can run tests/floorSocket.test.ts directly.
 
 export const UNAUTHORIZED_CLOSE = 4401; // the server's "bad or expired token": reconnecting can't help
+export const FORBIDDEN_CLOSE = 4403; // signed in, but this role may not listen here (e.g. /ws/alerts): same
+export type SocketStatus = "open" | "reconnecting" | "unauthorized" | "forbidden";
 export const BACKOFF_MS = [1000, 2000, 5000, 10000, 15000];
 
 export interface SocketLike {
@@ -18,6 +20,8 @@ export interface FloorSocketOptions<E> {
   onEvent: (event: E) => void;
   /** Called after a REconnect: events may have been missed while disconnected, so re-fetch the current state. */
   onReconnect?: () => void;
+  /** Connection state for the page ("Listening…" / "Reconnecting…" / why it stopped). */
+  onStatus?: (status: SocketStatus) => void;
   createSocket?: (url: string) => SocketLike;
   setTimer?: (fn: () => void, ms: number) => unknown;
   clearTimer?: (timer: unknown) => void;
@@ -43,6 +47,7 @@ export function openFloorSocket<E>(opts: FloorSocketOptions<E>): () => void {
     socket = ws;
     ws.onopen = () => {
       failures = 0;
+      opts.onStatus?.("open");
       if (lostConnection) {
         lostConnection = false;
         opts.onReconnect?.();
@@ -57,7 +62,12 @@ export function openFloorSocket<E>(opts: FloorSocketOptions<E>): () => void {
     };
     ws.onclose = (ev) => {
       if (socket === ws) socket = null;
-      if (stopped || ev.code === UNAUTHORIZED_CLOSE) return;
+      if (stopped) return;
+      if (ev.code === UNAUTHORIZED_CLOSE || ev.code === FORBIDDEN_CLOSE) {
+        opts.onStatus?.(ev.code === UNAUTHORIZED_CLOSE ? "unauthorized" : "forbidden");
+        return;
+      }
+      opts.onStatus?.("reconnecting");
       lostConnection = true;
       const delay = backoff[Math.min(failures, backoff.length - 1)];
       failures += 1;

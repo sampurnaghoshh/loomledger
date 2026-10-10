@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   Activity,
+  BellRing,
   ClipboardCheck,
   Factory,
   GitBranch,
@@ -36,6 +37,7 @@ const NAV = [
       { to: "/trace", label: "Find Cause", icon: GitBranch },
       { to: "/recall/Y-112", label: "Recall", icon: ShieldAlert },
       { to: "/labels", label: "QR labels", icon: QrCode },
+      { to: "/alerts", label: "Owner alerts", icon: BellRing },
     ],
   },
   {

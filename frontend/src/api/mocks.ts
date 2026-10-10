@@ -35,6 +35,8 @@ import type {
   WageRun,
   RollLabels,
   RollPassport,
+  BreakdownAlert,
+  OwnerAlert,
 } from "./types";
 
 const TOKENS = {
@@ -43,6 +45,12 @@ const TOKENS = {
 } as const;
 
 let recallApplied = false;
+// Owner alerts in mock mode: whatever /alerts page is open in THIS tab hears recalls.apply() and mock breakdowns.
+const alertListeners = new Set<(a: OwnerAlert) => void>();
+async function emitAlert(loader: () => Promise<{ default: unknown }>, at: "applied_at" | "started_at", patch: object = {}) {
+  const alert = { ...(await load<OwnerAlert>(loader)), [at]: new Date().toISOString(), ...patch } as OwnerAlert;
+  alertListeners.forEach((fn) => fn(alert));
+}
 const YARN_CHECKS: Record<string, () => Promise<{ default: unknown }>> = {
   "SO-0398": () => import("@mocks/orders_yarn_check_SO-0398.json"),
   "SO-0405": () => import("@mocks/orders_yarn_check_SO-0405.json"),
@@ -97,8 +105,12 @@ export const mock: Api = {
     output: () => load<FloorOutput>(() => import("@mocks/floor_output.json")),
     availability: () => load<FloorAvailability>(() => import("@mocks/floor_availability.json")),
     progress: () => load<FloorProgress>(() => import("@mocks/floor_progress.json")), // the story clock, 09:30
-    setState: async (machineCode, state) => {
+    setState: async (machineCode, state, reason) => {
       await delay();
+      if (state === "breakdown")
+        void emitAlert(() => import("@mocks/ws_alert_breakdown.json"), "started_at", {
+          machine_code: machineCode, machine_name: machineCode.replace(/^LOOM-/, "Loom "), reason: reason ?? null,
+        } satisfies Partial<BreakdownAlert>);
       return { machine_code: machineCode, state, started_at: new Date().toISOString() };
     },
     subscribe: (onEvent) => {
@@ -179,6 +191,13 @@ export const mock: Api = {
       return { inspection_id: Math.floor(Math.random() * 10000), lot_code: req.lot_code, result: req.result };
     },
   },
+  alerts: {
+    subscribe: (onAlert, onStatus) => {
+      alertListeners.add(onAlert);
+      setTimeout(() => onStatus?.("open"), 300);
+      return () => void alertListeners.delete(onAlert);
+    },
+  },
   rolls: {
     passport: async (code) => {
       if (!/^R-\d{3,}(-G)?$/.test(code)) {
@@ -207,6 +226,7 @@ export const mock: Api = {
         ? load<RecallResponse>(() => import("@mocks/recall_applied.json"))
         : load<RecallResponse>(() => import("@mocks/recall_preview.json")),
     apply: async () => {
+      if (!recallApplied) void emitAlert(() => import("@mocks/ws_alert_recall.json"), "applied_at"); // once, like COMMIT
       recallApplied = true;
       return load<RecallResponse>(() => import("@mocks/recall_applied.json"));
     },
