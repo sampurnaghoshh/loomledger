@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
 
-from app.auth import Conn, CurrentUser, require_role
+from app.auth import Conn, CurrentUser, require_permission
 from app.listing import ListParams, Page
 from app.modules.quality import service
 from app.modules.quality.schemas import InspectionRequest, InspectionResponse, LatestRejections, QueueItem, Rejection
@@ -47,7 +47,7 @@ def rejections(conn: Conn, user: CurrentUser):
 
 @router.post("/inspections", response_model=InspectionResponse, status_code=201)
 def inspect(body: InspectionRequest, conn: Conn, response: Response,
-            user: dict = Depends(require_role("qc"))):
+            user: dict = Depends(require_permission("quality.inspect"))):
     result, created = service.inspect(conn, body, user)
     if not created:
         response.status_code = 200      # idempotent replay of a rejection: the original result

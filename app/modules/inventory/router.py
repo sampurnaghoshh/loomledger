@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Response
 
-from app.auth import Conn, CurrentUser, require_role
+from app.auth import Conn, CurrentUser, require_permission
 from app.listing import ListParams, Page
 from app.modules.inventory import service
 from app.modules.inventory.schemas import LowStock, Masters, ReceiptRequest, ReceiptResponse, StockRow, StockSnapshot
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
 
 @router.get("/masters", response_model=Masters)
-def masters(conn: Conn, user: dict = Depends(require_role("store"))):
+def masters(conn: Conn, user: dict = Depends(require_permission("inventory.receive"))):
     return service.masters(conn)
 
 
@@ -41,7 +41,7 @@ def low_stock(conn: Conn, user: CurrentUser):
 
 @router.post("/receipts", response_model=ReceiptResponse, status_code=201)
 def receive(body: ReceiptRequest, conn: Conn, response: Response,
-            user: dict = Depends(require_role("store"))):
+            user: dict = Depends(require_permission("inventory.receive"))):
     result, created = service.receive_yarn(conn, body, user)
     if not created:
         response.status_code = 200      # idempotent replay: the original result

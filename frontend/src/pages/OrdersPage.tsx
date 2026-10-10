@@ -6,6 +6,7 @@ import type { ApiError, ApiErrorCode } from "@/api/errors";
 import type { DispatchRequest, DispatchResponse, OrderProgress, OrderSummary, RollCost } from "@/api/types";
 import { Badge, Button, Card, EmptyState, ErrorBanner, Field, Input, Loadable, Modal, PageHeader, Textarea } from "@/components/ui";
 import { useAction, useApi } from "@/hooks/useApi";
+import { usePermissions } from "@/hooks/usePermissions";
 import { formatDate, formatINR, formatQty, humanize, newIdempotencyKey } from "@/lib/format";
 import { custodyLabel, custodyTone, lotStatusTone, type Tone } from "@/lib/tones";
 
@@ -97,10 +98,11 @@ export default function OrdersPage() {
 
 // ---------------------------------------------------------------- one order
 function OrderRow({ order: o, onDispatch }: { order: OrderSummary; onDispatch: () => void }) {
+  const { can } = usePermissions();
   const [copied, setCopied] = useState<"ok" | "failed" | null>(null);
   const path = `/track/${encodeURIComponent(o.tracking_token)}`;
   const late = o.delay_days > 0; // computed in the DB (working days, Mon–Sat)
-  const canDispatch = o.status !== "dispatched" && o.status !== "cancelled";
+  const canDispatch = o.status !== "dispatched" && o.status !== "cancelled" && can("orders.dispatch");
 
   async function copy() {
     try {

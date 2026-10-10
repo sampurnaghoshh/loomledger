@@ -5,6 +5,7 @@
 
 import type { Api } from "./client";
 import { ApiError } from "./errors";
+import { getSession } from "@/lib/auth";
 import type {
   AttendanceRegister,
   BuyerOrderStatus,
@@ -43,6 +44,8 @@ import type {
   RollListItem,
   StockRow,
   WorkerRow,
+  PermissionsInfo,
+  UserRow,
 } from "./types";
 
 const TOKENS = {
@@ -51,6 +54,12 @@ const TOKENS = {
 } as const;
 
 let recallApplied = false;
+// Users & roles in mock mode: the five demo accounts, changed in memory with the database's two rules (017).
+const mockUsers: UserRow[] = [
+  ["owner@everest.test", "Rajesh Mehta", "owner"], ["store@everest.test", "Anil Kumar", "store"],
+  ["floor@everest.test", "Suresh Patil", "floor_supervisor"], ["qc@everest.test", "Meena Iyer", "qc"],
+  ["accounts@everest.test", "Farah Shaikh", "accounts"],
+].map(([email, full_name, role], i) => ({ id: i + 1, email, full_name, role: role as Role, active: true, created_at: "2026-10-10T08:00:00+05:30" }));
 // Owner alerts in mock mode: whatever /alerts page is open in THIS tab hears recalls.apply() and mock breakdowns.
 const alertListeners = new Set<(a: OwnerAlert) => void>();
 async function emitAlert(loader: () => Promise<{ default: unknown }>, at: "applied_at" | "started_at", patch: object = {}) {
@@ -130,7 +139,29 @@ export const mock: Api = {
       if (password !== "demo1234" || !roles[role] || !email.endsWith("@everest.test")) {
         throw new ApiError("INVALID_CREDENTIALS", "Email or password is incorrect.", 401);
       }
-      return { token: "mock-token", user: { ...base.user, email, role: roles[role] } };
+      return { token: `mock-token-${role}`, user: { ...base.user, email, role: roles[role] } };
+    },
+    permissions: async () => {
+      const m = await load<PermissionsInfo>(() => import("@mocks/auth_permissions.json"));
+      const role = getSession()?.user.role ?? "owner";
+      return { ...m, me: { role, permissions: m.permissions.filter((p) => p.roles.includes(role)).map((p) => p.code) } };
+    },
+  },
+  users: {
+    list: async (p) => mockPage(structuredClone(mockUsers), p, ["email", "full_name"], "email"),
+    update: async (id, change) => {
+      await delay();
+      const u = mockUsers.find((x) => x.id === id);
+      if (!u) throw new ApiError("NOT_FOUND", "Not found.", 404);
+      const me = getSession()?.user.email;
+      if (change.active === false && u.email === me)
+        throw new ApiError("SELF_DEACTIVATION", "You can't deactivate your own account", 409, "Ask another owner to do it.", { active: "not for your own account" }, "LL012");
+      const next = { ...u, ...change };
+      const after = mockUsers.map((x) => (x.id === id ? next : x));
+      if (u.role === "owner" && u.active && !after.some((x) => x.role === "owner" && x.active))
+        throw new ApiError("LAST_OWNER", `${u.email} is the last active owner`, 409, "Make another user an active owner first: someone must always be able to manage users.", undefined, "LL011");
+      Object.assign(u, change);
+      return structuredClone(u);
     },
   },
   floor: {

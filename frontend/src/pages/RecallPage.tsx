@@ -8,6 +8,7 @@ import type { Custody, RecallOrderImpact, RecallResponse, RecallRoll } from "@/a
 import { LotGraph } from "@/components/LotGraph";
 import { Badge, Button, Card, DataTable, EmptyState, ErrorBanner, Field, Loadable, Modal, PageHeader, StatTile, Textarea, type Column } from "@/components/ui";
 import { useAction, useApi } from "@/hooks/useApi";
+import { usePermissions } from "@/hooks/usePermissions";
 import { formatDate, formatDateTime, formatINR, formatQty, humanize, newIdempotencyKey } from "@/lib/format";
 import { custodyLabel, custodyTone } from "@/lib/tones";
 
@@ -43,6 +44,7 @@ export default function RecallPage() {
 }
 
 function RecallView({ data, onApplied }: { data: RecallResponse; onApplied: (next: RecallResponse) => void }) {
+  const { can } = usePermissions();
   const { impact, calculation } = data;
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [staleNotice, setStaleNotice] = useState(false);
@@ -67,7 +69,7 @@ function RecallView({ data, onApplied }: { data: RecallResponse; onApplied: (nex
           )
         }
         actions={
-          !data.applied && (
+          !data.applied && can("recalls.apply") && (
             <Button variant="danger" icon={<ShieldAlert className="size-4" />} onClick={() => setConfirmOpen(true)}>
               Apply recall
             </Button>

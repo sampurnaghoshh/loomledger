@@ -123,6 +123,7 @@ PostgreSQL 16 (14+ works). Extensions: `btree_gist`, `pgcrypto`. Session timezon
 | 014_yarn_availability | `product.yarn_product_id` (fabric → its yarn, composite FK) + `reorder_level_kg`; `goods_receipt.order_id` (receipt for an open order only, `LL010`); **`order_yarn_requirement(order)`**; `v_yarn_on_hand` (usable vs quarantined), **`v_yarn_plan`** (open orders in due order against usable yarn), `v_yarn_availability`, **`v_yarn_low_stock`** |
 | 015_run_progress | **`run_progress(at)`**: each open run's estimated progress (running time ÷ planned m at rated speed; breakdowns pause it), ETA, `woven_to_plan_at` (due off the loom since) |
 | 016_owner_alerts | channel `loomledger_alerts` (→ `WS /ws/alerts`, owner/qc): **`recall_alert_payload(recall)`** sent by a deferred trigger at COMMIT of a recall (never on rollback, once per recall), `breakdown_alert_payload(...)` on state → breakdown |
+| 017_rbac | `permission` + **`role_permission`** (the matrix the API checks: `require_permission("area.action")`), `app_user.active` (deactivated = no login, tokens refused), last active owner guard (`LL011`), **`set_user_access(actor, user, role, active)`**: no self-deactivation (`LL012`) + audit with the acting user |
 
 Conventions for new migrations:
 - File `db/migrations/00N_short_name.sql`, one concern per file, comment header explaining *why*.
@@ -159,6 +160,9 @@ Rules:
 - Validate input with Pydantic (`Field(gt=0)`, regex for codes like `^Y-\d{3,}$`, enums); return `422 VALIDATION_FAILED` with `fields`.
 - Idempotent writes: catch unique violation on `idempotency_key` → return the original result (200).
 - Roles: store → receipts; floor_supervisor → floor/production; qc → inspections, recalls; accounts → finance; owner → everything.
+  Since 017 these live in `role_permission`; routes use `require_permission(...)`, the UI asks `GET /api/auth/permissions`.
+- Never cast a query PARAMETER to an enum (`%s::user_role`): prepared statements keep the type OID and break after a
+  reset under a running backend. Compare as text (`role::text = %s`) or cast via text (`%s::text::user_role`).
 - Log one line per request with request id, method, path, status, ms. Never return SQL text or stack traces to the client.
 - Keep handlers thin; a service function should read like the business sentence it implements.
 

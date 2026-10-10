@@ -38,6 +38,8 @@ regenerate, update `frontend/src/api/types.ts`, and tell the team in the group c
 | SQLSTATE `LL008` (attendance for an inactive worker) | 422 | `WORKER_INACTIVE` + `fields.marks` |
 | SQLSTATE `LL009` (payment above what is still outstanding on the invoice / yarn bill) | 422 | `OVERPAYMENT` + `fields.amount: "at most <outstanding>"` |
 | SQLSTATE `LL010` (gate entry for an order that is dispatched / cancelled) | 422 | `ORDER_CLOSED` + `fields.order_code` |
+| SQLSTATE `LL011` (would leave no active owner: deactivate / demote / delete the last one) | 409 | `LAST_OWNER` |
+| SQLSTATE `LL012` (deactivating your own account) | 409 | `SELF_DEACTIVATION` + `fields.active` |
 | SQLSTATE `LL006` (dispatch mixes dye batches, no `shade_override_reason`) | 409 | `SHADE_MISMATCH` + `fields: {batches: "DB-08, DB-14"}` |
 | bad login | 401 | `INVALID_CREDENTIALS` |
 | missing/expired token | 401 | `UNAUTHENTICATED` |

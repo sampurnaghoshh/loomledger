@@ -4,14 +4,12 @@ import { useMemo, useState } from "react";
 import { CheckCircle2, Lock, Users } from "lucide-react";
 import { api } from "@/api/client";
 import type { AttendanceRegister, AttendanceStatus, WageRow, WageRun } from "@/api/types";
-import { Button, Card, DataTable, EmptyState, ErrorBanner, Field, Input, Loadable, PageHeader, Select, StatTile, type Column } from "@/components/ui";
+import { Button, Card, DataTable, EmptyState, ErrorBanner, Field, Input, Loadable, PageHeader, Select, Spinner, StatTile, type Column } from "@/components/ui";
 import { useAction, useApi } from "@/hooks/useApi";
-import { getSession } from "@/lib/auth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { formatDate, formatINR, formatMonth, humanize, newIdempotencyKey } from "@/lib/format";
 import type { Tone } from "@/lib/tones";
 
-const REGISTER_ROLES = ["owner", "floor_supervisor"];
-const WAGE_ROLES = ["owner", "accounts"];
 const STATUSES: { value: AttendanceStatus; label: string; tone: Tone }[] = [
   { value: "present", label: "Present", tone: "ok" },
   { value: "half_day", label: "Half day", tone: "warn" },
@@ -34,15 +32,18 @@ function istToday(): string {
 }
 
 export default function WorkforcePage() {
-  const role = getSession()?.user.role ?? "";
-  const canRegister = REGISTER_ROLES.includes(role);
-  const canWages = WAGE_ROLES.includes(role);
-  const [tab, setTab] = useState<"register" | "wages">(canRegister ? "register" : "wages");
+  const { can, loading } = usePermissions();
+  const canRegister = can("workforce.register");
+  const canWages = can("workforce.wages");
+  const [picked, setTab] = useState<"register" | "wages" | null>(null);
+  const tab = picked ?? (canRegister ? "register" : "wages");
 
   return (
     <div className="grid gap-6">
       <PageHeader title="Workforce" subtitle="Attendance register and wages" />
-      {!canRegister && !canWages ? (
+      {loading ? (
+        <Spinner />
+      ) : !canRegister && !canWages ? (
         <Card>
           <EmptyState title="Workforce is for the floor supervisor and accounts"
             body="Sign in as floor@, accounts@ or owner@." action={<Lock className="size-5 text-muted" aria-hidden />} />

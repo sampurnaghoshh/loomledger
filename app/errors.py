@@ -97,6 +97,12 @@ def map_db_error(exc: psycopg.Error) -> ApiError:
     if state == "LL010":
         return ApiError("ORDER_CLOSED", diag.message_primary or "That order is no longer open.", 422,
                         hint=diag.message_hint or None, fields={"order_code": "order is not open"}, sqlstate=state)
+    if state == "LL011":
+        return ApiError("LAST_OWNER", diag.message_primary or "That is the last active owner.", 409,
+                        hint=diag.message_hint or None, sqlstate=state)
+    if state == "LL012":
+        return ApiError("SELF_DEACTIVATION", diag.message_primary or "You can't deactivate your own account.", 409,
+                        hint=diag.message_hint or None, fields={"active": "not for your own account"}, sqlstate=state)
     if state == "LL003":
         return ApiError("LEDGER_IMMUTABLE", diag.message_primary or "The stock ledger is append-only.", 405,
                         hint="Post a correcting movement instead.", sqlstate=state)

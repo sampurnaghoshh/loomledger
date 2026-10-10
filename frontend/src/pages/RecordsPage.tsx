@@ -2,11 +2,11 @@
 // For evaluators and for the office. The demo pages (Floor, Quality, Orders…) are unchanged.
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "@/api/client";
-import type { InvoiceRow, ListQuery, OrderSummary, Page, QualityQueueItem, Rejection, Role, RollListItem, StockRow, WorkerRow } from "@/api/types";
+import type { InvoiceRow, ListQuery, OrderSummary, Page, QualityQueueItem, Rejection, RollListItem, StockRow, WorkerRow } from "@/api/types";
 import { Badge, Card, DataTable, ListToolbar, Loadable, PageHeader, Pager, type Column, type FilterDef } from "@/components/ui";
 import { useApi } from "@/hooks/useApi";
 import { useListQuery } from "@/hooks/useListQuery";
-import { getSession } from "@/lib/auth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { formatDate, formatDateTime, formatINR, formatQty, humanize } from "@/lib/format";
 import { custodyLabel, custodyTone } from "@/lib/tones";
 
@@ -18,7 +18,7 @@ type Tab<T> = {
   rowKey: (row: T) => string;
   filters: FilterDef[];
   search: string;
-  roles?: Role[]; // who may open it (owner always); undefined = everyone
+  permission?: string; // needed to open it (017); undefined = everyone signed in
 };
 const tab = <T,>(t: Tab<T>) => t as unknown as Tab<Record<string, unknown>>;
 
@@ -108,7 +108,7 @@ const TABS = [
   }),
   tab<InvoiceRow>({
     key: "invoices", label: "Invoices", load: api.lists.invoices, rowKey: (r) => r.code, search: "Search invoice, order, buyer",
-    roles: ["accounts"],
+    permission: "finance.access",
     filters: [{ key: "unpaid", label: "Outstanding", options: yesNo }],
     columns: [
       { key: "code", header: "Invoice", sortKey: "code", render: (r) => mono(r.code) },
@@ -121,7 +121,7 @@ const TABS = [
   }),
   tab<WorkerRow>({
     key: "workers", label: "Workers", load: api.lists.workers, rowKey: (r) => r.code, search: "Search code or name",
-    roles: ["floor_supervisor"],
+    permission: "workforce.register",
     filters: [
       { key: "skill", label: "Skill", options: opts(["weaving", "dyeing", "spinning", "finishing"]) },
       { key: "active", label: "Active", options: yesNo },
@@ -137,8 +137,8 @@ const TABS = [
 ];
 
 export default function RecordsPage() {
-  const role = getSession()?.user.role;
-  const visible = TABS.filter((t) => !t.roles || role === "owner" || (role && t.roles.includes(role)));
+  const { can } = usePermissions();
+  const visible = TABS.filter((t) => !t.permission || can(t.permission));
   const [params, setParams] = useSearchParams();
   const current = visible.find((t) => t.key === params.get("tab")) ?? visible[0];
 

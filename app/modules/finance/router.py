@@ -6,13 +6,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
 
-from app.auth import Conn, require_role
+from app.auth import Conn, require_permission
 from app.listing import ListParams, Page
 from app.modules.finance import service
 from app.modules.finance.schemas import InvoiceRow, MassBalance, PaymentRequest, PaymentResponse, Pnl, RollCost
 
 router = APIRouter(prefix="/api/finance", tags=["finance"])
-Accounts = Annotated[dict, Depends(require_role("accounts"))]
+Accounts = Annotated[dict, Depends(require_permission("finance.access"))]
 
 
 @router.get("/mass-balance", response_model=MassBalance)

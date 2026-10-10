@@ -620,3 +620,19 @@ export interface WorkerRow {
   hourly_wage: number;
   active: boolean;
 }
+
+/** GET /api/auth/permissions — the role × permission matrix (017) and what the signed-in user may do. */
+export interface PermissionsInfo {
+  roles: Role[];
+  permissions: { code: string; area: string; description: string; roles: Role[] }[];
+  me: { role: Role; permissions: string[] };
+}
+/** GET /api/users (owner) — paged; PATCH /api/users/{id} {role?, active?}. */
+export interface UserRow {
+  id: number;
+  email: string;
+  full_name: string;
+  role: Role;
+  active: boolean;
+  created_at: string;
+}

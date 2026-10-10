@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 
 from fastapi import Query
 
-from app.auth import Conn, CurrentUser, require_role
+from app.auth import Conn, CurrentUser, require_permission
 from app.listing import ListParams, Page
 from app.modules.orders import service
 from app.modules.orders.schemas import BuyerOrderStatus, DispatchRequest, DispatchResponse, OrderSummary, YarnCheck
@@ -37,7 +37,7 @@ def yarn_check(code: str, conn: Conn, user: CurrentUser):
 
 @router.post("/api/dispatches", response_model=DispatchResponse, status_code=201)
 def dispatch(body: DispatchRequest, conn: Conn, response: Response,
-             user: dict = Depends(require_role("store"))):
+             user: dict = Depends(require_permission("orders.dispatch"))):
     result, created = service.dispatch(conn, body, user)
     if not created:
         response.status_code = 200      # idempotent replay: the original result

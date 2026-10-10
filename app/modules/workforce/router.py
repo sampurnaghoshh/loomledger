@@ -6,13 +6,13 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Response
 
-from app.auth import Conn, require_role
+from app.auth import Conn, require_permission
 from app.listing import ListParams, Page
 from app.modules.workforce import service
 from app.modules.workforce.schemas import MarkRequest, MarkResponse, Register, Wages, WorkerRow
 
 router = APIRouter(prefix="/api/workforce", tags=["workforce"])
-Supervisor = Annotated[dict, Depends(require_role("floor_supervisor"))]
+Supervisor = Annotated[dict, Depends(require_permission("workforce.register"))]
 
 
 @router.get("/attendance", response_model=Register)
@@ -29,7 +29,7 @@ def mark(body: MarkRequest, conn: Conn, response: Response, user: Supervisor):
 
 
 @router.get("/wages", response_model=Wages)
-def wages(conn: Conn, user: dict = Depends(require_role("accounts")),
+def wages(conn: Conn, user: dict = Depends(require_permission("workforce.wages")),
           from_: Annotated[date | None, Query(alias="from")] = None, to: date | None = None):
     return service.wages(conn, from_, to)
 

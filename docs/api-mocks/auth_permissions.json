@@ -1,0 +1,135 @@
+{
+  "roles": [
+    "owner",
+    "store",
+    "floor_supervisor",
+    "qc",
+    "accounts"
+  ],
+  "permissions": [
+    {
+      "code": "users.manage",
+      "area": "admin",
+      "description": "Change users' roles and activate / deactivate them",
+      "roles": [
+        "owner"
+      ]
+    },
+    {
+      "code": "validation_log.view",
+      "area": "admin",
+      "description": "See the validation log (every write a business rule refused)",
+      "roles": [
+        "owner",
+        "qc"
+      ]
+    },
+    {
+      "code": "alerts.listen",
+      "area": "alerts",
+      "description": "Receive live owner alerts (recalls, breakdowns) on a phone",
+      "roles": [
+        "owner",
+        "qc"
+      ]
+    },
+    {
+      "code": "finance.access",
+      "area": "finance",
+      "description": "Month-end, P&L, mass balance, roll costs, invoices, payments",
+      "roles": [
+        "owner",
+        "accounts"
+      ]
+    },
+    {
+      "code": "floor.change_state",
+      "area": "floor",
+      "description": "Change a machine's state (running, idle, breakdown, changeover)",
+      "roles": [
+        "owner",
+        "floor_supervisor"
+      ]
+    },
+    {
+      "code": "inventory.receive",
+      "area": "inventory",
+      "description": "Record yarn arriving at the gate (goods receipt)",
+      "roles": [
+        "owner",
+        "store"
+      ]
+    },
+    {
+      "code": "orders.dispatch",
+      "area": "orders",
+      "description": "Dispatch rolls to a buyer (creates the invoice)",
+      "roles": [
+        "owner",
+        "store"
+      ]
+    },
+    {
+      "code": "production.start_run",
+      "area": "production",
+      "description": "Start a weaving run (issue yarn to a loom)",
+      "roles": [
+        "owner",
+        "floor_supervisor"
+      ]
+    },
+    {
+      "code": "quality.inspect",
+      "area": "quality",
+      "description": "Record a QC inspection (pass / rework / reject)",
+      "roles": [
+        "owner",
+        "qc"
+      ]
+    },
+    {
+      "code": "recalls.apply",
+      "area": "recalls",
+      "description": "Apply a recall (quarantine everything made from a lot)",
+      "roles": [
+        "owner",
+        "qc"
+      ]
+    },
+    {
+      "code": "workforce.register",
+      "area": "workforce",
+      "description": "Mark the attendance register and see the workers list",
+      "roles": [
+        "owner",
+        "floor_supervisor"
+      ]
+    },
+    {
+      "code": "workforce.wages",
+      "area": "workforce",
+      "description": "See the wage run",
+      "roles": [
+        "owner",
+        "accounts"
+      ]
+    }
+  ],
+  "me": {
+    "role": "owner",
+    "permissions": [
+      "users.manage",
+      "validation_log.view",
+      "alerts.listen",
+      "finance.access",
+      "floor.change_state",
+      "inventory.receive",
+      "orders.dispatch",
+      "production.start_run",
+      "quality.inspect",
+      "recalls.apply",
+      "workforce.register",
+      "workforce.wages"
+    ]
+  }
+}

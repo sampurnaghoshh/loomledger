@@ -49,6 +49,9 @@ import type {
   RollListItem,
   StockRow,
   WorkerRow,
+  PermissionsInfo,
+  Role,
+  UserRow,
 } from "./types";
 import { getSession } from "@/lib/auth";
 import { openFloorSocket, type SocketStatus } from "./floorSocket";
@@ -56,7 +59,7 @@ import { mock } from "./mocks";
 
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== "false";
 
-type Method = "GET" | "POST";
+type Method = "GET" | "POST" | "PATCH";
 
 async function request<T>(method: Method, path: string, body?: unknown, auth = true): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
@@ -87,6 +90,11 @@ const real = {
   auth: {
     login: (email: string, password: string) =>
       request<LoginResponse>("POST", "/api/auth/login", { email, password }, false),
+    permissions: () => request<PermissionsInfo>("GET", "/api/auth/permissions"),
+  },
+  users: {
+    list: (p: ListQuery) => request<Page<UserRow>>("GET", `/api/users${qs(p)}`), // users.manage
+    update: (id: number, change: { role?: Role; active?: boolean }) => request<UserRow>("PATCH", `/api/users/${id}`, change),
   },
   floor: {
     machines: () => request<MachineNow[]>("GET", "/api/floor/machines"),

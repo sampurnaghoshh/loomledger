@@ -394,6 +394,29 @@ def test_downtime_pauses_run_progress(db):
         assert dict(db.execute(due, (at("13:00"),)).fetchall()) == {"LOOM-1": None, "LOOM-4": None}
 
 
+# ---------------------------------------------------------------- access (017)
+def test_the_last_active_owner_cannot_be_removed(db):
+    for sql in ("UPDATE app_user SET active = false WHERE role = 'owner'",
+                "UPDATE app_user SET role = 'qc' WHERE role = 'owner'",
+                "DELETE FROM app_user WHERE role = 'owner'"):
+        with pytest.raises(psycopg.Error) as e, db.transaction(force_rollback=True):
+            db.execute(sql)
+        assert e.value.sqlstate == "LL011", sql
+
+
+def test_nobody_deactivates_themselves_and_changes_are_audited(db):
+    owner = db.execute("SELECT id FROM app_user WHERE role = 'owner'").fetchone()[0]
+    store = db.execute("SELECT id FROM app_user WHERE role = 'store'").fetchone()[0]
+    with pytest.raises(psycopg.Error) as e, db.transaction(force_rollback=True):
+        db.execute("SELECT set_user_access(%s, %s, NULL, false)", (owner, owner))
+    assert e.value.sqlstate == "LL012"
+    with db.transaction(force_rollback=True):
+        db.execute("SELECT set_user_access(%s, %s, NULL, false)", (owner, store))
+        assert db.execute("SELECT active FROM app_user WHERE id = %s", (store,)).fetchone()[0] is False
+        assert db.execute("""SELECT changed_by FROM audit_log WHERE table_name = 'app_user' AND row_id = %s
+                              ORDER BY id DESC LIMIT 1""", (store,)).fetchone()[0] == "owner@everest.test"
+
+
 def test_add_working_days_skips_sundays(db):
     # Sat 10 Oct 2026 + 1 working day = Mon 12 Oct
     assert db.execute("SELECT add_working_days('2026-10-10', 1)").fetchone()[0].isoformat() == "2026-10-12"
