@@ -26,6 +26,13 @@ export function formatDate(iso: string | null | undefined) {
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
 }
 
+/** Oct 2026 (accepts "2026-10", "2026-10-16" or a full timestamp) */
+export function formatMonth(iso: string | null | undefined) {
+  if (!iso) return "—";
+  const d = new Date(iso.length <= 10 ? `${iso.slice(0, 7)}-01T00:00:00+05:30` : iso);
+  return d.toLocaleDateString("en-IN", { month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
+}
+
 /** 16 Oct, 09:12 (mill time) */
 export function formatDateTime(iso: string | null | undefined) {
   if (!iso) return "—";
