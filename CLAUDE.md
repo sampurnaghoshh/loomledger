@@ -100,7 +100,7 @@ PostgreSQL 16 (14+ works). Extensions: `btree_gist`, `pgcrypto`. Session timezon
 | 005_floor_portal_balance | `v_machine_now`, `floor_output(day)`, `machine_availability(from,to)`, `v_yarn_balance_by_run`, **`mass_balance(from,to)`**, `v_yarn_unaccounted_by_machine`, **`buyer_order_status(token)`** |
 | 006_floor_notify_payload | `ist_iso(ts)`; `loomledger_floor` NOTIFY payload = `ws_floor_event.json` (adds `machine_code`, `reason`) |
 | 007_production_rules | `weaving_yarn_issue_kg(product, m)` (m × width × GSM/1000 × 1.04), `shift_at(ts)` (IST shift calendar) |
-| 008 | *reserved for Shade Guard (Nooman)* |
+| 008_shade_guard | `dispatch.shade_override_reason`; dispatch_line trigger: one dye batch per dispatch unless an override reason is recorded (`LL006`). Merged after 009 — order-independent |
 | 009_dispatch_guard | dispatch_line trigger: latest QC must be `pass` (`LL004`), roll reserved for the dispatch's order (`LL005`) |
 
 Conventions for new migrations:

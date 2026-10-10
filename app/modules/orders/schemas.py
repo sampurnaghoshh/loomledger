@@ -51,6 +51,7 @@ class DispatchRequest(BaseModel):
     lot_codes: list[str] = Field(min_length=1, max_length=200)
     vehicle_no: str = Field(min_length=1, max_length=40)
     idempotency_key: str = Field(min_length=8, max_length=100)
+    shade_override_reason: str | None = Field(default=None, min_length=3, max_length=500)   # allows mixed dye batches
 
     @field_validator("lot_codes")
     @classmethod
