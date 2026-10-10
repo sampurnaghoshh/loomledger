@@ -25,13 +25,10 @@ if ($Rehearsal) {
     $Url = "http://localhost:$Port"
     $Smoke = $true
 }
-if ($DatabaseUrl) {
-    $env:DATABASE_URL = $DatabaseUrl
-    python -m scripts.ensure_db $DatabaseUrl
-    if ($LASTEXITCODE -ne 0) { throw "could not create/check $DatabaseUrl" }
-} elseif (-not $env:DATABASE_URL) {
-    $env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/loomledger"
-}
+if ($DatabaseUrl) { $env:DATABASE_URL = $DatabaseUrl }
+elseif (-not $env:DATABASE_URL) { $env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/loomledger" }
+python -m scripts.ensure_db $env:DATABASE_URL                  # creates it if missing; harmless otherwise
+if ($LASTEXITCODE -ne 0) { Write-Host "(could not check/create the database - continuing)" }
 Write-Host ("database: " + ($env:DATABASE_URL -split "/")[-1])
 
 $seedArgs = @()
