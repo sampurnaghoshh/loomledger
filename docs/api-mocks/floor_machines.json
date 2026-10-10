@@ -3,11 +3,11 @@
     "code": "LOOM-1",
     "name": "Loom 1",
     "stage": "weaving",
-    "state": "idle",
-    "state_since": "2026-10-01T14:00:00+05:30",
+    "state": "running",
+    "state_since": "2026-10-10T08:00:00+05:30",
     "reason": null,
-    "current_run": null,
-    "current_lot": null,
+    "current_run": "WV-R-1213",
+    "current_lot": "R-1213-G",
     "current_order": null
   },
   {
@@ -36,11 +36,11 @@
     "code": "LOOM-4",
     "name": "Loom 4",
     "stage": "weaving",
-    "state": "idle",
-    "state_since": "2026-10-01T14:00:00+05:30",
+    "state": "running",
+    "state_since": "2026-10-10T08:00:00+05:30",
     "reason": null,
-    "current_run": null,
-    "current_lot": null,
+    "current_run": "WV-R-1214",
+    "current_lot": "R-1214-G",
     "current_order": null
   },
   {
@@ -58,11 +58,11 @@
     "code": "LOOM-6",
     "name": "Loom 6",
     "stage": "weaving",
-    "state": "idle",
-    "state_since": "2026-10-01T14:00:00+05:30",
+    "state": "running",
+    "state_since": "2026-10-10T08:00:00+05:30",
     "reason": null,
-    "current_run": null,
-    "current_lot": null,
+    "current_run": "WV-R-1215",
+    "current_lot": "R-1215-G",
     "current_order": null
   },
   {
