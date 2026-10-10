@@ -87,6 +87,28 @@ test("stops on 4401 (bad session): retrying can't help", () => {
   assert.equal(h.sockets.length, 1);
 });
 
+test("React StrictMode double mount: the first socket is closed while connecting, the second one gets the events", () => {
+  const sockets: FakeSocket[] = [];
+  const events: unknown[] = [];
+  const timers: unknown[] = [];
+  const subscribe = () =>
+    openFloorSocket({
+      url: () => "ws://host/ws/floor?token=t",
+      onEvent: (e) => events.push(e),
+      createSocket: (url) => { const s = new FakeSocket(url); sockets.push(s); return s; },
+      setTimer: (fn, ms) => { timers.push({ fn, ms }); return timers.at(-1); },
+      clearTimer: () => {},
+    });
+  const stopFirst = subscribe();                         // mount
+  stopFirst();                                           // StrictMode cleanup, before the handshake finished
+  subscribe();                                           // mount again
+  sockets[1].open();
+  sockets[1].send({ machine_code: "LOOM-4", state: "breakdown", ended_at: null });
+  assert.equal(sockets[0].closedByClient, true);
+  assert.equal(timers.length, 0, "the deliberately closed first socket does not schedule a reconnect");
+  assert.deepEqual(events, [{ machine_code: "LOOM-4", state: "breakdown", ended_at: null }]);
+});
+
 test("unsubscribe closes the socket and cancels a pending retry", () => {
   const h = harness();
   h.sockets[0].open();
