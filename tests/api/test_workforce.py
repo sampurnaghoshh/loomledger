@@ -128,7 +128,9 @@ def test_mark_a_shift_in_one_request_and_replay(client, auth):
     again = client.post(REG, json=body, headers=auth["floor"])
     assert again.status_code == 200 and again.json() == res.json()        # replay: nothing written twice
 
-    register = {w["worker_code"]: w for w in client.get(REG, headers=auth["floor"]).json()["workers"]}
+    # read back the day that was marked (the default day is the last working day: Saturday when run on a Sunday)
+    workers = client.get(REG, params={"day": body["day"]}, headers=auth["floor"]).json()["workers"]
+    register = {w["worker_code"]: w for w in workers}
     assert all(register[c]["status"] == "present" and register[c]["shift_code"] == "A" for c in codes)
 
 

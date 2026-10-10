@@ -110,7 +110,10 @@ def pay_body(amount, invoice: str = "INV-0412-1", key: str | None = None, method
 
 
 def receivable(client, auth) -> float:
-    rows = client.get(PNL, params=MONTH, headers=auth["owner"]).json()["receivables"]
+    # as of today: a payment is dated when it is recorded, which can be after the story day (e.g. on a Sunday)
+    today = q("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date AS d")[0]["d"]
+    window = MONTH | {"to": max(today, S.ANCHOR_DATE).isoformat()}
+    rows = client.get(PNL, params=window, headers=auth["owner"]).json()["receivables"]
     return next((r["outstanding"] for r in rows if r["buyer_code"] == "BUY-MER"), 0)
 
 
