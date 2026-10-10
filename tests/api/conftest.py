@@ -152,6 +152,7 @@ def live_server(app):
     thread.start()
     wait_until(lambda: server.started, 10, "uvicorn to start")
     wait_until(server_app.state.floor_listener.connected.is_set, 5, "LISTEN")
+    wait_until(server_app.state.alerts_listener.connected.is_set, 5, "LISTEN alerts")
     yield server_app, f"http://127.0.0.1:{port}"
     server.should_exit = True
     thread.join(timeout=5)

@@ -14,6 +14,7 @@ import OrdersPage from "@/pages/OrdersPage";
 import MonthEndPage from "@/pages/MonthEndPage";
 import RollPassportPage from "@/pages/RollPassportPage";
 import QrLabelsPage from "@/pages/QrLabelsPage";
+import AlertsPage from "@/pages/AlertsPage";
 
 function RequireAuth() {
   const location = useLocation();
@@ -32,6 +33,8 @@ export default function App() {
       <Route element={<RequireAuth />}>
         {/* Scanned from a QR label on a phone: full-screen, no sidebar (login first, then straight back here) */}
         <Route path="/roll/:code" element={<RollPassportPage />} />
+        {/* The owner's phone on the table: full-screen, live alerts over /ws/alerts */}
+        <Route path="/alerts" element={<AlertsPage />} />
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/floor" replace />} />
           <Route path="/floor" element={<FloorBoardPage />} />

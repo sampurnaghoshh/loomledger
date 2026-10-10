@@ -42,10 +42,16 @@ async def lifespan(app: FastAPI):
     listener = realtime.FloorListener(settings.DATABASE_URL, broadcaster.publish)
     app.state.floor_broadcaster = broadcaster
     app.state.floor_listener = listener
+    alerts = realtime.Broadcaster()
+    alerts_listener = realtime.FloorListener(settings.DATABASE_URL, alerts.publish, channel=realtime.ALERTS_CHANNEL)
+    app.state.alerts_broadcaster = alerts
+    app.state.alerts_listener = alerts_listener
     await listener.start()
+    await alerts_listener.start()
     try:
         yield
     finally:
+        await alerts_listener.stop()
         await listener.stop()
         pool.close()
 
@@ -94,7 +100,7 @@ def create_app() -> FastAPI:
             return JSONResponse({"status": "degraded", "db": "fail", "realtime": "connecting"}, status_code=503)
 
     app.include_router(auth.router)
-    app.include_router(realtime.router)          # WS /ws/floor
+    app.include_router(realtime.router)          # WS /ws/floor, /ws/alerts
 
     # ---- AREA ROUTERS ---------------------------------------------------------------------------
     # Each area lives in app/modules/<area>/ (router -> service -> repository). Include them here:

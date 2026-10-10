@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -136,6 +136,9 @@ def export(conn) -> None:
     write("ws_floor_event", {"machine_id": 4, "machine_code": "LOOM-4", "state": "breakdown",
                              "reason": "Warp beam bearing failure", "started_at": f"{anchor}T09:12:00+05:30",
                              "ended_at": None})
+    write("ws_alert_breakdown", conn.execute(
+        "SELECT breakdown_alert_payload((SELECT id FROM machine WHERE code = 'LOOM-4'), 'Warp beam bearing failure', %s) AS j",
+        (datetime.combine(anchor, time(9, 12), IST),)).fetchone()["j"])
 
     # ---- inventory
     write("inventory_masters", {
@@ -235,6 +238,9 @@ def export(conn) -> None:
                      (recall_at, y112))
         conn.execute("UPDATE recall SET initiated_at = %s WHERE root_lot_id = %s", (recall_at, y112))
     rc = conn.execute("SELECT code, initiated_at FROM recall WHERE root_lot_id = %s", (y112,)).fetchone()
+    # owner alert (016) as it went out at commit, pinned to the story clock like the recall row
+    write("ws_alert_recall", conn.execute("SELECT recall_alert_payload(id) AS j FROM recall WHERE root_lot_id = %s",
+                                          (y112,)).fetchone()["j"])
     write("recall_applied", {"applied": True, "recall_code": rc["code"], "applied_at": rc["initiated_at"],
                              **with_calculation(recall_payload(conn, S.Y112))})
 
@@ -318,6 +324,7 @@ def main() -> None:
     with psycopg.connect(database_url(), row_factory=dict_row) as conn:
         reset_schema(conn); migrate(conn); seed(conn)
         export(conn)
+        conn.rollback()        # discard the export's writes (incl. the recall's pending at-commit alert, 016): no NOTIFY
         reset_schema(conn); migrate(conn); seed(conn)          # leave a clean, un-recalled demo database
     print(f"wrote {len(list(OUT.glob('*.json')))} files to {OUT}")
 

@@ -550,3 +550,30 @@ export interface RollLabels {
   root: string | null;
   rolls: RollLabel[];
 }
+
+/** WS /ws/alerts — live owner alerts (016). Sent by PostgreSQL: a recall at COMMIT, or a machine breakdown. */
+export interface RecallAlert {
+  kind: "recall";
+  recall_code: string;
+  root_lot_code: string;
+  reason: string;
+  applied_at: string;
+  rolls_total: number;
+  rolls_rejected: number;
+  rolls_at_risk: number;
+  rolls_at_customer: number;
+  at_buyers: { buyer: string; rolls: string[] }[];
+  orders_affected: number;
+  buyers_affected: number;
+  delay_days: number; // the worst order's extra working days
+  orders: { order_code: string; buyer: string; delay_days: number; promised_date: string; revised_promise_date: string }[];
+  total_exposure: number;
+}
+export interface BreakdownAlert {
+  kind: "breakdown";
+  machine_code: string;
+  machine_name: string;
+  reason: string | null;
+  started_at: string;
+}
+export type OwnerAlert = RecallAlert | BreakdownAlert;

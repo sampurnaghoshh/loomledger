@@ -214,6 +214,7 @@ class Smoke:
             self.check(act, "rolls already at the buyer", at_buyer == S.EXPECTED_AT_CUSTOMER,
                        ", ".join(at_buyer))
 
+        alerts = self.open_owner_alerts()                     # the owner's phone, listening before the recall
         first = self.ok_json(act, "apply recall as qc", self.call(
             "POST", "/api/recalls", "qc", json={"lot_code": S.Y112, "reason": f"Colour mismatch traced to {S.Y112}"}), 201)
         if first is not None:
@@ -230,6 +231,8 @@ class Smoke:
                            and (p["status"], p["custody"]) == ("recalled", "at_customer"),
                            f"{p['status']} · {p['custody']} · {(p['recall'] or {}).get('code')} · {p['order']['buyer']}")
 
+        self.owner_alert(act, alerts, first)
+
         res = self.call("POST", "/api/production/weaving-runs", "floor", json={
             "machine_code": "LOOM-2", "yarn_lot_code": S.Y112, "product_code": GREIGE_FOR[S.YARN_LOTS[S.Y112][0]],
             "meters_planned": float(S.ROLL_LENGTH_M), "idempotency_key": str(uuid.uuid4())})
@@ -238,6 +241,37 @@ class Smoke:
                    res.status_code == 409 and err.get("code") == "LOT_QUARANTINED" and err.get("sqlstate") == "LL001",
                    f"HTTP {res.status_code} {err.get('code')} ({err.get('sqlstate')}): {err.get('message')}")
         return before
+
+    def open_owner_alerts(self):
+        ws_url = self.base.replace("http://", "ws://").replace("https://", "wss://") + "/ws/alerts"
+        try:
+            ws = ws_connect(f"{ws_url}?token={self.tokens['owner']}", open_timeout=5)
+            time.sleep(0.5)                                        # let the server register the subscription
+            return ws
+        except Exception:                                          # noqa: BLE001 — reported by owner_alert
+            return None
+
+    def owner_alert(self, act: str, ws, applied: dict | None) -> None:
+        """PostgreSQL sends the recall alert at COMMIT: exactly one, even though Act 3 presses apply twice."""
+        step = "owner alert over /ws/alerts"
+        if ws is None or applied is None:
+            self.check(act, step, False, "could not connect" if ws is None else "recall not applied")
+            return
+        try:
+            with ws:
+                got = json.loads(ws.recv(timeout=5))
+                try:
+                    extra = json.loads(ws.recv(timeout=1))
+                except TimeoutError:
+                    extra = None
+            exposure = S.expected_money()["total_exposure"].quantize(Decimal("0.01"))
+            self.check(act, step, got.get("kind") == "recall" and got["recall_code"] == applied["recall_code"]
+                       and got["rolls_total"] == S.EXPECTED_SCOPE["rolls_total"]
+                       and Decimal(str(got["total_exposure"])) == exposure and extra is None,
+                       f"{got.get('recall_code')} · {got.get('rolls_total')} rolls · {money(got.get('total_exposure', 0))}"
+                       + ("" if extra is None else f" · UNEXPECTED second alert: {extra.get('kind')}"))
+        except Exception as exc:                                    # noqa: BLE001
+            self.check(act, step, False, f"{type(exc).__name__}: {exc}")
 
     # ---------- Act 4: business impact ----------
     def act4(self, before: dict[str, dict]) -> None:
