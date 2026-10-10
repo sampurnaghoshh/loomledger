@@ -40,6 +40,8 @@ import type {
   StockSnapshot,
   WageRun,
   YarnCheck,
+  RollLabels,
+  RollPassport,
 } from "./types";
 import { getSession } from "@/lib/auth";
 import { openFloorSocket } from "./floorSocket";
@@ -126,6 +128,10 @@ const real = {
       request<LotGraph & { lot_codes: string[] }>("POST", "/api/trace/graph", { lot_codes: lotCodes, direction: "up" }),
     descendants: (lotCode: string) =>
       request<LotGraph & { lot_code: string }>("GET", `/api/trace/lots/${encodeURIComponent(lotCode)}/descendants`),
+  },
+  rolls: {
+    passport: (code: string) => request<RollPassport>("GET", `/api/rolls/${encodeURIComponent(code)}/passport`),
+    labels: (root?: string) => request<RollLabels>("GET", `/api/rolls/labels${qs({ root })}`),
   },
   recalls: {
     preview: (lotCode: string) =>

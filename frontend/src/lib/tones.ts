@@ -1,5 +1,5 @@
 // One mapping from domain states to colour tones, so every screen agrees.
-import type { Custody, LotStatus, MachineState, Verdict } from "@/api/types";
+import type { Custody, LotStatus, MachineState, RollPassport, Verdict } from "@/api/types";
 
 export type Tone = "ok" | "warn" | "bad" | "hold" | "brand" | "accent" | "idle";
 
@@ -57,4 +57,22 @@ export const verdictLabel: Record<Verdict, string> = {
  * like a stopped machine's bar, so a live breakdown stays the loudest thing on the board. */
 export function runProgressTone(run: { woven_to_plan_at: string | null }, stopped: boolean): "brand" | "idle" {
   return run.woven_to_plan_at !== null || stopped ? "idle" : "brand";
+}
+
+/** The big banner on a roll's QR passport: a recall freeze wins over where the roll is; otherwise custody (facts). */
+export function passportBanner(p: Pick<RollPassport, "status" | "custody" | "order" | "lineage">): { tone: Tone; label: string } {
+  const atBuyer = `AT BUYER${p.order ? ` (${p.order.buyer})` : ""}`;
+  if (p.status === "quarantined" || p.status === "recalled")
+    return { tone: "hold", label: p.custody === "at_customer" ? `QUARANTINED · ${atBuyer}` : "QUARANTINED" };
+  const onMachine = p.lineage[p.lineage.length - 1]?.run?.stage ?? "weaving";
+  const labels: Record<Custody, string> = {
+    rejected: "REJECTED",
+    passed_in_store: "PASSED · IN STORE",
+    wip: onMachine.toUpperCase(),
+    awaiting_qc: "AWAITING QC",
+    rework: "REWORK",
+    at_customer: atBuyer,
+    consumed: "CONSUMED",
+  };
+  return { tone: custodyTone[p.custody], label: labels[p.custody] };
 }

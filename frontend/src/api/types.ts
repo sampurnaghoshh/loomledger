@@ -502,3 +502,51 @@ export interface DispatchResponse {
   invoice_code: string;
   amount: number; // ₹, Σ roll metres × order line price
 }
+
+/** GET /api/rolls/{code}/passport — everything a roll's QR code answers (F1). */
+export interface RollPassportStep {
+  lot_code: string;
+  kind: LotKind;
+  product: string;
+  qty: number;
+  uom: "kg" | "m";
+  depth: number; // 0 = this roll, 1 = its parent, ...
+  receipt: { code: string; supplier: string; received_at: string } | null; // yarn: bought
+  run: {
+    code: string;
+    stage: MachineStage;
+    machine: string;
+    shift: string;
+    operator: string;
+    started_at: string;
+    ended_at: string | null; // null = still on the machine
+  } | null; // fabric: made
+}
+export interface RollPassport {
+  code: string;
+  kind: "greige" | "finished";
+  status: LotStatus; // quarantined / recalled once a recall froze it
+  custody: Custody; // where it is, derived from facts
+  qty_m: number;
+  product_code: string;
+  product: string;
+  colour: string | null;
+  lineage: RollPassportStep[]; // oldest first; the roll itself last
+  qc: { result: QcResult; defect_type: string | null; defect_m: number | null; inspector: string; inspected_at: string } | null;
+  cost: { material: number; machine: number; labour: number; chemicals: number; total: number; cost_per_m: number };
+  order: { code: string; buyer: string; status: string; promised_date: string; revised_promise_date: string | null } | null;
+  dispatch: { code: string; dispatched_at: string; vehicle_no: string | null; invoice_code: string | null } | null;
+  recall: { code: string; root_lot_code: string; reason: string; initiated_at: string } | null;
+}
+/** GET /api/rolls/labels — rolls to print QR labels for: a family (in_scope) + one clean roll. */
+export interface RollLabel {
+  code: string;
+  product: string;
+  qty_m: number;
+  custody: Custody;
+  in_scope: boolean;
+}
+export interface RollLabels {
+  root: string | null;
+  rolls: RollLabel[];
+}

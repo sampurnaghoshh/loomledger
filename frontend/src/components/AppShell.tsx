@@ -8,6 +8,7 @@ import {
   LogOut,
   Menu,
   PackageSearch,
+  QrCode,
   ReceiptIndianRupee,
   ShieldAlert,
   Truck,
@@ -34,6 +35,7 @@ const NAV = [
     items: [
       { to: "/trace", label: "Find Cause", icon: GitBranch },
       { to: "/recall/Y-112", label: "Recall", icon: ShieldAlert },
+      { to: "/labels", label: "QR labels", icon: QrCode },
     ],
   },
   {

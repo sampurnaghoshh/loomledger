@@ -1,5 +1,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "@/api/client";
 import type { MachineNow, MachineState, FloorEvent, RunProgress } from "@/api/types";
 import { useApi, useAction } from "@/hooks/useApi";
@@ -349,7 +350,17 @@ export default function FloorBoardPage() {
                           </div>
                           <div className="flex justify-between gap-3">
                             <span className="text-muted">Current lot</span>
-                            <span className="text-right font-medium">{machine.current_lot ?? "—"}</span>
+                            {machine.current_lot ? (
+                              <Link
+                                to={`/roll/${encodeURIComponent(machine.current_lot)}`}
+                                className="text-right font-mono font-medium text-brand underline"
+                                aria-label={`Passport for ${machine.current_lot}`}
+                              >
+                                {machine.current_lot}
+                              </Link>
+                            ) : (
+                              <span className="text-right font-medium">—</span>
+                            )}
                           </div>
                           <div className="flex justify-between gap-3">
                             <span className="text-muted">Order</span>

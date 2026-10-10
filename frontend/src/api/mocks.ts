@@ -33,6 +33,8 @@ import type {
   Role,
   StockSnapshot,
   WageRun,
+  RollLabels,
+  RollPassport,
 } from "./types";
 
 const TOKENS = {
@@ -46,6 +48,16 @@ const YARN_CHECKS: Record<string, () => Promise<{ default: unknown }>> = {
   "SO-0405": () => import("@mocks/orders_yarn_check_SO-0405.json"),
   "SO-0412": () => import("@mocks/orders_yarn_check_SO-0412.json"),
   "SO-0419": () => import("@mocks/orders_yarn_check_SO-0419.json"),
+};
+
+// QR passports exported for one roll per banner + the clean roll, before and after the Y-112 recall
+type Loader = () => Promise<{ default: unknown }>;
+const PASSPORTS: Record<string, { before: Loader; after: Loader }> = {
+  "R-1201": { before: () => import("@mocks/roll_passport_R-1201_before.json"), after: () => import("@mocks/roll_passport_R-1201_after.json") },
+  "R-1204": { before: () => import("@mocks/roll_passport_R-1204_before.json"), after: () => import("@mocks/roll_passport_R-1204_after.json") },
+  "R-1206": { before: () => import("@mocks/roll_passport_R-1206_before.json"), after: () => import("@mocks/roll_passport_R-1206_after.json") },
+  "R-1212-G": { before: () => import("@mocks/roll_passport_R-1212-G_before.json"), after: () => import("@mocks/roll_passport_R-1212-G_after.json") },
+  "R-1003": { before: () => import("@mocks/roll_passport_R-1003_before.json"), after: () => import("@mocks/roll_passport_R-1003_after.json") },
 };
 
 // receipt + dispatch mock state (cleared on refresh, like the recall)
@@ -166,6 +178,23 @@ export const mock: Api = {
       }
       return { inspection_id: Math.floor(Math.random() * 10000), lot_code: req.lot_code, result: req.result };
     },
+  },
+  rolls: {
+    passport: async (code) => {
+      if (!/^R-\d{3,}(-G)?$/.test(code)) {
+        throw new ApiError("VALIDATION_FAILED", "Please correct the highlighted fields.", 422, undefined, { code: "invalid roll code" });
+      }
+      const files = PASSPORTS[code];
+      if (!files) {
+        await delay();
+        throw new ApiError("NOT_FOUND", `Unknown roll: ${code}.`, 404, `Mock data has ${Object.keys(PASSPORTS).join(", ")}.`, { code: `unknown: ${code}` });
+      }
+      return load<RollPassport>(recallApplied ? files.after : files.before);
+    },
+    labels: () =>
+      recallApplied
+        ? load<RollLabels>(() => import("@mocks/roll_labels_after.json"))
+        : load<RollLabels>(() => import("@mocks/roll_labels_before.json")),
   },
   trace: {
     findCause: () => load<FindCauseResponse>(() => import("@mocks/trace_find_cause.json")),
