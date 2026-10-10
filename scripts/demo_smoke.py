@@ -117,8 +117,11 @@ class Smoke:
             states: dict[str, int] = {}
             for m in machines:
                 states[m["state"]] = states.get(m["state"], 0) + 1
-            self.check(act, "floor board", len(machines) > 0,
-                       f"{len(machines)} machines · " + ", ".join(f"{n} {s}" for s, n in sorted(states.items())))
+            running = sorted(m["code"] for m in machines if m["state"] == "running")
+            expected = sorted({*S.BUSY_FLOOR, S.Y112_ROLLS["R-1212"][0]})
+            self.check(act, "floor board · busy floor", running == expected,
+                       f"{len(machines)} machines · " + ", ".join(f"{n} {s}" for s, n in sorted(states.items()))
+                       + f" · weaving: {', '.join(running)}")
 
         self.live_floor_event(act)
 
@@ -276,11 +279,13 @@ class Smoke:
         act = "Close"
         mb = self.ok_json(act, "mass balance", self.call("GET", "/api/finance/mass-balance", "accounts"))
         if mb is not None:
-            t, worst = mb["totals"], mb["by_machine"][0]
-            self.check(act, "mass balance", t["unaccounted_kg"] == worst["unaccounted_kg"],
-                       f"issued {t['issued_kg']:,} kg · unaccounted {t['unaccounted_kg']} kg = {t['unaccounted_pct']}%")
-            self.check(act, "leaky machine", worst["machine_code"] == S.LEAKY_MACHINE
-                       and worst["unaccounted_kg"] == num(S.LEAKY_EXTRA_KG * worst["runs"]),
+            t, worst, e = mb["totals"], mb["by_machine"][0], S.expected_mass_balance()
+            self.check(act, "mass balance", all(t[k] == num(v) for k, v in e.items())
+                       and t["unaccounted_kg"] == worst["unaccounted_kg"],
+                       f"issued {t['issued_kg']:,} kg = fabric {t['fabric_kg']:,} + waste {t['waste_kg']} + "
+                       f"on the looms {t['wip_kg']} + unaccounted {t['unaccounted_kg']} kg = {t['unaccounted_pct']}%")
+            self.check(act, "leaky machine", worst["machine_code"] == S.LEAKY_MACHINE and worst["runs"] == S.LEAKY_ROLLS
+                       and worst["unaccounted_kg"] == num(S.LEAKY_EXTRA_KG * S.LEAKY_ROLLS),
                        f"{worst['machine_name']}: {worst['unaccounted_kg']} kg = {worst['unaccounted_pct']}%")
         order = next(iter(S.expected_order_impact()))
         costs = self.ok_json(act, "roll costs", self.call("GET", "/api/finance/roll-costs", "accounts",
