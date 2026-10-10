@@ -99,15 +99,15 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 ### Trace (Act 2)
 | Method & path | Body | Response | Owner | Screen |
 |---|---|---|---|---|
-| `POST /api/trace/find-cause` | `{lot_codes: ["R-1201", ...]}` | `trace_find_cause.json` (`find_cause()`) | Nooman | Nooman |
-| `POST /api/trace/graph` | `{lot_codes, direction: "up"}` | `trace_graph_ancestors.json` | Nooman | Nooman |
-| `GET /api/trace/lots/{code}/descendants` | – | `trace_graph_descendants.json` | Nooman | Nooman |
+| `POST /api/trace/find-cause` | `{lot_codes: ["R-1201", ...]}` (1–500, distinct). Any signed-in user | `trace_find_cause.json` (`find_cause()`; ranked and judged by the DB); `404` unknown lot (`fields.lot_codes`) | Sampurna | Nooman |
+| `POST /api/trace/graph` | `{lot_codes, direction: "up" \| "down"}` (default `up`): the lots + all ancestors (or descendants), nodes ordered by kind then code, edges only between listed nodes | `trace_graph_ancestors.json`; `404` unknown lot | Sampurna | Nooman |
+| `GET /api/trace/lots/{code}/descendants` | – | `trace_graph_descendants.json`; `404` unknown lot | Sampurna | Nooman |
 
 ### Recall (Acts 3–4)
 | Method & path | Body / query | Response | Owner | Screen |
 |---|---|---|---|---|
-| `GET /api/recalls/preview` | `?lot_code=Y-112` | `recall_preview.json` (or `recall_applied.json` if already applied) | Nooman | Nooman |
-| `POST /api/recalls` | `{lot_code, reason}` → `apply_recall()`; idempotent | `recall_applied.json` | Nooman | Nooman |
+| `GET /api/recalls/preview` | `?lot_code=Y-112`. Any signed-in user | `recall_preview.json` (no `applied_at` key), or `recall_applied.json` once applied; `404` unknown lot | Sampurna | Nooman |
+| `POST /api/recalls` | `{lot_code, reason (3–500 chars)}` → `apply_recall()`. Role `qc` | `201 recall_applied.json`; applying again → `200` with the **same** recall (code, time, numbers), nothing re-posted; `404` unknown lot | Sampurna | Nooman |
 
 ### Orders, dispatch, buyer portal
 | Method & path | Body | Response | Owner | Screen |
