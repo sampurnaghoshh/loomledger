@@ -1,0 +1,144 @@
+{
+  "from": "2026-10-01",
+  "to": "2026-10-10",
+  "totals": {
+    "workers": 11,
+    "days_worked": 101,
+    "shifts_worked": 100.5,
+    "gross_wage": 115380.0
+  },
+  "workers": [
+    {
+      "worker_code": "D-01",
+      "full_name": "Dyer 1",
+      "skill": "dyeing",
+      "hourly_wage": 100.0,
+      "days_worked": 10,
+      "shifts_worked": 10.0,
+      "half_days": 0,
+      "absent_days": 0,
+      "leave_days": 0,
+      "gross_wage": 12000.0
+    },
+    {
+      "worker_code": "D-02",
+      "full_name": "Dyer 2",
+      "skill": "dyeing",
+      "hourly_wage": 100.0,
+      "days_worked": 10,
+      "shifts_worked": 10.0,
+      "half_days": 0,
+      "absent_days": 0,
+      "leave_days": 0,
+      "gross_wage": 12000.0
+    },
+    {
+      "worker_code": "D-03",
+      "full_name": "Dyer 3",
+      "skill": "dyeing",
+      "hourly_wage": 100.0,
+      "days_worked": 10,
+      "shifts_worked": 10.0,
+      "half_days": 0,
+      "absent_days": 0,
+      "leave_days": 0,
+      "gross_wage": 12000.0
+    },
+    {
+      "worker_code": "Q-01",
+      "full_name": "Kavya Rao",
+      "skill": null,
+      "hourly_wage": 90.0,
+      "days_worked": 9,
+      "shifts_worked": 8.5,
+      "half_days": 1,
+      "absent_days": 0,
+      "leave_days": 0,
+      "gross_wage": 9180.0
+    },
+    {
+      "worker_code": "Q-02",
+      "full_name": "Imran Khan",
+      "skill": null,
+      "hourly_wage": 90.0,
+      "days_worked": 8,
+      "shifts_worked": 8.0,
+      "half_days": 0,
+      "absent_days": 0,
+      "leave_days": 1,
+      "gross_wage": 8640.0
+    },
+    {
+      "worker_code": "W-01",
+      "full_name": "Weaver 1",
+      "skill": "weaving",
+      "hourly_wage": 95.0,
+      "days_worked": 9,
+      "shifts_worked": 9.0,
+      "half_days": 0,
+      "absent_days": 0,
+      "leave_days": 0,
+      "gross_wage": 10260.0
+    },
+    {
+      "worker_code": "W-02",
+      "full_name": "Weaver 2",
+      "skill": "weaving",
+      "hourly_wage": 95.0,
+      "days_worked": 9,
+      "shifts_worked": 9.0,
+      "half_days": 0,
+      "absent_days": 0,
+      "leave_days": 0,
+      "gross_wage": 10260.0
+    },
+    {
+      "worker_code": "W-03",
+      "full_name": "Weaver 3",
+      "skill": "weaving",
+      "hourly_wage": 95.0,
+      "days_worked": 9,
+      "shifts_worked": 9.0,
+      "half_days": 0,
+      "absent_days": 0,
+      "leave_days": 0,
+      "gross_wage": 10260.0
+    },
+    {
+      "worker_code": "W-04",
+      "full_name": "Weaver 4",
+      "skill": "weaving",
+      "hourly_wage": 95.0,
+      "days_worked": 9,
+      "shifts_worked": 9.0,
+      "half_days": 0,
+      "absent_days": 0,
+      "leave_days": 0,
+      "gross_wage": 10260.0
+    },
+    {
+      "worker_code": "W-05",
+      "full_name": "Weaver 5",
+      "skill": "weaving",
+      "hourly_wage": 95.0,
+      "days_worked": 9,
+      "shifts_worked": 9.0,
+      "half_days": 0,
+      "absent_days": 0,
+      "leave_days": 0,
+      "gross_wage": 10260.0
+    },
+    {
+      "worker_code": "W-06",
+      "full_name": "Weaver 6",
+      "skill": "weaving",
+      "hourly_wage": 95.0,
+      "days_worked": 9,
+      "shifts_worked": 9.0,
+      "half_days": 0,
+      "absent_days": 0,
+      "leave_days": 0,
+      "gross_wage": 10260.0
+    }
+  ]
+}

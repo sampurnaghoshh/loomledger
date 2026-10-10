@@ -23,7 +23,7 @@ log = logging.getLogger("loomledger.errors")
 
 # Named constraints that deserve their own code (see 001_core.sql).
 ONE_DISPATCH_PER_ROLL = "one_dispatch_per_roll"
-IDEMPOTENCY_CONSTRAINTS = {"stock_move_idempotency_key_key"}
+IDEMPOTENCY_CONSTRAINTS = {"stock_move_idempotency_key_key", "attendance_batch_idempotency_key_key"}
 
 
 class ApiError(Exception):
@@ -83,6 +83,12 @@ def map_db_error(exc: psycopg.Error) -> ApiError:
         return ApiError("SHADE_MISMATCH", diag.message_primary or "Rolls from different dye batches.", 409,
                         hint=diag.message_hint or None, fields={"batches": diag.message_detail or ""},
                         sqlstate=state)
+    if state == "LL007":
+        return ApiError("ATTENDANCE_FUTURE_DATE", diag.message_primary or "Attendance date is in the future.", 422,
+                        hint=diag.message_hint or None, fields={"day": "in the future"}, sqlstate=state)
+    if state == "LL008":
+        return ApiError("WORKER_INACTIVE", diag.message_primary or "Worker is not active.", 422,
+                        hint=diag.message_hint or None, fields={"marks": "inactive worker"}, sqlstate=state)
     if state == "LL003":
         return ApiError("LEDGER_IMMUTABLE", diag.message_primary or "The stock ledger is append-only.", 405,
                         hint="Post a correcting movement instead.", sqlstate=state)

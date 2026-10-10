@@ -131,6 +131,23 @@ def export(conn) -> None:
     write("inventory_stock_as_of", {"as_of": received,
                                     "rows": q(conn, "SELECT * FROM stock_on_hand(%s) ORDER BY location_code, lot_code", (received,))})
 
+    # ---- workforce (G1)
+    write("workforce_attendance", {
+        "day": anchor,
+        "shifts": q(conn, """SELECT code, name, to_char(starts_at, 'HH24:MI') AS starts_at, to_char(ends_at, 'HH24:MI') AS ends_at
+                               FROM shift ORDER BY code"""),
+        "workers": q(conn, """SELECT w.code AS worker_code, w.full_name, w.skill::text AS skill, a.status, s.code AS shift_code
+                                FROM worker w LEFT JOIN attendance a ON a.worker_id = w.id AND a.work_date = %s
+                                LEFT JOIN shift s ON s.id = a.shift_id WHERE w.active ORDER BY w.code""", (anchor,))})
+    month_from = date(anchor.year, anchor.month, 1)
+    wage_rows = q(conn, "SELECT * FROM wages(%s, %s)", (month_from, anchor))
+    write("workforce_wages", {"from": month_from, "to": anchor,
+                              "totals": {"workers": len(wage_rows),
+                                         "days_worked": sum(r["days_worked"] for r in wage_rows),
+                                         "shifts_worked": sum(r["shifts_worked"] for r in wage_rows),
+                                         "gross_wage": sum(r["gross_wage"] for r in wage_rows)},
+                              "workers": wage_rows})
+
     # ---- quality
     write("quality_queue", q(conn, """
         SELECT c.lot_code, p.name AS product, c.qty_m, r.code AS dye_batch, m.name AS dyed_on, r.ended_at AS dyed_at,
