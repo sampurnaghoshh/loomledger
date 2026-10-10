@@ -131,7 +131,7 @@ Per order (remake joins the weaving queue in promise-date order):
 ### Month-end · mass balance
 
 Yarn is weighed, fabric is measured: **kg = m × width × GSM / 1000**.
-Issued 1,499.1 kg = fabric 1,410.0 + recorded waste 56.4 + on the loom 15.6 + **unaccounted 17.1 kg (1.14%)** — and **all of it is on Loom 3 (6.64% of what it was issued)**.
+Issued 1,545.9 kg = fabric 1,410.0 + recorded waste 56.4 + on the looms 62.4 (4 rolls being woven right now) + **unaccounted 17.1 kg (1.11%)** — and **all of it is on Loom 3 (6.64% of what it was issued)**.
 
 ### Buyer links (deterministic for the demo; production links use `gen_random_uuid()`)
 

@@ -6,13 +6,15 @@ export type ApiErrorCode =
   | "INSUFFICIENT_STOCK" //   422
   | "MACHINE_BUSY" //         409  machine already booked for that time
   | "ALREADY_DISPATCHED" //   409
-  | "SHADE_MISMATCH" //       409  rolls from different dye batches in one order line
+  | "SHADE_MISMATCH" //       409  rolls from different dye batches in one dispatch (fields.batches); resend with shade_override_reason
   | "VALIDATION_FAILED" //    422  see fields
   | "INVALID_CREDENTIALS" //  401
   | "UNAUTHENTICATED" //      401
   | "FORBIDDEN" //            403
   | "NOT_FOUND" //            404
   | "LEDGER_IMMUTABLE" //     405  ledger rows can't be changed; post a correcting move
+  | "NOT_QC_PASSED" //        409  dispatch: roll has not passed QC
+  | "NOT_IN_ORDER" //         422  dispatch: roll is not reserved for this order
   | "DUPLICATE_REQUEST" //    409  same idempotency key already used (normally replayed as 200)
   | "CONFLICT_RETRY" //       409  concurrent change / deadlock — safe to resubmit
   | "DB_UNAVAILABLE" //       503  database unreachable

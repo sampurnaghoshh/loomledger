@@ -12,11 +12,11 @@ Core idea: **a factory is two things — a ledger and a family tree.**
 Everything else — inventory, traceability, defect root cause, recall, true cost per roll, delivery delay, buyer portal — is **derived** from those two tables, mostly inside PostgreSQL.
 
 **The demo story (everything we build serves it):**
-1. **Act 1 – Normal day.** Live floor board, machines running, yarn arriving.
+1. **Act 1 – Normal day.** Live floor board: 4 of 6 looms weaving (Looms 1, 4, 5, 6), yarn arriving; Loom 4 breaks down live.
 2. **Act 2 – Something's wrong.** QC rejects 3 rolls (colour mismatch). *Find Cause* walks their ancestry and compares defect rates: **Yarn Lot Y-112 (37.5% vs 4.0% elsewhere) is the root cause; Dye Vat 3 and Night Shift B are coincidental.**
 3. **Act 3 – Contain it.** *Recall* finds 9 more at-risk rolls, **2 already delivered** to a buyer. Apply recall → everything quarantined → trying to issue Y-112 yarn is **refused by PostgreSQL itself** (shown in the UI and in psql).
 4. **Act 4 – Business impact.** 2 orders, 2 buyers, 600 m to remake, **600 ÷ 250 = 2.4 → 3 working days** delay, **₹1,23,640 total exposure**. The buyer's phone shows the new date.
-5. **Close.** Month-end mass balance (1.14% yarn unaccounted — all on Loom 3), true cost per roll, tests passing.
+5. **Close.** Month-end mass balance (1.11% yarn unaccounted — all on Loom 3), true cost per roll, tests passing.
 
 Closing line: *"The factory knew it had a defect. LoomLedger knows where it came from, what it touched, what it cost, and what to do next."*
 
@@ -47,7 +47,9 @@ db/migrate.py                   python -m db.migrate [--reset]
 seed/scenario.py                canonical numbers + independent expected values
 seed/seed.py                    deterministic seed (python -m seed.seed [--anchor YYYY-MM-DD])
 scripts/export_mocks.py         regenerate docs/api-mocks from the DB
-scripts/reset_demo.sh           wipe + reseed (run before every rehearsal)
+scripts/reset_demo.sh / .ps1    wipe + reseed (run before every rehearsal); --smoke / -Smoke = reset → demo smoke → reset
+scripts/demo_smoke.py           walks the whole demo story over HTTP + ws against a running backend (✓/✗ per step)
+scripts/benchmark.py            EXPLAIN (ANALYZE, BUFFERS) of the demo queries, read-only → docs/BENCHMARK.md
 tests/                          DB tests: golden chain + invariants (pytest)
 app/                            FastAPI backend (to be built — §6)
 frontend/                       React + Vite + TS + Tailwind v4 (skeleton built — §7)
@@ -64,6 +66,10 @@ docker compose up -d                                   # Postgres 16 on :5432 (l
 export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledger
 export TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledger_test
 ./scripts/reset_demo.sh                                # migrate from scratch + seed
+./scripts/reset_demo.sh --smoke [URL]                  # REHEARSAL: reset → walk Acts 1–4 + close over HTTP/ws → reset
+                                                       #   (backend must be running; exit ≠ 0 = the demo is broken)
+python -m scripts.demo_smoke [URL]                     # just the walk-through; refuses (exit 2) unless the DB is fresh
+./scripts/reset_demo.sh && python -m scripts.benchmark # measured query timings + index use → docs/BENCHMARK.md (rule 9: quote only these)
 python -m pytest -q                                    # golden + invariants + api tests (wipes + reseeds the TEST db itself)
 psql "$DATABASE_URL" -f docs/demo.sql                  # run the demo in SQL
 python -m scripts.export_mocks                         # regenerate the API contract files
@@ -76,10 +82,13 @@ cd frontend && npm install
 npm run dev                                            # http://localhost:5173 (mock data by default)
 npm run build                                          # typecheck + production build — must pass before a PR
 # real backend: create frontend/.env.local with VITE_USE_MOCKS=false
+# teammate's backend over LAN: they run `uvicorn app.main:app --host 0.0.0.0 --port 8000` (allow port 8000 in their firewall);
+#   you copy frontend/.env.example to .env.local, set VITE_API_TARGET=http://<their LAN IP>:8000, restart npm run dev
 ```
 
 Windows users: run the Python commands in PowerShell with `$env:DATABASE_URL="..."` and
-`$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/loomledger_test"`, and run `python -m seed.seed` instead of the .sh script.
+`$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/loomledger_test"`, and use `.\scripts\reset_demo.ps1` (rehearsal: `.\scripts\reset_demo.ps1 -Smoke`; if scripts are blocked:
+`powershell -ExecutionPolicy Bypass -File .\scripts\reset_demo.ps1 -Smoke`) instead of the .sh script.
 
 Test database: `docker compose` creates the empty `loomledger_test` database (scripts/init-test-db.sql). You never
 seed it by hand — the pytest fixtures drop its schema, migrate and seed it automatically (once per module for DB tests,
@@ -97,6 +106,9 @@ PostgreSQL 16 (14+ works). Extensions: `btree_gist`, `pgcrypto`. Session timezon
 | 004_costing_impact | **`lot_cost(lot)`** recursive cost roll-up, `v_roll_cost`, `add_working_days` (Mon–Sat), **`recall_order_impact(root)`**, **`recall_impact(root)`**, **`apply_recall(root, reason, user)`** (idempotent) |
 | 005_floor_portal_balance | `v_machine_now`, `floor_output(day)`, `machine_availability(from,to)`, `v_yarn_balance_by_run`, **`mass_balance(from,to)`**, `v_yarn_unaccounted_by_machine`, **`buyer_order_status(token)`** |
 | 006_floor_notify_payload | `ist_iso(ts)`; `loomledger_floor` NOTIFY payload = `ws_floor_event.json` (adds `machine_code`, `reason`) |
+| 007_production_rules | `weaving_yarn_issue_kg(product, m)` (m × width × GSM/1000 × 1.04), `shift_at(ts)` (IST shift calendar) |
+| 008_shade_guard | `dispatch.shade_override_reason`; dispatch_line trigger: one dye batch per dispatch unless an override reason is recorded (`LL006`). Merged after 009 — order-independent |
+| 009_dispatch_guard | dispatch_line trigger: latest QC must be `pass` (`LL004`), roll reserved for the dispatch's order (`LL005`) |
 
 Conventions for new migrations:
 - File `db/migrations/00N_short_name.sql`, one concern per file, comment header explaining *why*.
@@ -168,7 +180,8 @@ Rules:
 Find Cause on R-1201..R-1203: Y-112 **3/8 = 37.50%** vs 4/100 = **4.00%** → lift 9.38 → root_cause · Dye Vat 3 3/33 = 9.09% vs 5.33% → coincidental · Night Shift B 3/43 = 6.98% vs 6.15% → coincidental · Loom 2 covers 2 of 3 → partial.
 Recall Y-112: 12 rolls = 3 rejected + 9 at risk (3 passed in store, 3 awaiting QC, 1 on Loom 5, **2 at Meridian Apparels: R-1204, R-1205**). Orders SO-0412 (14 → 16 Oct, +2) and SO-0419 (17 → 21 Oct, +3).
 Money: already lost ₹22,488 · newly exposed ₹64,024 · recoverable yarn 142.8 kg = ₹37,128 · **total ₹1,23,640**. Finished Y-112 roll = ₹7,496.
-Mass balance: issued 1,499.1 kg, unaccounted 17.1 kg = **1.14%**, all on **Loom 3 (6.64%)**.
+Floor at demo "now": Looms 1, 4, 6 weaving R-1213-G..R-1215-G (`BUSY_FLOOR`) + Loom 5 weaving R-1212-G; Loom 2 free (the Y-112 refusal), Loom 3 idle.
+Mass balance (`expected_mass_balance()`): issued 1,545.9 kg = fabric 1,410.0 + waste 56.4 + on the looms 62.4 + unaccounted 17.1 kg = **1.11%**, all on **Loom 3 (6.64%)**.
 Buyer link SO-0412: `/track/4155711b-d0c4-5f02-a2b5-bfd8dd09045d`. Logins: `owner@everest.test` (also store@, floor@, qc@, accounts@), password `demo1234`.
 
 ## 9. Definition of done (every task)
@@ -178,6 +191,9 @@ Buyer link SO-0412: `/track/4155711b-d0c4-5f02-a2b5-bfd8dd09045d`. Logins: `owne
 - Frontend: `npm run build` passes (no TS errors); checked at 375 px and 1280 px; loading/error/empty states exist.
 - No hardcoded demo numbers; no secrets in code; no console errors.
 - Committed on a feature branch with a conventional message and merged by PR.
+- CI green on the PR (`.github/workflows/ci.yml`): migrate + seed from scratch, `pytest`, **mocks regenerated from
+  the DB equal `docs/api-mocks`** (changed a response shape or the seed? run `python -m scripts.export_mocks` and
+  commit the diff), and the frontend `npm ci && npm run build`.
 
 ## 10. Git workflow
 

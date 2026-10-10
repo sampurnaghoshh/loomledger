@@ -60,9 +60,10 @@ class Batch:
 
 
 class Seeder:
-    def __init__(self, conn: psycopg.Connection, anchor: date):
+    def __init__(self, conn: psycopg.Connection, anchor: date, qc_story_rejects: bool = True):
         self.c = conn
         self.anchor = anchor
+        self.qc_story_rejects = qc_story_rejects   # False: R-1201..R-1203 wait for QC (rejected live / via the API)
         self.id: dict[str, dict[str, int]] = defaultdict(dict)
         self.rolls: dict[str, Roll] = {}
         self.batches: list[Batch] = []
@@ -304,6 +305,30 @@ class Seeder:
                           f"woven:{run_code}", run=run)
             roll.ids["run"] = run
 
+    def busy_floor(self) -> None:
+        """Act 1: looms weaving at demo "now" (scenario.BUSY_FLOOR) — open runs on WIP greige rolls, built
+        exactly like a run started through POST /api/production/weaving-runs (and like R-1212 on Loom 5)."""
+        start = self.at(0, S.BUSY_FLOOR_START_HOUR)
+        n = max(int(code.removeprefix("R-")) for code in self.rolls) + 1
+        for loom, yarn in S.BUSY_FLOOR.items():
+            family = S.YARN_LOTS[yarn][0]
+            code, run_code = f"R-{n}-G", f"WV-R-{n}"
+            run = self.one(
+                """INSERT INTO process_run (code, machine_id, stage, shift_id, operator_id, started_at)
+                   VALUES (%s, %s, 'weaving', %s, %s, %s) RETURNING id""",
+                (run_code, self.id["machine"][loom], self.id["shift"][self.shift_of(start)],
+                 self.id["worker"][f"W-0{loom[-1]}"], start))
+            self.runs.append((run_code, loom, self.shift_of(start), start, None))
+            self.id["lot"][code] = self.one(
+                """INSERT INTO lot (code, kind, product_id, qty, produced_by_run_id, produced_by_stage, status, created_at)
+                   VALUES (%s, 'greige', %s, %s, %s, 'weaving', 'wip', %s) RETURNING id""",
+                (code, self.id["product"]["GRG-TWL" if family == "twill" else "GRG-POP"], S.ROLL_LENGTH_M, run, start))
+            issue = S.yarn_issue_kg(family, loom)
+            self.move(yarn, "YARN-STORE", "PRODUCTION", issue, "issue", start, f"issue:{run_code}", run=run)
+            self.c.execute("INSERT INTO lot_lineage (parent_lot_id, child_lot_id, qty_consumed) VALUES (%s, %s, %s)",
+                           (self.id["lot"][yarn], self.id["lot"][code], issue))
+            n += 1
+
     # ------------------------------------------------------------------ dyeing + QC
     def dye_and_inspect(self) -> None:
         dyer = {"VAT-1": "D-01", "VAT-2": "D-02", "VAT-3": "D-03"}
@@ -334,6 +359,8 @@ class Seeder:
             base = b.inspect_base or b.end + timedelta(minutes=30)
             inspector = self.id["worker"]["Q-01" if int(b.code[-2:]) % 2 else "Q-02"]
             for i, r in enumerate(sorted(b.rolls, key=lambda r: (r.reject, r.code))):
+                if r.group == "Y112" and r.reject and not self.qc_story_rejects:
+                    continue
                 r.inspected_at = base + timedelta(minutes=5 * i)
                 defect = S.DEFECT if r.group == "Y112" and r.reject else r.defect
                 self.c.execute(
@@ -399,10 +426,12 @@ class Seeder:
         for code, order, when, lots in dispatches:
             late = [c for c in lots if self.rolls[c].inspected_at is None or self.rolls[c].inspected_at >= when]
             assert not late, f"{code}: rolls not inspected before dispatch: {late}"
+            # these historical shipments mix dye batches; Shade Guard (008) needs the approval on record
             did = self.one(
-                """INSERT INTO dispatch (code, order_id, vehicle_no, dispatched_at)
-                   VALUES (%s, %s, %s, %s) RETURNING id""",
-                (code, self.id["order"][order], "KA-05-TR-7781", when))
+                """INSERT INTO dispatch (code, order_id, vehicle_no, dispatched_at, shade_override_reason)
+                   VALUES (%s, %s, %s, %s, %s) RETURNING id""",
+                (code, self.id["order"][order], "KA-05-TR-7781", when,
+                 "Buyer approved mixed dye lots for this shipment."))
             for c in lots:
                 self.c.execute("INSERT INTO dispatch_line (dispatch_id, lot_id) VALUES (%s, %s)",
                                (did, self.id["lot"][c]))
@@ -473,6 +502,7 @@ class Seeder:
         self.receipts()
         self.plan()
         self.weave()
+        self.busy_floor()
         self.dye_and_inspect()
         self.orders()
         self.floor_and_people()
@@ -483,10 +513,11 @@ def buyer_token(order_code: str) -> uuid.UUID:
     return uuid.uuid5(TOKEN_NAMESPACE, order_code)
 
 
-def seed(conn: psycopg.Connection, anchor: date = S.ANCHOR_DATE) -> None:
+def seed(conn: psycopg.Connection, anchor: date = S.ANCHOR_DATE, *, qc_story_rejects: bool = True) -> None:
+    """qc_story_rejects=False leaves the three story rolls (R-1201..R-1203) awaiting QC instead of rejected."""
     conn.commit()   # never nest inside a caller's open transaction: the seed is all-or-nothing on its own
     with conn.transaction():
-        Seeder(conn, anchor).run()
+        Seeder(conn, anchor, qc_story_rejects).run()
 
 
 def main() -> None:

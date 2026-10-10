@@ -3,12 +3,12 @@
   "to": null,
   "totals": {
     "received_kg": 2030.0,
-    "issued_kg": 1499.1,
+    "issued_kg": 1545.9,
     "fabric_kg": 1410.0,
     "waste_kg": 56.4,
-    "wip_kg": 15.6,
+    "wip_kg": 62.4,
     "unaccounted_kg": 17.1,
-    "unaccounted_pct": 1.14
+    "unaccounted_pct": 1.11
   },
   "by_machine": [
     {
@@ -22,8 +22,8 @@
     {
       "machine_code": "LOOM-1",
       "machine_name": "Loom 1",
-      "runs": 19,
-      "issued_kg": 246.48,
+      "runs": 20,
+      "issued_kg": 262.08,
       "unaccounted_kg": 0.0,
       "unaccounted_pct": 0.0
     },
@@ -38,8 +38,8 @@
     {
       "machine_code": "LOOM-4",
       "machine_name": "Loom 4",
-      "runs": 19,
-      "issued_kg": 246.48,
+      "runs": 20,
+      "issued_kg": 262.08,
       "unaccounted_kg": 0.0,
       "unaccounted_pct": 0.0
     },
@@ -54,8 +54,8 @@
     {
       "machine_code": "LOOM-6",
       "machine_name": "Loom 6",
-      "runs": 19,
-      "issued_kg": 246.48,
+      "runs": 20,
+      "issued_kg": 262.08,
       "unaccounted_kg": 0.0,
       "unaccounted_pct": 0.0
     }

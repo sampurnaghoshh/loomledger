@@ -1,31 +1,78 @@
 name: ci
 
+# Every PR and every push to main: the database story (golden Y-112 + ledger invariants), the API,
+# the API contract (mocks regenerated from the DB must match the committed ones), and the frontend build.
 on:
-  push:
   pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  database:
+  backend:
+    name: backend · migrate, seed, pytest, contract
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: loomledger_test
+          POSTGRES_DB: loomledger
         ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 2s
           --health-retries 20
     env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/loomledger
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/loomledger_test
+      PGPASSWORD: postgres
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
       - run: pip install -r requirements.txt
-      - name: Golden Y-112 test + ledger invariants
-        run: python -m pytest -v
+
+      - name: Create the test database
+        run: psql -h localhost -U postgres -f scripts/init-test-db.sql
+
+      - name: Migrate an empty database from scratch, then seed the demo
+        run: |
+          python -m db.migrate
+          python -m seed.seed
+
+      - name: Tests · golden Y-112, ledger invariants, API
+        run: python -m pytest -q
+
+      - name: Contract · mocks regenerated from the database match docs/api-mocks
+        run: |
+          python -m scripts.export_mocks
+          git diff --exit-code --stat docs/api-mocks || {
+            echo "::error::docs/api-mocks is out of date with the database. Run 'python -m scripts.export_mocks' and commit the result."
+            exit 1
+          }
+
+  frontend:
+    name: frontend · typecheck + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build

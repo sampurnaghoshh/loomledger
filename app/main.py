@@ -14,8 +14,14 @@ from fastapi.responses import JSONResponse
 from app import auth, realtime
 from app.config import get_settings
 from app.db import create_pool
+from app.modules.finance import router as finance
 from app.modules.floor import router as floor
 from app.modules.inventory import router as inventory
+from app.modules.orders import router as orders
+from app.modules.production import router as production
+from app.modules.quality import router as quality
+from app.modules.recalls import router as recalls
+from app.modules.trace import router as trace
 from app.errors import handle_unexpected, install_exception_handlers
 
 log = logging.getLogger("loomledger.request")
@@ -92,13 +98,12 @@ def create_app() -> FastAPI:
     # Each area lives in app/modules/<area>/ (router -> service -> repository). Include them here:
     app.include_router(floor.router)
     app.include_router(inventory.router)
-    # still to come:
-    #   from app.modules.production.router import router as production_router; app.include_router(production_router)
-    #   from app.modules.quality.router import router as quality_router;       app.include_router(quality_router)
-    #   from app.modules.trace.router import router as trace_router;           app.include_router(trace_router)
-    #   from app.modules.recalls.router import router as recalls_router;       app.include_router(recalls_router)
-    #   from app.modules.orders.router import router as orders_router;         app.include_router(orders_router)
-    #   from app.modules.finance.router import router as finance_router;       app.include_router(finance_router)
+    app.include_router(production.router)
+    app.include_router(quality.router)
+    app.include_router(orders.router)            # /api/orders, /api/dispatches, /api/track (public)
+    app.include_router(finance.router)
+    app.include_router(trace.router)
+    app.include_router(recalls.router)
     # ---------------------------------------------------------------------------------------------
 
     return app

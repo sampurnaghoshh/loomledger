@@ -97,12 +97,65 @@ def assert_same_shape(actual, mock, path: str = "$") -> None:
         assert type(actual) is type(mock), f"{path}: {type(actual).__name__} != {type(mock).__name__}"
 
 
+def apply_story_recall() -> None:
+    """Apply the Y-112 recall on the test DB and pin its time to the story clock, exactly as
+    scripts/export_mocks.py does, so the *_after mocks can be compared value for value."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    import psycopg
+
+    from seed import scenario as S
+    recall_at = datetime.combine(S.ANCHOR_DATE, S.RECALL_APPLIED_AT, ZoneInfo(S.TIMEZONE))
+    with psycopg.connect(TEST_URL) as conn, conn.transaction():
+        y112 = conn.execute("SELECT id FROM lot WHERE code = %s", (S.Y112,)).fetchone()[0]
+        conn.execute("SELECT apply_recall(%s, 'Colour mismatch traced to yarn lot Y-112', "
+                     "(SELECT id FROM app_user WHERE role = 'qc'))", (y112,))
+        conn.execute("""UPDATE order_event SET created_at = %s
+                         WHERE created_at = (SELECT initiated_at FROM recall WHERE root_lot_id = %s)""",
+                     (recall_at, y112))
+        conn.execute("UPDATE recall SET initiated_at = %s WHERE root_lot_id = %s", (recall_at, y112))
+
+
 @pytest.fixture(scope="module")
 def reseed_after_module(app):
     """For modules whose tests write: the ledger is append-only, so restore by reseeding when the module ends.
     Put read/contract tests first in the module — they run before any write."""
     yield
     _fresh().close()
+
+
+@pytest.fixture(scope="module")
+def live_server(app):
+    """A real uvicorn server in a thread (real sockets, real lifespan) on the test DB: (app, base_url)."""
+    import socket
+    import threading
+    import time
+
+    import uvicorn
+
+    from app.main import create_app
+
+    def wait_until(cond, timeout: float, what: str) -> None:
+        deadline = time.monotonic() + timeout
+        while not cond():
+            if time.monotonic() > deadline:
+                raise AssertionError(f"timed out waiting for {what}")
+            time.sleep(0.02)
+
+    server_app = create_app()       # own instance: its own pool, listener and broadcaster
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    server = uvicorn.Server(uvicorn.Config(server_app, host="127.0.0.1", port=port, log_level="warning"))
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    wait_until(lambda: server.started, 10, "uvicorn to start")
+    wait_until(server_app.state.floor_listener.connected.is_set, 5, "LISTEN")
+    yield server_app, f"http://127.0.0.1:{port}"
+    server.should_exit = True
+    thread.join(timeout=5)
+    assert not thread.is_alive(), "server (and floor listener) did not shut down"
 
 
 def login(client: TestClient, email: str) -> str:

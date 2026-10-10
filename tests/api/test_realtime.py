@@ -7,13 +7,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-import socket
-import threading
 import time
+import uuid
 
+import httpx
 import psycopg
 import pytest
-import uvicorn
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import connect
 
@@ -33,21 +32,9 @@ def wait_until(cond, timeout: float = TIMEOUT, what: str = "condition") -> None:
 
 
 @pytest.fixture(scope="module")
-def live(app):                      # `app` points settings at the freshly seeded test DB
-    from app.main import create_app
-    server_app = create_app()       # own instance: its own pool, listener and broadcaster
-    with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
-        port = s.getsockname()[1]
-    server = uvicorn.Server(uvicorn.Config(server_app, host="127.0.0.1", port=port, log_level="warning"))
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    wait_until(lambda: server.started, 10, "uvicorn to start")
-    wait_until(server_app.state.floor_listener.connected.is_set, 5, "LISTEN")
-    yield server_app, f"ws://127.0.0.1:{port}/ws/floor"
-    server.should_exit = True
-    thread.join(timeout=5)
-    assert not thread.is_alive(), "server (and floor listener) did not shut down"
+def live(live_server):
+    app, base = live_server
+    return app, base.replace("http://", "ws://") + "/ws/floor"
 
 
 @pytest.fixture(scope="module")
@@ -120,6 +107,22 @@ def test_real_machine_state_change_matches_contract(live, token):
     assert opened["started_at"].endswith("+05:30")
     if prev:
         assert events[0]["ended_at"] == opened["started_at"]      # the closed row comes first
+
+
+def test_starting_a_run_pushes_running_to_the_floor_board(live, token, reseed_after_module):
+    """POST /api/production/weaving-runs marks the loom running in the same transaction -> ws events."""
+    app, url = live
+    base = url.replace("ws://", "http://").removesuffix("/ws/floor")
+    with subscribe(live, token) as ws:
+        res = httpx.post(f"{base}/api/production/weaving-runs", headers={"Authorization": f"Bearer {token}"},
+                         json={"machine_code": "LOOM-3", "yarn_lot_code": "Y-104", "product_code": "GRG-TWL",
+                               "meters_planned": 50, "idempotency_key": str(uuid.uuid4())}, timeout=TIMEOUT)
+        assert res.status_code == 201, res.text
+        events = [json.loads(ws.recv(timeout=TIMEOUT)) for _ in range(2)]
+    closed, opened = events
+    assert closed["machine_code"] == opened["machine_code"] == "LOOM-3"
+    assert closed["ended_at"] == opened["started_at"]
+    assert (opened["state"], opened["ended_at"]) == ("running", None)
 
 
 def test_listener_reconnects_after_db_drops_it(live, token):
