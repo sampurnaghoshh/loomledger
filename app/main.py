@@ -16,6 +16,7 @@ from app.config import get_settings
 from app.db import create_pool
 from app.modules.floor import router as floor
 from app.modules.inventory import router as inventory
+from app.modules.orders import router as orders
 from app.modules.production import router as production
 from app.modules.quality import router as quality
 from app.errors import handle_unexpected, install_exception_handlers
@@ -96,10 +97,10 @@ def create_app() -> FastAPI:
     app.include_router(inventory.router)
     app.include_router(production.router)
     app.include_router(quality.router)
+    app.include_router(orders.router)            # /api/orders, /api/dispatches, /api/track (public)
     # still to come:
     #   from app.modules.trace.router import router as trace_router;           app.include_router(trace_router)
     #   from app.modules.recalls.router import router as recalls_router;       app.include_router(recalls_router)
-    #   from app.modules.orders.router import router as orders_router;         app.include_router(orders_router)
     #   from app.modules.finance.router import router as finance_router;       app.include_router(finance_router)
     # ---------------------------------------------------------------------------------------------
 

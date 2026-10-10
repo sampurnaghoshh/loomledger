@@ -103,6 +103,10 @@ def test_start_creates_run_wip_roll_issue_lineage_reservation(started):
 def test_floor_board_shows_the_new_run(client, auth, started):
     loom2 = next(m for m in client.get("/api/floor/machines", headers=auth["qc"]).json() if m["code"] == "LOOM-2")
     assert (loom2["current_run"], loom2["current_lot"]) == (started["res"]["run_code"], started["res"]["lot_code"])
+    assert (loom2["state"], loom2["reason"]) == ("running", None)            # start-run set the loom running
+    open_rows = one("""SELECT count(*) AS n FROM machine_state_log s JOIN machine m ON m.id = s.machine_id
+                        WHERE m.code = 'LOOM-2' AND s.ended_at IS NULL""")["n"]
+    assert open_rows == 1
 
 
 def test_start_replay_returns_original(client, auth, started):
@@ -113,12 +117,12 @@ def test_start_replay_returns_original(client, auth, started):
 
 
 def test_machine_busy_is_409_and_writes_nothing(client, auth, started):
-    moves, runs = count("stock_move"), count("process_run")
+    moves, runs, states = count("stock_move"), count("process_run"), count("machine_state_log")
     for loom in ("LOOM-2", "LOOM-5"):                       # our run, and the seeded roll still on Loom 5
         res = client.post(STARTS, json=run_body(machine_code=loom), headers=auth["floor"])
         assert res.status_code == 409, res.text
         assert (res.json()["error"]["code"], res.json()["error"]["sqlstate"]) == ("MACHINE_BUSY", "23P01")
-    assert (count("stock_move"), count("process_run")) == (moves, runs)
+    assert (count("stock_move"), count("process_run"), count("machine_state_log")) == (moves, runs, states)
 
 
 def test_insufficient_stock_is_422_and_writes_nothing(client, auth):
@@ -181,6 +185,8 @@ def test_finish_closes_run_scraps_waste_and_stores_roll(client, auth, started):
     issued = S.fabric_kg("twill") * (1 + S.YARN_WASTE_RATIO)
     assert facts["material"] == issued * S.YARN_LOTS["Y-101"][2]
     assert facts["machine"] > 0 and facts["labour"] > 0
+    loom2 = next(m for m in client.get("/api/floor/machines", headers=auth["qc"]).json() if m["code"] == "LOOM-2")
+    assert (loom2["state"], loom2["current_run"]) == ("idle", None)          # finish-run set it idle again
     started["finish"] = (body, res.json())
 
 

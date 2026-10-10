@@ -10,7 +10,9 @@ import json
 import socket
 import threading
 import time
+import uuid
 
+import httpx
 import psycopg
 import pytest
 import uvicorn
@@ -120,6 +122,22 @@ def test_real_machine_state_change_matches_contract(live, token):
     assert opened["started_at"].endswith("+05:30")
     if prev:
         assert events[0]["ended_at"] == opened["started_at"]      # the closed row comes first
+
+
+def test_starting_a_run_pushes_running_to_the_floor_board(live, token, reseed_after_module):
+    """POST /api/production/weaving-runs marks the loom running in the same transaction -> ws events."""
+    app, url = live
+    base = url.replace("ws://", "http://").removesuffix("/ws/floor")
+    with subscribe(live, token) as ws:
+        res = httpx.post(f"{base}/api/production/weaving-runs", headers={"Authorization": f"Bearer {token}"},
+                         json={"machine_code": "LOOM-6", "yarn_lot_code": "Y-103", "product_code": "GRG-TWL",
+                               "meters_planned": 50, "idempotency_key": str(uuid.uuid4())}, timeout=TIMEOUT)
+        assert res.status_code == 201, res.text
+        events = [json.loads(ws.recv(timeout=TIMEOUT)) for _ in range(2)]
+    closed, opened = events
+    assert closed["machine_code"] == opened["machine_code"] == "LOOM-6"
+    assert closed["ended_at"] == opened["started_at"]
+    assert (opened["state"], opened["ended_at"]) == ("running", None)
 
 
 def test_listener_reconnects_after_db_drops_it(live, token):

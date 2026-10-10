@@ -57,6 +57,33 @@ def test_a_roll_can_never_ship_twice(db):
         assert "one_dispatch_per_roll" in str(err.value)
 
 
+def _dispatch_for(db, order_code: str) -> int:
+    return db.execute(
+        """INSERT INTO dispatch (code, order_id, dispatched_at)
+           VALUES ('DSP-TEST', (SELECT id FROM sales_order WHERE code = %s), now()) RETURNING id""",
+        (order_code,)).fetchone()[0]
+
+
+@pytest.mark.parametrize("roll", ["R-1201",          # rejected
+                                  "R-1209"])         # awaiting QC
+def test_only_qc_passed_rolls_can_ship(db, roll):
+    did = _dispatch_for(db, "SO-0412")
+    err = expect_sqlstate(db, "LL004", "INSERT INTO dispatch_line (dispatch_id, lot_id) VALUES (%s, %s)",
+                          (did, lot_id(db, roll)))
+    assert f"roll {roll} has not passed quality control" in str(err)
+
+
+def test_a_roll_ships_only_on_its_own_order(db):
+    passed_for_0412 = db.execute(
+        """SELECT c.lot_code FROM v_roll_custody c JOIN reservation rs ON rs.lot_id = c.lot_id
+             JOIN order_line ol ON ol.id = rs.order_line_id JOIN sales_order so ON so.id = ol.order_id
+            WHERE so.code = 'SO-0412' AND c.custody = 'passed_in_store' ORDER BY 1 LIMIT 1""").fetchone()[0]
+    did = _dispatch_for(db, "SO-0419")
+    err = expect_sqlstate(db, "LL005", "INSERT INTO dispatch_line (dispatch_id, lot_id) VALUES (%s, %s)",
+                          (did, lot_id(db, passed_for_0412)))
+    assert "not reserved for order SO-0419" in str(err)
+
+
 # ---------------------------------------------------------------- production rules
 def test_machine_cannot_be_double_booked(db):
     # Loom 5 is weaving R-1212 right now (open-ended run); any overlapping run is refused
