@@ -23,7 +23,8 @@ log = logging.getLogger("loomledger.errors")
 
 # Named constraints that deserve their own code (see 001_core.sql).
 ONE_DISPATCH_PER_ROLL = "one_dispatch_per_roll"
-IDEMPOTENCY_CONSTRAINTS = {"stock_move_idempotency_key_key", "attendance_batch_idempotency_key_key"}
+IDEMPOTENCY_CONSTRAINTS = {"stock_move_idempotency_key_key", "attendance_batch_idempotency_key_key",
+                           "payment_idempotency_key_key"}
 
 
 class ApiError(Exception):
@@ -89,6 +90,10 @@ def map_db_error(exc: psycopg.Error) -> ApiError:
     if state == "LL008":
         return ApiError("WORKER_INACTIVE", diag.message_primary or "Worker is not active.", 422,
                         hint=diag.message_hint or None, fields={"marks": "inactive worker"}, sqlstate=state)
+    if state == "LL009":
+        return ApiError("OVERPAYMENT", diag.message_primary or "Payment exceeds the outstanding amount.", 422,
+                        hint=diag.message_hint or None, fields={"amount": f"at most {diag.message_detail}"},
+                        sqlstate=state)
     if state == "LL003":
         return ApiError("LEDGER_IMMUTABLE", diag.message_primary or "The stock ledger is append-only.", 405,
                         hint="Post a correcting movement instead.", sqlstate=state)

@@ -1,7 +1,9 @@
-"""Finance SQL. Mass balance from 005 (mass_balance, v_yarn_balance_by_run); roll cost from 004 (v_roll_cost)."""
+"""Finance SQL. Mass balance from 005 (mass_balance, v_yarn_balance_by_run); roll cost from 004 (v_roll_cost);
+monthly_pnl() and buyer payments from 013."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 
 import psycopg
 
@@ -61,3 +63,37 @@ def roll_costs(conn: psycopg.Connection, order_code: str) -> list[dict]:
              JOIN sales_order so   ON so.id = ol.order_id
             WHERE so.code = %s
             ORDER BY rc.lot_code""", (order_code,)).fetchall()
+
+
+# ---------------------------------------------------------------- monthly P&L + buyer payments (013)
+def month_to_date(conn: psycopg.Connection) -> dict:
+    """The month of the last working day (Sunday -> Saturday), up to that day."""
+    return conn.execute(
+        """SELECT date_trunc('month', d)::date AS from_, d AS "to"
+             FROM last_working_day((now() AT TIME ZONE 'Asia/Kolkata')::date) AS d""").fetchone()
+
+
+def pnl(conn: psycopg.Connection, from_: date, to: date) -> dict:
+    return conn.execute("SELECT monthly_pnl(%s, %s) AS p", (from_, to)).fetchone()["p"]
+
+
+def invoice_id(conn: psycopg.Connection, code: str) -> int | None:
+    row = conn.execute("SELECT id FROM invoice WHERE code = %s", (code,)).fetchone()
+    return row["id"] if row else None
+
+
+def insert_payment(conn: psycopg.Connection, invoice: int, amount: Decimal, method: str, key: str, user_id: int) -> int:
+    """The database refuses more than the outstanding amount (LL009)."""
+    return conn.execute(
+        """INSERT INTO payment (invoice_id, amount, paid_at, method, idempotency_key, recorded_by)
+           VALUES (%s, %s, now(), %s, %s, %s) RETURNING id""", (invoice, amount, method, key, user_id)).fetchone()["id"]
+
+
+def payment(conn: psycopg.Connection, *, payment_id: int | None = None, key: str | None = None) -> dict | None:
+    """One payment with the balance right after it (payments are append-only, so this never changes)."""
+    return conn.execute(
+        """SELECT p.id AS payment_id, i.code AS invoice_code, p.amount, p.method, p.paid_at, i.amount AS invoice_amount,
+                  i.amount - (SELECT SUM(q.amount) FROM payment q WHERE q.invoice_id = p.invoice_id AND q.id <= p.id)
+                      AS outstanding_after
+             FROM payment p JOIN invoice i ON i.id = p.invoice_id
+            WHERE p.id = %s OR p.idempotency_key = %s""", (payment_id, key)).fetchone()
