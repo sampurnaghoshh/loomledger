@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app import auth
+from app import auth, realtime
 from app.config import get_settings
 from app.db import create_pool
 from app.errors import handle_unexpected, install_exception_handlers
@@ -23,12 +23,20 @@ _SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    pool = create_pool(get_settings().DATABASE_URL)
+    settings = get_settings()
+    pool = create_pool(settings.DATABASE_URL)
     pool.open(wait=False)          # start even if the DB is down; /api/health reports it
     app.state.pool = pool
+
+    broadcaster = realtime.Broadcaster()
+    listener = realtime.FloorListener(settings.DATABASE_URL, broadcaster.publish)
+    app.state.floor_broadcaster = broadcaster
+    app.state.floor_listener = listener
+    await listener.start()
     try:
         yield
     finally:
+        await listener.stop()
         pool.close()
 
 
@@ -69,12 +77,14 @@ def create_app() -> FastAPI:
         try:
             with request.app.state.pool.connection(timeout=2) as conn:
                 conn.execute("SELECT 1").fetchone()
-            return JSONResponse({"status": "ok", "db": "ok"})
+            listening = request.app.state.floor_listener.connected.is_set()
+            return JSONResponse({"status": "ok", "db": "ok", "realtime": "ok" if listening else "connecting"})
         except Exception:  # noqa: BLE001
             log.warning("health: database unreachable rid=%s", request.state.request_id)
-            return JSONResponse({"status": "degraded", "db": "fail"}, status_code=503)
+            return JSONResponse({"status": "degraded", "db": "fail", "realtime": "connecting"}, status_code=503)
 
     app.include_router(auth.router)
+    app.include_router(realtime.router)          # WS /ws/floor
 
     # ---- AREA ROUTERS ---------------------------------------------------------------------------
     # Each area lives in app/modules/<area>/ (router -> service -> repository). Include them here:
