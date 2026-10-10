@@ -82,8 +82,8 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 ### Production
 | Method & path | Body | Response | Owner |
 |---|---|---|---|
-| `POST /api/production/weaving-runs` | `{machine_code, yarn_lot_code, product_code, meters_planned, order_code?, idempotency_key}` → run (shift from current IST hour), greige lot `wip`, yarn issue (kg = m × width × GSM/1000 × 1.04), lineage, reservation | `201 {run_code, lot_code, yarn_issued_kg}`; `409 LOT_QUARANTINED` (this is the stage demo), `409 MACHINE_BUSY`, `422 INSUFFICIENT_STOCK` | Sampurna |
-| `POST /api/production/weaving-runs/{run_code}/finish` | `{waste_kg, idempotency_key}` → end run, waste move, greige into GREIGE-STORE, lot `active` | `{run_code, lot_code, meters}` | Sampurna |
+| `POST /api/production/weaving-runs` | `{machine_code, yarn_lot_code, product_code, meters_planned, order_code?, operator_code?, idempotency_key}` → run `WV-R-<n>` (shift = `shift_at(now())`), greige lot `R-<n>-G` `wip`, yarn issue YARN-STORE → PRODUCTION (kg = `weaving_yarn_issue_kg()` = m × width × GSM/1000 × 1.04), lineage, reservation. `product_code` is the **greige** product (e.g. GRG-TWL). `operator_code` omitted = first active weaver not on an open run. Role `floor_supervisor` | `201 {run_code, lot_code, yarn_issued_kg}`; replay → `200` original; `409 LOT_QUARANTINED` (this is the stage demo), `409 MACHINE_BUSY`, `422 INSUFFICIENT_STOCK`; `404` unknown machine/yarn/product/order/operator (`fields`); `422` not a weaving machine | Sampurna |
+| `POST /api/production/weaving-runs/{run_code}/finish` | `{waste_kg, idempotency_key}` → end run (machine + labour hours now count in `lot_cost`), waste YARN PRODUCTION → SCRAP (if > 0), greige PRODUCTION → GREIGE-STORE, lot `active`. Role `floor_supervisor` | `{run_code, lot_code, meters}`; replay → same body; `404` unknown weaving run; `422` already finished; `409 LOT_QUARANTINED` if the roll was recalled while on the loom | Sampurna |
 | `POST /api/production/dye-batches` | `{machine_code, greige_lot_codes[], chemical_cost, idempotency_key}` | `201 {batch_code}` | Sampurna (stretch) |
 | `POST /api/production/dye-batches/{code}/finish` | `{idempotency_key}` → finished lots | `{batch_code, lot_codes[]}` | Sampurna (stretch) |
 
@@ -92,7 +92,7 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 |---|---|---|---|---|
 | `GET /api/quality/queue` | – | `quality_queue.json` | Sampurna | Adithi |
 | `GET /api/quality/rejections` | – | `quality_rejections.json` | Sampurna | Adithi |
-| `POST /api/quality/inspections` | `{lot_code, result, defect_type?, defect_meters?, notes?}`; reject also moves the roll FG-STORE → REJECT-BAY | `201 {inspection_id, lot_code, result}` | Sampurna | Adithi |
+| `POST /api/quality/inspections` | `{lot_code, result, defect_type?, defect_meters?, notes?, inspector_code?, idempotency_key?}`; `defect_type` required unless `pass` (empty for `pass`); reject also moves the roll FG-STORE → REJECT-BAY in the same transaction. `inspector_code` omitted = first active QC inspector. Send `idempotency_key` (replays of a reject return the original). Role `qc` | `201 {inspection_id, lot_code, result}`; reject replay → `200`; `404` unknown finished roll/inspector; `422 INSUFFICIENT_STOCK` roll not in FG-STORE; `409 LOT_QUARANTINED` roll is quarantined | Sampurna | Adithi |
 
 ### Trace (Act 2)
 | Method & path | Body | Response | Owner | Screen |

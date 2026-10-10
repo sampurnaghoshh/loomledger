@@ -294,6 +294,8 @@ export interface InspectionRequest {
   defect_type?: string;
   defect_meters?: number;
   notes?: string;
+  inspector_code?: string; // omitted = the first active QC inspector
+  idempotency_key?: string; // send newIdempotencyKey(): a replayed reject returns the original
 }
 export interface InspectionResponse {
   inspection_id: number;
@@ -306,6 +308,7 @@ export interface StartWeavingRequest {
   product_code: string;
   meters_planned: number;
   order_code?: string;
+  operator_code?: string; // omitted = the first free weaver
   idempotency_key: string;
 }
 export interface StartWeavingResponse {
