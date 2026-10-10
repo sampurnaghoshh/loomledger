@@ -106,7 +106,7 @@ Layout (each module = router → service → repository, nothing skips a layer):
 app/
   main.py         create app, CORS (http://localhost:5173), include routers, /api/health, exception handlers, request-id middleware
   config.py       Settings from env: DATABASE_URL, SECRET_KEY, TOKEN_TTL_HOURS=12, CORS_ORIGINS
-  db.py           ConnectionPool(dict_row); get_conn() dependency; `with conn.transaction():` per write request
+  db.py           ConnectionPool(dict_row, autocommit); get_conn() dependency; `with write_tx(conn):` once per write request
   errors.py       ApiError(code, message, status, hint, fields); map psycopg errors by sqlstate/constraint name (table in API_CONTRACT.md)
   auth.py         POST /api/auth/login (crypt() check in SQL), sign/verify token, require_user, require_role(*roles)
   realtime.py     async LISTEN loomledger_floor → broadcast to /ws/floor clients
