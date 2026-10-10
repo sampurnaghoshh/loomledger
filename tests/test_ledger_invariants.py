@@ -251,6 +251,38 @@ def test_working_days_between_is_the_inverse_of_add_working_days(db):
         assert db.execute("SELECT working_days_between(%s, %s)", (a, b)).fetchone()[0] == 0
 
 
+ATTEND = "INSERT INTO attendance (worker_id, work_date, shift_id, status) VALUES (%s, %s, (SELECT id FROM shift WHERE code = 'A'), %s)"
+
+
+def _worker(db, code: str) -> int:
+    return db.execute("SELECT id FROM worker WHERE code = %s", (code,)).fetchone()[0]
+
+
+def test_attendance_cannot_be_marked_for_a_future_day(db):
+    tomorrow = db.execute("SELECT (now() AT TIME ZONE 'Asia/Kolkata')::date + 1").fetchone()[0]
+    err = expect_sqlstate(db, "LL007", ATTEND, (_worker(db, "W-01"), tomorrow, "present"))
+    assert "in the future" in str(err)
+
+
+def test_attendance_only_for_active_workers(db):
+    with db.transaction(force_rollback=True):
+        db.execute("UPDATE worker SET active = false WHERE code = 'Q-02'")
+        with pytest.raises(psycopg.Error) as err:
+            db.execute(ATTEND, (_worker(db, "Q-02"), S.ANCHOR_DATE - timedelta(days=60), "present"))
+        assert err.value.sqlstate == "LL008"
+
+
+def test_one_attendance_row_per_worker_per_day(db):
+    expect_sqlstate(db, "23505", ATTEND, (_worker(db, "Q-01"), S.ANCHOR_DATE, "absent"))   # the seed already marked it
+
+
+def test_wages_pay_shift_hours_times_rate(db):
+    rows = db.execute("SELECT worker_code, hourly_wage, shifts_worked, gross_wage FROM wages(%s, %s)",
+                              (S.ANCHOR_DATE - timedelta(days=S.ATTENDANCE_DAYS - 1), S.ANCHOR_DATE)).fetchall()
+    assert rows and all(g == round(h * S.SHIFT_HOURS * s, 2) for _, h, s, g in rows)
+    assert db.execute("SELECT shift_hours(id) FROM shift WHERE code = 'B'").fetchone()[0] == S.SHIFT_HOURS   # across midnight
+
+
 def test_add_working_days_skips_sundays(db):
     # Sat 10 Oct 2026 + 1 working day = Mon 12 Oct
     assert db.execute("SELECT add_working_days('2026-10-10', 1)").fetchone()[0].isoformat() == "2026-10-12"

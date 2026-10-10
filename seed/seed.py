@@ -491,6 +491,19 @@ class Seeder:
                    VALUES (%s, %s, %s, 'present') ON CONFLICT DO NOTHING""",
                 (self.id["worker"][worker], start.date(), self.id["shift"][shift]))
 
+        # Workforce register: every working day on the usual shift (scenario.expected_register); the run-implied
+        # rows above stay. An exception must not contradict a run (absent while operating a loom).
+        for code, days in S.expected_register(self.anchor).items():
+            for day, (status, shift) in days.items():
+                if status != "present":
+                    clash = self.c.execute("SELECT 1 FROM attendance WHERE worker_id = %s AND work_date = %s",
+                                           (self.id["worker"][code], day)).fetchone()
+                    assert clash is None, f"attendance exception {code} {day} {status} falls on a day {code} ran a machine"
+                self.c.execute(
+                    """INSERT INTO attendance (worker_id, work_date, shift_id, status)
+                       VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING""",
+                    (self.id["worker"][code], day, self.id["shift"][shift], status))
+
         for o in S.ORDERS:
             self.c.execute(
                 "INSERT INTO buyer_link (token, order_id, expires_at) VALUES (%s, %s, %s)",
