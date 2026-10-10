@@ -4,6 +4,7 @@ import { api } from "@/api/client";
 import type { MachineNow, MachineState, FloorEvent } from "@/api/types";
 import { useApi, useAction } from "@/hooks/useApi";
 import { machineStateTone } from "@/lib/tones";
+import { formatDate, formatDateTime, formatPct } from "@/lib/format";
 import {
   Badge,
   Button,
@@ -32,13 +33,19 @@ const states: { value: MachineState; label: string }[] = [
   { value: "changeover", label: "Changeover" },
 ];
 
+
 function elapsedSince(value: string | null) {
   if (!value) return "Time unknown";
 
+  const startTime = new Date(value).getTime();
   const minutes = Math.max(
     0,
-    Math.floor((Date.now() - new Date(value).getTime()) / 60000),
+    Math.floor((Date.now() - startTime) / 60000),
   );
+
+  if (minutes > 12 * 60) {
+    return `since ${formatDateTime(value)}`;
+  }
 
   const days = Math.floor(minutes / 1440);
   const hours = Math.floor((minutes % 1440) / 60);
@@ -209,13 +216,13 @@ export default function FloorBoardPage() {
               <StatTile label="Machines running" value={counts.running} tone="ok" />
               <StatTile label="Idle" value={counts.idle} tone="idle" />
               <StatTile label="Breakdowns" value={counts.breakdown} tone="bad" />
-              <StatTile label="Metres produced today" value={metersToday === null ? "—" : metersToday.toLocaleString()} hint={outputState.data?.day ?? "Production date"} tone="brand" />
-              <StatTile label="30-day availability" value={averageAvailability === null ? "—" : `${averageAvailability.toFixed(1)}%`} hint={availabilityState.data ? `${availabilityState.data.from} – ${availabilityState.data.to}` : "Loading availability"} tone="accent" />
+              <StatTile label="Metres produced today" value={metersToday === null ? "—" : metersToday.toLocaleString()} hint={outputState.data?.day ? formatDate(outputState.data.day) : "Production date"} tone="brand" />
+              <StatTile label="30-day availability" value={averageAvailability === null ? "—" : formatPct(averageAvailability)} hint={availabilityState.data ? `${formatDate(availabilityState.data.from)} – ${formatDate(availabilityState.data.to)}` : "Loading availability"} tone="accent" />
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
               <span>{machines.length} machines · {counts.changeover} in changeover</span>
-              <span>Updated {new Date(lastUpdated).toLocaleTimeString()}</span>
+              <span>Updated {formatDateTime(new Date(lastUpdated).toISOString())}</span>
             </div>
 
             {stages.map((stage) => {
