@@ -40,7 +40,7 @@ if [ -n "$rehearsal" ]; then
     smoke=1
 fi
 export DATABASE_URL="$db_url"
-[ -n "$custom_db$rehearsal" ] && "$PY" -m scripts.ensure_db "$DATABASE_URL"
+"$PY" -m scripts.ensure_db "$DATABASE_URL" || echo "(could not check/create the database - continuing)"
 echo "database: ${DATABASE_URL##*/}"
 
 reset() { "$PY" -m seed.seed ${seed_args[@]+"${seed_args[@]}"}; }
