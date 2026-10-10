@@ -1,0 +1,91 @@
+{
+  "code": "R-1206",
+  "kind": "finished",
+  "status": "quarantined",
+  "custody": "passed_in_store",
+  "qty_m": 50.0,
+  "product_code": "FIN-TWL-NVY",
+  "product": "Navy Twill",
+  "colour": "Navy",
+  "lineage": [
+    {
+      "lot_code": "Y-112",
+      "kind": "yarn",
+      "product": "Cotton 40s Combed Yarn",
+      "qty": 330.0,
+      "uom": "kg",
+      "depth": 2,
+      "receipt": {
+        "code": "GRN-Y-112",
+        "supplier": "Kaveri Yarn Traders",
+        "received_at": "2026-09-20T10:45:00+05:30"
+      },
+      "run": null
+    },
+    {
+      "lot_code": "R-1206-G",
+      "kind": "greige",
+      "product": "Greige Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "depth": 1,
+      "receipt": null,
+      "run": {
+        "code": "WV-R-1206",
+        "stage": "weaving",
+        "machine": "Loom 5",
+        "shift": "Day Shift A",
+        "operator": "Weaver 5",
+        "started_at": "2026-09-23T08:00:00+05:30",
+        "ended_at": "2026-09-23T14:00:00+05:30"
+      }
+    },
+    {
+      "lot_code": "R-1206",
+      "kind": "finished",
+      "product": "Navy Twill",
+      "qty": 50.0,
+      "uom": "m",
+      "depth": 0,
+      "receipt": null,
+      "run": {
+        "code": "DB-02",
+        "stage": "dyeing",
+        "machine": "Dye Vat 1",
+        "shift": "Day Shift A",
+        "operator": "Dyer 1",
+        "started_at": "2026-10-05T08:00:00+05:30",
+        "ended_at": "2026-10-05T14:00:00+05:30"
+      }
+    }
+  ],
+  "qc": {
+    "result": "pass",
+    "defect_type": null,
+    "defect_m": null,
+    "inspector": "Imran Khan",
+    "inspected_at": "2026-10-05T14:45:00+05:30"
+  },
+  "cost": {
+    "material": 4056.0,
+    "machine": 1970.0,
+    "labour": 670.0,
+    "chemicals": 800.0,
+    "total": 7496.0,
+    "cost_per_m": 149.92
+  },
+  "order": {
+    "code": "SO-0412",
+    "buyer": "Meridian Apparels",
+    "status": "partially_dispatched",
+    "promised_date": "2026-10-14",
+    "revised_promise_date": "2026-10-16"
+  },
+  "dispatch": null,
+  "recall": {
+    "code": "RC-Y-112",
+    "root_lot_code": "Y-112",
+    "reason": "Colour mismatch traced to yarn lot Y-112",
+    "initiated_at": "2026-10-10T09:45:00+05:30"
+  }
+}

@@ -1,6 +1,6 @@
 // Recall: everything a root lot touched, what it costs, which buyers wait longer, and one button to quarantine it all.
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Ban, Factory, ShieldAlert, ShieldCheck } from "lucide-react";
 import { api } from "@/api/client";
 import type { ApiError } from "@/api/errors";
@@ -231,7 +231,13 @@ function RollsByCustody({ rolls }: { rolls: RecallRoll[] }) {
                       className="rounded-md border border-line bg-surface px-2 py-1 text-sm"
                       title={`${formatQty(r.qty_m, "m")} · ${formatINR(r.cost)}`}
                     >
-                      <span className="whitespace-nowrap font-mono text-ink">{r.lot_code}</span>
+                      <Link
+                        to={`/roll/${encodeURIComponent(r.lot_code)}`}
+                        className="whitespace-nowrap font-mono text-ink underline decoration-line underline-offset-2 hover:text-brand"
+                        aria-label={`Passport for ${r.lot_code}`}
+                      >
+                        {r.lot_code}
+                      </Link>
                       {atCustomer && r.buyer_name && <span className="ml-2 font-medium text-accent">{r.buyer_name}</span>}
                     </li>
                   ))}

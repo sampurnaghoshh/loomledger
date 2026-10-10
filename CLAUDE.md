@@ -151,7 +151,7 @@ app/
   modules/<area>/schemas.py    Pydantic request/response models (field names = contract keys)
 tests/api/        pytest + httpx TestClient: happy path, each error code, contract shape vs docs/api-mocks
 ```
-Areas: `floor`, `inventory`, `production`, `quality`, `trace`, `recalls`, `orders` (incl. dispatch + track), `finance`.
+Areas: `floor`, `inventory`, `production`, `quality`, `trace`, `recalls`, `orders` (incl. dispatch + track), `finance`, `workforce`, `rolls` (QR passport + labels).
 
 Rules:
 - Response JSON must equal the mock file shape. Decimal → float, dates ISO. Use `jsonable_encoder` or explicit schema.

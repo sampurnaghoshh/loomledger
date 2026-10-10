@@ -1,6 +1,6 @@
 // Find Cause: walk the ancestry of the rejected rolls and rank every shared factor by how much it lifts the defect rate.
 import { useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { api } from "@/api/client";
 import type { CauseFactor, LotGraph } from "@/api/types";
@@ -78,9 +78,15 @@ export default function TracePage() {
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted">Selected rolls</span>
         {lots.map((code) => (
-          <span key={code} className="whitespace-nowrap rounded-full border border-line bg-surface px-2.5 py-0.5 font-mono text-sm text-ink">
+          <Link
+            key={code}
+            to={`/roll/${encodeURIComponent(code)}`}
+            className="whitespace-nowrap rounded-full border border-line bg-surface px-2.5 py-0.5 font-mono text-sm text-ink hover:border-brand hover:text-brand"
+            title="Open passport"
+            aria-label={`Passport for ${code}`}
+          >
             {code}
-          </span>
+          </Link>
         ))}
       </div>
 

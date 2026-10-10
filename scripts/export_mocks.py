@@ -21,6 +21,9 @@ from db.migrate import database_url, migrate, reset_schema
 from seed import scenario as S
 from seed.seed import buyer_token, seed
 
+from app.modules.rolls import service as rolls
+from app.modules.rolls.schemas import RollLabels, RollPassport
+
 OUT = Path(__file__).resolve().parent.parent / "docs" / "api-mocks"
 IST = ZoneInfo(S.TIMEZONE)
 
@@ -38,6 +41,16 @@ def _default(o):
 def write(name: str, payload) -> None:
     (OUT / f"{name}.json").write_text(json.dumps(payload, indent=2, default=_default, ensure_ascii=False) + "\n",
                                       encoding="utf-8")
+
+
+def roll_mocks(conn, phase: str) -> None:
+    """QR labels + one passport per banner (and the clean roll), through the API's own schemas."""
+    labels = RollLabels.model_validate(rolls.labels(conn, None)).model_dump(mode="json")
+    write(f"roll_labels_{phase}", labels)
+    clean = next(r["code"] for r in labels["rolls"] if not r["in_scope"])
+    for code in [*S.PASSPORT_ROLLS.values(), clean]:
+        passport = RollPassport.model_validate(rolls.passport(conn, code)).model_dump(mode="json")
+        write(f"roll_passport_{code}_{phase}", passport)
 
 
 def q(conn, sql: str, params: tuple = ()) -> list[dict]:
@@ -209,6 +222,7 @@ def export(conn) -> None:
     month_from = date(anchor.year, anchor.month, 1)
     pnl = lambda: conn.execute("SELECT monthly_pnl(%s, %s) AS p", (month_from, anchor)).fetchone()["p"]  # noqa: E731
     write("finance_pnl", pnl())
+    roll_mocks(conn, "before")
 
     with conn.transaction():
         conn.execute("SELECT apply_recall(%s, 'Colour mismatch traced to yarn lot Y-112', "
@@ -238,6 +252,7 @@ def export(conn) -> None:
                                                    (buyer_token(order),)).fetchone()["j"])
     write("finance_pnl_after_recall", pnl())
     write("inventory_low_stock_after_recall", low_stock())
+    roll_mocks(conn, "after")
     write("error_not_found", {"error": {"code": "NOT_FOUND", "message": "This tracking link is invalid or has expired."}})
 
     # ---- orders
