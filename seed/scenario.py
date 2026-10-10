@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from decimal import Decimal as D
 
 # ---------------------------------------------------------------------------
@@ -18,6 +18,7 @@ from decimal import Decimal as D
 # ---------------------------------------------------------------------------
 ANCHOR_DATE = date(2026, 10, 10)          # a Saturday
 TIMEZONE = "Asia/Kolkata"
+RECALL_APPLIED_AT = time(9, 45)           # when the recall is applied in the story (mock export pins it here)
 
 # ---------------------------------------------------------------------------
 # Physical constants

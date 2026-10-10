@@ -12,6 +12,7 @@ import uuid
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import psycopg
 from psycopg.rows import dict_row
@@ -21,6 +22,7 @@ from seed import scenario as S
 from seed.seed import buyer_token, seed
 
 OUT = Path(__file__).resolve().parent.parent / "docs" / "api-mocks"
+IST = ZoneInfo(S.TIMEZONE)
 
 
 def _default(o):
@@ -110,11 +112,12 @@ def export(conn) -> None:
                                               current_run, current_lot, current_order
                                          FROM v_machine_now ORDER BY code"""))
     write("floor_output", {"day": anchor, "machines": q(conn, "SELECT * FROM floor_output(%s)", (anchor,))})
+    window_from = datetime.combine(anchor - timedelta(days=30), datetime.min.time(), IST)
+    window_to = datetime.combine(anchor, datetime.min.time(), IST)
     write("floor_availability", {
-        "from": datetime.combine(anchor - timedelta(days=30), datetime.min.time()).isoformat(),
-        "to": datetime.combine(anchor, datetime.min.time()).isoformat(),
-        "machines": q(conn, "SELECT * FROM machine_availability(%s::timestamptz - interval '30 days', %s::timestamptz)",
-                      (anchor, anchor))})
+        "from": window_from.isoformat(),
+        "to": window_to.isoformat(),
+        "machines": q(conn, "SELECT * FROM machine_availability(%s, %s)", (window_from, window_to))})
     write("ws_floor_event", {"machine_id": 4, "machine_code": "LOOM-4", "state": "breakdown",
                              "reason": "Warp beam bearing failure", "started_at": f"{anchor}T09:12:00+05:30",
                              "ended_at": None})
@@ -163,6 +166,13 @@ def export(conn) -> None:
     with conn.transaction():
         conn.execute("SELECT apply_recall(%s, 'Colour mismatch traced to yarn lot Y-112', "
                      "(SELECT id FROM app_user WHERE role = 'qc'))", (y112,))
+        # apply_recall stamps now(); pin its recall row and buyer messages to the story's clock so
+        # re-exporting is deterministic (this database is re-seeded right after the export).
+        recall_at = datetime.combine(anchor, S.RECALL_APPLIED_AT, IST)
+        conn.execute("""UPDATE order_event SET created_at = %s
+                         WHERE created_at = (SELECT initiated_at FROM recall WHERE root_lot_id = %s)""",
+                     (recall_at, y112))
+        conn.execute("UPDATE recall SET initiated_at = %s WHERE root_lot_id = %s", (recall_at, y112))
     rc = conn.execute("SELECT code, initiated_at FROM recall WHERE root_lot_id = %s", (y112,)).fetchone()
     write("recall_applied", {"applied": True, "recall_code": rc["code"], "applied_at": rc["initiated_at"],
                              **with_calculation(recall_payload(conn, S.Y112))})
