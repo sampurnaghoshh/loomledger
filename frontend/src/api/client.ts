@@ -12,6 +12,7 @@ import type {
   FloorEvent,
   FloorOutput,
   InspectionRequest,
+  InventoryMasters,
   InspectionResponse,
   LoginResponse,
   LotGraph,
@@ -95,6 +96,7 @@ const real = {
     },
   },
   inventory: {
+    masters: () => request<InventoryMasters>("GET", "/api/inventory/masters"), // store@ / owner@
     stock: (asOf?: string) => request<StockSnapshot>("GET", `/api/inventory/stock${qs({ as_of: asOf })}`),
     receive: (req: ReceiptRequest) => request<ReceiptResponse>("POST", "/api/inventory/receipts", req),
   },
