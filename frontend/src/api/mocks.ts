@@ -7,6 +7,7 @@ import type { Api } from "./client";
 import { ApiError } from "./errors";
 import type {
   BuyerOrderStatus,
+  DispatchResponse,
   FindCauseResponse,
   FloorAvailability,
   FloorEvent,
@@ -30,6 +31,11 @@ const TOKENS = {
 } as const;
 
 let recallApplied = false;
+
+// dispatch mock state (cleared on refresh, like the recall)
+const dispatchesByKey = new Map<string, DispatchResponse>();
+const shippedRolls = new Set<string>();
+const dispatchCount: Record<string, number> = {};
 
 const delay = (ms = 250) => new Promise((r) => setTimeout(r, ms));
 async function load<T>(loader: () => Promise<{ default: unknown }>): Promise<T> {
@@ -138,6 +144,55 @@ export const mock: Api = {
       return recallApplied
         ? load<BuyerOrderStatus>(() => import("@mocks/track_SO-0419_after.json"))
         : load<BuyerOrderStatus>(() => import("@mocks/track_SO-0419_before.json"));
+    },
+    // Built only from the mock files: amount = roll metres (stock mock) x the order's unit price (orders mock).
+    // Not simulated (the mocks carry no dye batch / QC data for store rolls): SHADE_MISMATCH, NOT_QC_PASSED, NOT_IN_ORDER.
+    dispatch: async (req) => {
+      await delay();
+      const replay = dispatchesByKey.get(req.idempotency_key);
+      if (replay) return structuredClone(replay);
+
+      const fields: Record<string, string> = {};
+      if (!req.lot_codes.length) fields.lot_codes = "Pick at least one roll";
+      else if (new Set(req.lot_codes).size !== req.lot_codes.length) fields.lot_codes = "A roll can only be listed once";
+      if (!req.vehicle_no.trim()) fields.vehicle_no = "Required";
+      if (req.shade_override_reason !== undefined && req.shade_override_reason.trim().length < 3)
+        fields.shade_override_reason = "At least 3 characters";
+      if (Object.keys(fields).length) throw new ApiError("VALIDATION_FAILED", "Please correct the highlighted fields.", 422, undefined, fields);
+
+      const orders = await load<OrderSummary[]>(() => import("@mocks/orders.json"));
+      const order = orders.find((o) => o.code === req.order_code);
+      if (!order) throw new ApiError("NOT_FOUND", `Order ${req.order_code} not found.`, 404, undefined, { order_code: "not found" });
+
+      if (recallApplied) {
+        const recall = await load<RecallResponse>(() => import("@mocks/recall_applied.json"));
+        const held = req.lot_codes.find((c) => recall.rolls.some((r) => r.lot_code === c));
+        if (held) {
+          const blocked = await load<{ error: { hint: string } }>(() => import("@mocks/error_lot_quarantined.json"));
+          throw new ApiError("LOT_QUARANTINED", `stock movement blocked: lot ${held} is quarantined`, 409, blocked.error.hint);
+        }
+      }
+      const again = req.lot_codes.find((c) => shippedRolls.has(c));
+      if (again) throw new ApiError("ALREADY_DISPATCHED", "One or more rolls have already been dispatched.", 409);
+
+      const stock = await load<StockSnapshot>(() => import("@mocks/inventory_stock_now.json"));
+      const inStore = new Map(stock.rows.filter((r) => r.location_code === "FG-STORE").map((r) => [r.lot_code, r.qty]));
+      const missing = req.lot_codes.filter((c) => !inStore.has(c));
+      if (missing.length)
+        throw new ApiError("NOT_FOUND", `Unknown roll(s): ${missing.join(", ")}.`, 404, undefined, { lot_codes: `unknown: ${missing.join(", ")}` });
+
+      const n = (dispatchCount[order.code] ??= order.progress.dispatched_m > 0 ? 1 : 0) + 1;
+      dispatchCount[order.code] = n;
+      const digits = order.code.replace(/^SO-/, "");
+      const metres = req.lot_codes.reduce((sum, c) => sum + (inStore.get(c) ?? 0), 0);
+      const result: DispatchResponse = {
+        dispatch_code: `DSP-${digits}-${n}`,
+        invoice_code: `INV-${digits}-${n}`,
+        amount: metres * order.unit_price,
+      };
+      req.lot_codes.forEach((c) => shippedRolls.add(c));
+      dispatchesByKey.set(req.idempotency_key, result);
+      return structuredClone(result);
     },
   },
   finance: {
