@@ -90,6 +90,8 @@ export default function FloorBoardPage() {
 
   useEffect(() => {
     const unsubscribe = api.floor.subscribe((event: FloorEvent) => {
+      // A state change sends two events: the old state closing (ended_at set), then the new one. Apply only the current state.
+      if (event.ended_at !== null) return;
       setMachines((current) =>
         current.map((machine) =>
           machine.code === event.machine_code
