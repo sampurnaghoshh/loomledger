@@ -271,7 +271,7 @@ export default function QualityPage() {
                       {formatQty(lot.qty_m, "m")}
                     </td>
                     <td className="px-3 py-3 text-ink">{lot.dye_batch}</td>
-                    <td className="px-3 py-3 text-ink">{formatDate(lot.dyed_on)}</td>
+                    <td className="px-3 py-3 text-ink">{lot.dyed_on}</td>
                     <td className="px-3 py-3 text-muted">
                       {formatDateTime(lot.dyed_at)}
                     </td>
@@ -375,7 +375,7 @@ export default function QualityPage() {
               </p>
               <p className="mt-1 text-muted">
                 {formatQty(selectedLot.qty_m, "m")} ·{" "}
-                {formatDate(selectedLot.dyed_on)} · Order {selectedLot.order_code ?? "—"}
+                {selectedLot.dyed_on} · Order {selectedLot.order_code ?? "—"}
               </p>
             </div>
 
