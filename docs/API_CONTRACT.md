@@ -74,6 +74,8 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 - No hello/snapshot message: on every (re)connect, call `GET /api/floor/machines` for the current board, then apply events.
   Events that happen while you're disconnected are not replayed.
 - Close **1013** = client fell >100 messages behind; reconnect. Any other close: reconnect with backoff (e.g. 1 s → 30 s).
+  `api.floor.subscribe(onEvent, onReconnect)` does this for you (`src/api/floorSocket.ts`: 1 → 15 s backoff, stops on 4401) and
+  calls `onReconnect` after a reconnect so the page re-fetches what it missed.
 
 ### Inventory
 | Method & path | Body / query | Response | Owner | Screen |
