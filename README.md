@@ -4,6 +4,24 @@
 
 Stock is never stored — it is the sum of an append-only ledger (`stock_move`). Every physical thing (yarn lot, greige roll, finished roll) is a node in a family tree (`lot_lineage`). Inventory, traceability, defect root cause, recall, true cost, delay impact and the buyer portal are all *derived* from those two tables — in PostgreSQL.
 
+**Presenting:** [`docs/DEMO_RUNBOOK.md`](docs/DEMO_RUNBOOK.md) · [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) · **Judges:** [`docs/EVALUATOR_GUIDE.md`](docs/EVALUATOR_GUIDE.md)
+
+## What it does
+
+- **The story** (Acts 1–4): live floor board → QC rejections → *Find Cause* walks every roll's family tree and compares
+  defect rates → one-click recall quarantines everything made from the bad yarn (PostgreSQL then refuses to use it) →
+  delay in working days, money at risk, buyer's tracking page updated → month-end mass balance and true cost per roll.
+- **Floor:** machine states pushed over WebSocket, estimated run progress (honest "due off loom" after the plan).
+- **Owner alerts:** a phone on `/alerts` lights up the moment a recall is *committed* or a machine breaks down.
+- **QR roll passport:** scan a label → where the roll came from, QC, true cost, order, shipment, recall; printable A4 labels.
+- **Stock & yarn:** ledger-derived stock with time travel, yarn availability per order, low-stock warning, gate entry.
+- **Money & people:** dispatch + invoices, buyer and supplier payments, monthly P&L (recall exposure shown as contingent),
+  attendance register and wage run.
+- **Records:** every list paged / searched / sorted / filtered on the server, state in the URL.
+- **Access:** role × permission matrix in the database, owner-only Users & roles, last-owner and self-deactivation guards.
+- **Validation:** the production order is enforced by the DB (`PHASE_SKIPPED`), and every refused write is kept in a
+  validation log (who, what, why).
+
 **Start here:** [`docs/TEAM_PLAN.md`](docs/TEAM_PLAN.md) (who does what, with prompts) · [`CLAUDE.md`](CLAUDE.md) (rules & architecture) · [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) (endpoints) · [`docs/FRONTEND_CONTEXT.md`](docs/FRONTEND_CONTEXT.md) (context pack for chat LLMs)
 
 ---
@@ -34,7 +52,14 @@ Run it:
 uvicorn app.main:app --port 8000           # backend, docs at http://localhost:8000/docs
 cd frontend && cp .env.example .env.local  # then set VITE_USE_MOCKS=false in .env.local
 npm run dev                                # http://localhost:5173 against the real backend
-./scripts/reset_demo.sh --rehearsal        # private end-to-end check on loomledger_rehearsal + its own backend :8001
+./scripts/reset_demo.sh --rehearsal        # private end-to-end check on loomledger_rehearsal + its own backend :8001 (39 ✓ 0 ✗)
+```
+
+Evaluator playground (the story + ~300 rolls of history, its own DB and ports — see [`docs/EVALUATOR_GUIDE.md`](docs/EVALUATOR_GUIDE.md)):
+```bash
+./scripts/reset_demo.sh --eval             # (PowerShell: .\scripts\reset_demo.ps1 -Eval) → loomledger_eval, starts nothing
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledger_eval uvicorn app.main:app --port 8002
+cd frontend && VITE_USE_MOCKS=false VITE_API_TARGET=http://localhost:8002 npm run dev -- --port 5174 --strictPort
 ```
 
 Without Docker: any PostgreSQL **14+** with the `btree_gist` and `pgcrypto` contrib extensions; `reset_demo` creates the demo
@@ -55,10 +80,12 @@ db/migrations/002_ledger_guards.sql      append-only ledger, quarantine + stock 
 db/migrations/003_traceability.sql       ancestors/descendants (recursive CTEs), time travel, roll custody, FIND CAUSE, recall scope
 db/migrations/004_costing_impact.sql     true cost roll-up, working-day calendar, recall impact, apply_recall
 db/migrations/005_floor_portal_balance.sql  floor board, availability, mass balance, buyer portal
-db/migrations/006-009_*.sql              floor NOTIFY payload, production rules, Shade Guard, dispatch guard
+db/migrations/006-011_*.sql              floor NOTIFY payload, production rules, Shade Guard, dispatch guard, working-day helpers
+db/migrations/012-014_*.sql              workforce + wages, money (payments, P&L), yarn availability
+db/migrations/015-018_*.sql              run progress, owner alerts (NOTIFY at commit), role-based access, phase guard + validation log
 db/migrate.py                            applies migrations once each, in order, each in its own transaction
 seed/scenario.py                         THE SINGLE SOURCE OF TRUTH for every demo number
-seed/seed.py                             deterministic seed built only from scenario.py
+seed/seed.py                             deterministic seed built only from scenario.py (--profile eval: + seed/eval_profile.py)
 tests/test_golden_y112.py                the demo, executed end to end
 tests/test_ledger_invariants.py          what the database refuses, and what must always add up
 docs/demo.sql                            the 5-minute demo as SQL (Act 1 → month-end)
