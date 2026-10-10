@@ -60,9 +60,10 @@ class Batch:
 
 
 class Seeder:
-    def __init__(self, conn: psycopg.Connection, anchor: date):
+    def __init__(self, conn: psycopg.Connection, anchor: date, qc_story_rejects: bool = True):
         self.c = conn
         self.anchor = anchor
+        self.qc_story_rejects = qc_story_rejects   # False: R-1201..R-1203 wait for QC (rejected live / via the API)
         self.id: dict[str, dict[str, int]] = defaultdict(dict)
         self.rolls: dict[str, Roll] = {}
         self.batches: list[Batch] = []
@@ -334,6 +335,8 @@ class Seeder:
             base = b.inspect_base or b.end + timedelta(minutes=30)
             inspector = self.id["worker"]["Q-01" if int(b.code[-2:]) % 2 else "Q-02"]
             for i, r in enumerate(sorted(b.rolls, key=lambda r: (r.reject, r.code))):
+                if r.group == "Y112" and r.reject and not self.qc_story_rejects:
+                    continue
                 r.inspected_at = base + timedelta(minutes=5 * i)
                 defect = S.DEFECT if r.group == "Y112" and r.reject else r.defect
                 self.c.execute(
@@ -483,10 +486,11 @@ def buyer_token(order_code: str) -> uuid.UUID:
     return uuid.uuid5(TOKEN_NAMESPACE, order_code)
 
 
-def seed(conn: psycopg.Connection, anchor: date = S.ANCHOR_DATE) -> None:
+def seed(conn: psycopg.Connection, anchor: date = S.ANCHOR_DATE, *, qc_story_rejects: bool = True) -> None:
+    """qc_story_rejects=False leaves the three story rolls (R-1201..R-1203) awaiting QC instead of rejected."""
     conn.commit()   # never nest inside a caller's open transaction: the seed is all-or-nothing on its own
     with conn.transaction():
-        Seeder(conn, anchor).run()
+        Seeder(conn, anchor, qc_story_rejects).run()
 
 
 def main() -> None:
