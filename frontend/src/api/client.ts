@@ -5,6 +5,8 @@
 import { ApiError } from "./errors";
 import type {
   BuyerOrderStatus,
+  DispatchRequest,
+  DispatchResponse,
   FindCauseResponse,
   FloorAvailability,
   FloorEvent,
@@ -122,6 +124,9 @@ const real = {
   orders: {
     list: () => request<OrderSummary[]>("GET", "/api/orders"),
     track: (token: string) => request<BuyerOrderStatus>("GET", `/api/track/${encodeURIComponent(token)}`, undefined, false),
+    // store@ / owner@. Errors: NOT_FOUND, NOT_QC_PASSED, NOT_IN_ORDER, SHADE_MISMATCH, LOT_QUARANTINED,
+    // INSUFFICIENT_STOCK, ALREADY_DISPATCHED, VALIDATION_FAILED (see docs/API_CONTRACT.md)
+    dispatch: (req: DispatchRequest) => request<DispatchResponse>("POST", "/api/dispatches", req),
   },
   finance: {
     massBalance: (from?: string, to?: string) =>

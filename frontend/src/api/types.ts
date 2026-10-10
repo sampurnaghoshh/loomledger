@@ -316,3 +316,15 @@ export interface StartWeavingResponse {
   lot_code: string;
   yarn_issued_kg: number;
 }
+export interface DispatchRequest {
+  order_code: string;
+  lot_codes: string[]; // finished rolls reserved for this order that passed QC; one dye batch per dispatch
+  vehicle_no: string;
+  idempotency_key: string; // newIdempotencyKey() once per form: a resend returns the original dispatch
+  shade_override_reason?: string; // 3-500 chars; allows mixing dye batches (else 409 SHADE_MISMATCH, fields.batches)
+}
+export interface DispatchResponse {
+  dispatch_code: string;
+  invoice_code: string;
+  amount: number; // ₹, Σ roll metres × order line price
+}
