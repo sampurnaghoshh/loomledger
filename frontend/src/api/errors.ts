@@ -12,6 +12,13 @@ export type ApiErrorCode =
   | "UNAUTHENTICATED" //      401
   | "FORBIDDEN" //            403
   | "NOT_FOUND" //            404
+  | "LEDGER_IMMUTABLE" //     405  ledger rows can't be changed; post a correcting move
+  | "DUPLICATE_REQUEST" //    409  same idempotency key already used (normally replayed as 200)
+  | "CONFLICT_RETRY" //       409  concurrent change / deadlock — safe to resubmit
+  | "DB_UNAVAILABLE" //       503  database unreachable
+  | "METHOD_NOT_ALLOWED" //   405
+  | "BAD_REQUEST" //          4xx  other HTTP errors
+  | "INTERNAL" //             500
   | "NETWORK" //              could not reach the server
   | "UNKNOWN";
 
