@@ -28,6 +28,10 @@ class OrderSummary(BaseModel):
     status: Literal["confirmed", "in_production", "partially_dispatched", "dispatched", "cancelled"]
     progress: OrderProgress
     tracking_token: UUID
+    yarn_status: Literal["ok", "short"] | None     # null = closed order (014 v_yarn_plan)
+    yarn_required_kg: float | None
+    yarn_shortfall_kg: float | None
+    yarn_short_of: str | None                      # yarn product name(s) it is short of
 
 
 class BuyerUpdate(BaseModel):
@@ -68,3 +72,26 @@ class DispatchResponse(BaseModel):
     dispatch_code: str
     invoice_code: str
     amount: float
+
+
+class YarnLine(BaseModel):
+    product_code: str
+    product: str
+    yarn_product_code: str
+    yarn_product: str
+    ordered_m: float
+    covered_m: float           # reserved rolls that are not rejected, quarantined or recalled
+    unwoven_m: float
+    required_kg: float         # weaving_yarn_issue_kg(product, unwoven_m)
+    available_kg: float        # usable yarn left for this order after the orders due before it
+    shortfall_kg: float
+
+
+class YarnCheck(BaseModel):
+    order_code: str
+    status: Literal["ok", "short", "closed"]
+    due: date                  # revised promise date if any
+    required_kg: float
+    shortfall_kg: float
+    orders_ahead: list[str]    # open orders that take the same yarn first
+    lines: list[YarnLine]

@@ -16,9 +16,13 @@ def resolve_as_of(conn: psycopg.Connection, as_of: datetime) -> datetime:
 
 def stock(conn: psycopg.Connection, as_of: datetime | None) -> list[dict]:
     return conn.execute(
-        """SELECT location_code, lot_code, lot_kind::text AS lot_kind, product_code, qty, uom::text AS uom
-             FROM stock_on_hand(COALESCE(%s::timestamptz, 'infinity'))
-            ORDER BY location_code, lot_code""", (as_of,)).fetchall()
+        """SELECT s.location_code, s.lot_code, s.lot_kind::text AS lot_kind, s.product_code, s.qty, s.uom::text AS uom,
+                  so.code AS order_code                                  -- yarn received for an order (014)
+             FROM stock_on_hand(COALESCE(%s::timestamptz, 'infinity')) s
+             JOIN lot l                 ON l.code = s.lot_code
+             LEFT JOIN goods_receipt gr ON gr.id = l.goods_receipt_id
+             LEFT JOIN sales_order so   ON so.id = gr.order_id
+            ORDER BY s.location_code, s.lot_code""", (as_of,)).fetchall()
 
 
 def suppliers(conn: psycopg.Connection) -> list[dict]:
@@ -29,13 +33,33 @@ def yarn_products(conn: psycopg.Connection) -> list[dict]:
     return conn.execute("SELECT code, name FROM product WHERE kind = 'yarn' ORDER BY code").fetchall()
 
 
+def open_orders(conn: psycopg.Connection) -> list[dict]:
+    """Orders a yarn receipt can be recorded for (014: the database refuses closed ones, LL010)."""
+    return conn.execute(
+        """SELECT so.code, b.name AS buyer FROM sales_order so JOIN party b ON b.id = so.buyer_id
+            WHERE so.status NOT IN ('dispatched', 'cancelled') ORDER BY so.code""").fetchall()
+
+
+def order_id(conn: psycopg.Connection, code: str) -> int | None:
+    row = conn.execute("SELECT id FROM sales_order WHERE code = %s", (code,)).fetchone()
+    return row["id"] if row else None
+
+
+def low_stock(conn: psycopg.Connection) -> list[dict]:
+    return conn.execute(
+        """SELECT product_code, product_name, on_hand_kg, quarantined_kg, committed_kg, open_orders, available_kg,
+                  reorder_level_kg, below_reorder_kg
+             FROM v_yarn_low_stock ORDER BY product_code""").fetchall()
+
+
 def receipt_by_key(conn: psycopg.Connection, idempotency_key: str) -> dict | None:
     return conn.execute(
-        """SELECT gr.code AS receipt_code, l.code AS lot_code, m.qty AS kg, loc.code AS location
+        """SELECT gr.code AS receipt_code, l.code AS lot_code, m.qty AS kg, loc.code AS location, so.code AS order_code
              FROM stock_move m
-             JOIN goods_receipt gr ON gr.id = m.goods_receipt_id
-             JOIN lot l            ON l.id = m.lot_id
-             JOIN location loc     ON loc.id = m.to_location_id
+             JOIN goods_receipt gr    ON gr.id = m.goods_receipt_id
+             JOIN lot l               ON l.id = m.lot_id
+             JOIN location loc        ON loc.id = m.to_location_id
+             LEFT JOIN sales_order so ON so.id = gr.order_id
             WHERE m.idempotency_key = %s AND m.kind = 'receipt'""", (idempotency_key,)).fetchone()
 
 
@@ -53,11 +77,12 @@ def yarn_product_id(conn: psycopg.Connection, code: str | None) -> int | None:
 
 
 def insert_goods_receipt(conn: psycopg.Connection, code: str, supplier_id: int, vehicle_no: str | None,
-                         challan_no: str | None, user_id: int) -> int:
+                         challan_no: str | None, user_id: int, order_id: int | None = None) -> int:
+    """The database refuses an order that is no longer open (LL010)."""
     return conn.execute(
-        """INSERT INTO goods_receipt (code, supplier_id, received_at, vehicle_no, challan_no, received_by)
-           VALUES (%s, %s, now(), %s, %s, %s) RETURNING id""",
-        (code, supplier_id, vehicle_no, challan_no, user_id)).fetchone()["id"]
+        """INSERT INTO goods_receipt (code, supplier_id, received_at, vehicle_no, challan_no, received_by, order_id)
+           VALUES (%s, %s, now(), %s, %s, %s, %s) RETURNING id""",
+        (code, supplier_id, vehicle_no, challan_no, user_id, order_id)).fetchone()["id"]
 
 
 def insert_yarn_lot(conn: psycopg.Connection, code: str, product_id: int, kg: float, price_per_kg: float,

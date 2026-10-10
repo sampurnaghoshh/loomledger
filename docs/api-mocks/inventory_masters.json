@@ -14,5 +14,19 @@
       "code": "YRN-C40",
       "name": "Cotton 40s Combed Yarn"
     }
+  ],
+  "open_orders": [
+    {
+      "code": "SO-0405",
+      "buyer": "Saffron Home Linen"
+    },
+    {
+      "code": "SO-0412",
+      "buyer": "Meridian Apparels"
+    },
+    {
+      "code": "SO-0419",
+      "buyer": "Coastline Garments"
+    }
   ]
 }

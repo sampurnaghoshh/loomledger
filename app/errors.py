@@ -94,6 +94,9 @@ def map_db_error(exc: psycopg.Error) -> ApiError:
         return ApiError("OVERPAYMENT", diag.message_primary or "Payment exceeds the outstanding amount.", 422,
                         hint=diag.message_hint or None, fields={"amount": f"at most {diag.message_detail}"},
                         sqlstate=state)
+    if state == "LL010":
+        return ApiError("ORDER_CLOSED", diag.message_primary or "That order is no longer open.", 422,
+                        hint=diag.message_hint or None, fields={"order_code": "order is not open"}, sqlstate=state)
     if state == "LL003":
         return ApiError("LEDGER_IMMUTABLE", diag.message_primary or "The stock ledger is append-only.", 405,
                         hint="Post a correcting movement instead.", sqlstate=state)

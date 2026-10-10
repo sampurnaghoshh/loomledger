@@ -37,6 +37,7 @@ regenerate, update `frontend/src/api/types.ts`, and tell the team in the group c
 | SQLSTATE `LL007` (attendance for a future day) | 422 | `ATTENDANCE_FUTURE_DATE` + `fields.day` |
 | SQLSTATE `LL008` (attendance for an inactive worker) | 422 | `WORKER_INACTIVE` + `fields.marks` |
 | SQLSTATE `LL009` (payment above what is still outstanding on the invoice / yarn bill) | 422 | `OVERPAYMENT` + `fields.amount: "at most <outstanding>"` |
+| SQLSTATE `LL010` (gate entry for an order that is dispatched / cancelled) | 422 | `ORDER_CLOSED` + `fields.order_code` |
 | SQLSTATE `LL006` (dispatch mixes dye batches, no `shade_override_reason`) | 409 | `SHADE_MISMATCH` + `fields: {batches: "DB-08, DB-14"}` |
 | bad login | 401 | `INVALID_CREDENTIALS` |
 | missing/expired token | 401 | `UNAUTHENTICATED` |
@@ -83,9 +84,10 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 ### Inventory
 | Method & path | Body / query | Response | Owner | Screen |
 |---|---|---|---|---|
-| `GET /api/inventory/stock` | `?as_of=<ISO timestamp>` (omit = now) | `inventory_stock_now.json` / `inventory_stock_as_of.json` | Sampurna | Adithi |
-| `GET /api/inventory/masters` | – (role `store`) | `inventory_masters.json`: `{suppliers: [{code, name}], yarn_products: [{code, name}]}` — the gate-entry form's choices | Sampurna | Sampurna |
-| `POST /api/inventory/receipts` | `{supplier_code, lot_code (^Y-\d{3,}$), kg, price_per_kg, vehicle_no?, challan_no?, product_code?, idempotency_key}` → goods_receipt `GRN-<lot>` + yarn lot + receipt move SUPPLIERS → YARN-STORE. `product_code` omitted = the only yarn product. Role `store` | `201 {receipt_code, lot_code, kg, location}`; same `idempotency_key` again → `200` + the original body; `404` unknown supplier/product (`fields`); `422` lot code exists | Sampurna | Adithi |
+| `GET /api/inventory/stock` | `?as_of=<ISO timestamp>` (omit = now). Each row has `order_code`: the order its yarn was received for at the gate (null = general stock) | `inventory_stock_now.json` / `inventory_stock_as_of.json` | Sampurna | Adithi |
+| `GET /api/inventory/masters` | – (role `store`) | `inventory_masters.json`: `{suppliers: [{code, name}], yarn_products: [{code, name}], open_orders: [{code, buyer}]}` — the gate-entry form's choices (open = not dispatched / cancelled) | Sampurna | Sampurna |
+| `POST /api/inventory/receipts` | `{supplier_code, lot_code (^Y-\d{3,}$), kg, price_per_kg, vehicle_no?, challan_no?, product_code?, order_code? (^SO-\d{4}$), idempotency_key}` → goods_receipt `GRN-<lot>` (with the order, if given) + yarn lot + receipt move SUPPLIERS → YARN-STORE. `product_code` omitted = the only yarn product. Role `store` | `201 {receipt_code, lot_code, kg, location, order_code}`; same `idempotency_key` again → `200` + the original body; `404` unknown supplier/product/order (`fields`); `422 ORDER_CLOSED` (LL010); `422` lot code exists | Sampurna | Adithi |
+| `GET /api/inventory/low-stock` | – (any signed-in user) → `v_yarn_low_stock` (014): per yarn product whose **free** yarn is below its `reorder_level_kg`. `on_hand_kg` = usable (in YARN-STORE, lot not quarantined/recalled); `quarantined_kg` = held, never counted; `committed_kg` = what open orders still need (`v_yarn_plan`); `available_kg` = on hand − committed (may be negative); `below_reorder_kg` = reorder level − available. Empty list = nothing low | `inventory_low_stock.json`, `inventory_low_stock_after_recall.json` | Sampurna | Adithi |
 
 ### Production
 | Method & path | Body | Response | Owner |
@@ -120,6 +122,8 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 | Method & path | Body | Response | Owner | Screen |
 |---|---|---|---|---|
 | `GET /api/orders` | – (any signed-in user; `tracking_token` = the order's newest unexpired link; `delay_days` = working days Mon–Sat from promised to revised via `working_days_between()`, 0 when on time) | `orders.json` (exported **after** the recall; before it `revised_promise_date` is null) | Sampurna | Dhruva |
+| `GET /api/orders` (yarn fields) | Each order also carries `yarn_status` (`ok` / `short`; null for a closed order), `yarn_required_kg`, `yarn_shortfall_kg`, `yarn_short_of` (yarn name(s), null when ok) from `v_yarn_plan` (014) | `orders.json` | Sampurna | Dhruva |
+| `GET /api/orders/{code}/yarn-check` | – (any signed-in user). What the order still has to weave (`unwoven_m` = ordered − reserved rolls that are not rejected / quarantined / recalled), the yarn that needs (`weaving_yarn_issue_kg`, 007), and what usable yarn is left for it after the open orders due before it (revised date if any, then code). `status`: `ok` / `short` / `closed` (dispatched or cancelled: no lines) | `orders_yarn_check_<code>.json` (exported **after** the recall, like `orders.json`); `404` unknown order | Sampurna | Dhruva |
 | `POST /api/dispatches` | `{order_code, lot_codes[], vehicle_no, idempotency_key, shade_override_reason?}` → dispatch `DSP-<order>-<n>`, lines, each roll FG-STORE → CUSTOMERS, lots `dispatched`, invoice `INV-<order>-<n>` (Σ m × line price), order status, buyer update. Role `store`. Guards (DB): `409 NOT_QC_PASSED` (LL004), `422 NOT_IN_ORDER` (LL005), `409 LOT_QUARANTINED`, `422 INSUFFICIENT_STOCK` (not in FG-STORE), `409 ALREADY_DISPATCHED`. Shade Guard (migration 008): all rolls of **one dispatch** from one dye batch, else `409 SHADE_MISMATCH` with `fields.batches`, unless `shade_override_reason` (3–500 chars) is given — it is stored on the dispatch | `201 {dispatch_code, invoice_code, amount}`; replay → `200` original; `404` unknown order/roll | Sampurna | Dhruva (stretch) |
 | `GET /api/track/{token}` | public, no login (`buyer_order_status(token)`) | `track_SO-0412_before.json` / `_after.json`; malformed, unknown and expired tokens all return the same `404 error_not_found.json` | Sampurna | Dhruva |
 

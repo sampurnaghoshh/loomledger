@@ -18,6 +18,21 @@ def list_orders(conn: psycopg.Connection) -> list[dict]:
     return repo.list_orders(conn)
 
 
+def yarn_check(conn: psycopg.Connection, code: str) -> dict:
+    """Is there enough usable yarn to weave what this order still needs, after the orders due before it?"""
+    order = repo.order_for_yarn_check(conn, code)
+    if order is None:
+        raise ApiError("NOT_FOUND", f"Order {code} not found.", 404, fields={"order_code": "not found"})
+    lines = repo.yarn_plan_lines(conn, order["id"])
+    if not lines:                                   # dispatched / cancelled: nothing left to weave
+        return {"order_code": code, "status": "closed", "due": order["due"], "required_kg": 0, "shortfall_kg": 0,
+                "orders_ahead": [], "lines": []}
+    shortfall = sum(l["shortfall_kg"] for l in lines)
+    return {"order_code": code, "status": "short" if shortfall > 0 else "ok", "due": order["due"],
+            "required_kg": sum(l["required_kg"] for l in lines), "shortfall_kg": shortfall,
+            "orders_ahead": repo.orders_ahead(conn, order["id"]), "lines": lines}
+
+
 def track(conn: psycopg.Connection, token: str) -> dict:
     """Public buyer page. Malformed, unknown and expired tokens all get the same 404 — nothing to probe."""
     try:

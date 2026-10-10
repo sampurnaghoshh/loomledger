@@ -1,0 +1,24 @@
+{
+  "order_code": "SO-0405",
+  "status": "short",
+  "due": "2026-10-20",
+  "required_kg": 112.32,
+  "shortfall_kg": 83.02,
+  "orders_ahead": [
+    "SO-0412"
+  ],
+  "lines": [
+    {
+      "product_code": "FIN-POP-SKY",
+      "product": "Sky Blue Poplin",
+      "yarn_product_code": "YRN-C40",
+      "yarn_product": "Cotton 40s Combed Yarn",
+      "ordered_m": 1500.0,
+      "covered_m": 900.0,
+      "unwoven_m": 600.0,
+      "required_kg": 112.32,
+      "available_kg": 29.3,
+      "shortfall_kg": 83.02
+    }
+  ]
+}

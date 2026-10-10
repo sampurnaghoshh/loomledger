@@ -125,11 +125,20 @@ def export(conn) -> None:
     # ---- inventory
     write("inventory_masters", {
         "suppliers": q(conn, "SELECT code, name FROM party WHERE kind = 'supplier' ORDER BY code"),
-        "yarn_products": q(conn, "SELECT code, name FROM product WHERE kind = 'yarn' ORDER BY code")})
-    write("inventory_stock_now", {"as_of": None, "rows": q(conn, "SELECT * FROM stock_on_hand() ORDER BY location_code, lot_code")})
+        "yarn_products": q(conn, "SELECT code, name FROM product WHERE kind = 'yarn' ORDER BY code"),
+        "open_orders": q(conn, """SELECT so.code, b.name AS buyer FROM sales_order so JOIN party b ON b.id = so.buyer_id
+                                   WHERE so.status NOT IN ('dispatched', 'cancelled') ORDER BY so.code""")})
+    stock_sql = """SELECT s.*, so.code AS order_code
+                     FROM stock_on_hand(%s) s JOIN lot l ON l.code = s.lot_code
+                     LEFT JOIN goods_receipt gr ON gr.id = l.goods_receipt_id LEFT JOIN sales_order so ON so.id = gr.order_id
+                    ORDER BY s.location_code, s.lot_code"""
+    write("inventory_stock_now", {"as_of": None, "rows": q(conn, stock_sql, ("infinity",))})
     received = conn.execute("SELECT received_at FROM goods_receipt WHERE code = 'GRN-Y-112'").fetchone()["received_at"]
-    write("inventory_stock_as_of", {"as_of": received,
-                                    "rows": q(conn, "SELECT * FROM stock_on_hand(%s) ORDER BY location_code, lot_code", (received,))})
+    write("inventory_stock_as_of", {"as_of": received, "rows": q(conn, stock_sql, (received,))})
+    low_stock = lambda: q(conn, """SELECT product_code, product_name, on_hand_kg, quarantined_kg, committed_kg,
+                                          open_orders, available_kg, reorder_level_kg, below_reorder_kg
+                                     FROM v_yarn_low_stock ORDER BY product_code""")  # noqa: E731
+    write("inventory_low_stock", low_stock())
 
     # ---- workforce (G1)
     write("workforce_attendance", {
@@ -226,19 +235,51 @@ def export(conn) -> None:
         write(f"track_{order}_after", conn.execute("SELECT buyer_order_status(%s) AS j",
                                                    (buyer_token(order),)).fetchone()["j"])
     write("finance_pnl_after_recall", pnl())
+    write("inventory_low_stock_after_recall", low_stock())
     write("error_not_found", {"error": {"code": "NOT_FOUND", "message": "This tracking link is invalid or has expired."}})
 
     # ---- orders
     write("orders", q(conn, """
+        WITH yarn AS (
+            SELECT yp.order_id, CASE WHEN SUM(yp.shortfall_kg) > 0 THEN 'short' ELSE 'ok' END AS status,
+                   SUM(yp.required_kg) AS required_kg, SUM(yp.shortfall_kg) AS shortfall_kg,
+                   string_agg(DISTINCT y.name, ', ') FILTER (WHERE yp.shortfall_kg > 0) AS short_of
+              FROM v_yarn_plan yp JOIN product y ON y.id = yp.yarn_product_id
+             GROUP BY yp.order_id)
         SELECT so.code, b.name AS buyer, p.name AS product, ol.qty_m AS ordered_m, ol.unit_price,
                so.promised_date, so.revised_promise_date,
                working_days_between(so.promised_date, so.revised_promise_date) AS delay_days,
                so.status::text AS status,
-               buyer_order_status(bl.token)->'progress' AS progress, bl.token AS tracking_token
+               buyer_order_status(bl.token)->'progress' AS progress, bl.token AS tracking_token,
+               y.status AS yarn_status, y.required_kg AS yarn_required_kg, y.shortfall_kg AS yarn_shortfall_kg,
+               y.short_of AS yarn_short_of
           FROM sales_order so JOIN party b ON b.id = so.buyer_id
           JOIN order_line ol ON ol.order_id = so.id JOIN product p ON p.id = ol.product_id
           JOIN buyer_link bl ON bl.order_id = so.id
+          LEFT JOIN yarn y ON y.order_id = so.id
          ORDER BY so.promised_date"""))
+
+    # ---- yarn check per order (G3), after the recall like orders.json
+    for o in S.ORDERS:
+        order = conn.execute("""SELECT id, COALESCE(revised_promise_date, promised_date) AS due FROM sales_order
+                                 WHERE code = %s""", (o.code,)).fetchone()
+        lines = q(conn, """SELECT p.code AS product_code, p.name AS product, y.code AS yarn_product_code,
+                                  y.name AS yarn_product, yp.ordered_m, yp.covered_m, yp.unwoven_m, yp.required_kg,
+                                  yp.available_kg, yp.shortfall_kg
+                             FROM v_yarn_plan yp JOIN product p ON p.id = yp.product_id
+                             JOIN product y ON y.id = yp.yarn_product_id
+                            WHERE yp.order_id = %s ORDER BY yp.order_line_id""", (order["id"],))
+        ahead = [r["order_code"] for r in q(conn, """
+            SELECT DISTINCT o.order_code, o.due FROM v_yarn_plan o
+              JOIN v_yarn_plan me ON me.order_id = %s AND me.yarn_product_id = o.yarn_product_id
+             WHERE o.order_id <> me.order_id AND (o.due, o.order_code) < (me.due, me.order_code)
+             ORDER BY o.due, o.order_code""", (order["id"],))]
+        shortfall = sum((r["shortfall_kg"] for r in lines), Decimal(0))
+        write(f"orders_yarn_check_{o.code}", {
+            "order_code": o.code,
+            "status": "closed" if not lines else ("short" if shortfall > 0 else "ok"),
+            "due": order["due"], "required_kg": sum((r["required_kg"] for r in lines), Decimal(0)), "shortfall_kg": shortfall,
+            "orders_ahead": ahead if lines else [], "lines": lines})
 
     # ---- finance (month-end)
     write("finance_mass_balance", {"from": None, "to": None,

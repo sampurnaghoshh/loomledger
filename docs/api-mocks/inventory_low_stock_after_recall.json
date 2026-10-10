@@ -1,0 +1,13 @@
+[
+  {
+    "product_code": "YRN-C40",
+    "product_name": "Cotton 40s Combed Yarn",
+    "on_hand_kg": 341.3,
+    "quarantined_kg": 142.8,
+    "committed_kg": 736.32,
+    "open_orders": 3,
+    "available_kg": -395.02,
+    "reorder_level_kg": 150.0,
+    "below_reorder_kg": 545.02
+  }
+]
