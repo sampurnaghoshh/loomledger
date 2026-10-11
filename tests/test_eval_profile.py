@@ -36,6 +36,8 @@ def fresh(profile: str, *, autocommit: bool = True) -> psycopg.Connection:
     next fresh() can drop the schema while this connection is still open."""
     ensure_database(EVAL_URL)
     conn = psycopg.connect(EVAL_URL, row_factory=dict_row)
+    conn.execute("SET TIME ZONE 'Asia/Kolkata'")   # mill time, whether or not this database was set up before (001)
+    conn.commit()
     reset_schema(conn)
     migrate(conn)
     seed(conn, profile=profile)
@@ -55,9 +57,12 @@ def ev():
 
 
 def fingerprint(conn) -> str:
+    """Timestamps as epoch seconds: the same instant renders differently in a UTC and an IST session (the database's
+    Asia/Kolkata default only reaches sessions opened after migration 001 ran — on a brand-new CI database the first
+    connection is still UTC)."""
     rows = conn.execute("""
-        SELECT string_agg(concat_ws('|', l.code, l.qty, l.status, l.created_at), ',' ORDER BY l.code) AS lots,
-               (SELECT string_agg(concat_ws('|', l2.code, m.kind, m.qty, m.created_at, m.idempotency_key), ','
+        SELECT string_agg(concat_ws('|', l.code, l.qty, l.status, extract(epoch FROM l.created_at)), ',' ORDER BY l.code) AS lots,
+               (SELECT string_agg(concat_ws('|', l2.code, m.kind, m.qty, extract(epoch FROM m.created_at), m.idempotency_key), ','
                                   ORDER BY m.idempotency_key)
                   FROM stock_move m JOIN lot l2 ON l2.id = m.lot_id) AS moves,
                (SELECT string_agg(concat_ws('|', code, status, order_date, promised_date), ',' ORDER BY code)
