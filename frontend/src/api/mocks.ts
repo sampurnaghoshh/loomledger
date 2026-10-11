@@ -5,6 +5,7 @@
 
 import type { Api } from "./client";
 import { ApiError } from "./errors";
+import { getSession } from "@/lib/auth";
 import type {
   AttendanceRegister,
   BuyerOrderStatus,
@@ -37,6 +38,15 @@ import type {
   RollPassport,
   BreakdownAlert,
   OwnerAlert,
+  InvoiceRow,
+  ListQuery,
+  Page,
+  RollListItem,
+  StockRow,
+  WorkerRow,
+  PermissionsInfo,
+  UserRow,
+  ValidationLogRow,
 } from "./types";
 
 const TOKENS = {
@@ -45,6 +55,13 @@ const TOKENS = {
 } as const;
 
 let recallApplied = false;
+const mockValidationLog: ValidationLogRow[] = [];
+// Users & roles in mock mode: the five demo accounts, changed in memory with the database's two rules (017).
+const mockUsers: UserRow[] = [
+  ["owner@everest.test", "Rajesh Mehta", "owner"], ["store@everest.test", "Anil Kumar", "store"],
+  ["floor@everest.test", "Suresh Patil", "floor_supervisor"], ["qc@everest.test", "Meena Iyer", "qc"],
+  ["accounts@everest.test", "Farah Shaikh", "accounts"],
+].map(([email, full_name, role], i) => ({ id: i + 1, email, full_name, role: role as Role, active: true, created_at: "2026-10-10T08:00:00+05:30" }));
 // Owner alerts in mock mode: whatever /alerts page is open in THIS tab hears recalls.apply() and mock breakdowns.
 const alertListeners = new Set<(a: OwnerAlert) => void>();
 async function emitAlert(loader: () => Promise<{ default: unknown }>, at: "applied_at" | "started_at", patch: object = {}) {
@@ -75,6 +92,33 @@ const dispatchesByKey = new Map<string, DispatchResponse>();
 const shippedRolls = new Set<string>();
 const dispatchCount: Record<string, number> = {};
 
+// Paged lists in mock mode: the same query language as app/listing.py, applied in the browser to the mock files.
+const PAGING = new Set(["page", "page_size", "q", "sort"]);
+const POSITIVE: Record<string, string> = { late: "delay_days", unpaid: "outstanding" };
+function mockPage<T extends object>(rows: T[], p: ListQuery, search: (keyof T)[], defaultSort: string): Page<T> {
+  const val = (r: T, k: string) => (r as Record<string, unknown>)[k];
+  let out = rows.filter((r) =>
+    Object.entries(p).every(([k, v]) => {
+      if (v === undefined || v === "" || PAGING.has(k)) return true;
+      if (POSITIVE[k]) return (Number(val(r, POSITIVE[k]) ?? 0) > 0) === (v === "true");
+      return String(val(r, k)) === v;
+    }),
+  );
+  const q = p.q?.trim().toLowerCase();
+  if (q) out = out.filter((r) => search.some((k) => String(val(r, k as string) ?? "").toLowerCase().includes(q)));
+  const sort = p.sort || defaultSort;
+  const key = sort.replace(/^-/, "");
+  const dir = sort.startsWith("-") ? -1 : 1;
+  out = [...out].sort((a, b) => {
+    const x = val(a, key), y = val(b, key);
+    if (x == null || y == null) return x == null ? (y == null ? 0 : 1) : -1;
+    return (x < y ? -1 : x > y ? 1 : 0) * dir;
+  });
+  const page = Math.max(1, Number(p.page) || 1);
+  const size = Math.min(100, Math.max(1, Number(p.page_size) || 25));
+  return { items: out.slice((page - 1) * size, page * size), total: out.length, page, page_size: size };
+}
+
 const delay = (ms = 250) => new Promise((r) => setTimeout(r, ms));
 async function load<T>(loader: () => Promise<{ default: unknown }>): Promise<T> {
   await delay();
@@ -97,7 +141,33 @@ export const mock: Api = {
       if (password !== "demo1234" || !roles[role] || !email.endsWith("@everest.test")) {
         throw new ApiError("INVALID_CREDENTIALS", "Email or password is incorrect.", 401);
       }
-      return { token: "mock-token", user: { ...base.user, email, role: roles[role] } };
+      return { token: `mock-token-${role}`, user: { ...base.user, email, role: roles[role] } };
+    },
+    permissions: async () => {
+      const m = await load<PermissionsInfo>(() => import("@mocks/auth_permissions.json"));
+      const role = getSession()?.user.role ?? "owner";
+      return { ...m, me: { role, permissions: m.permissions.filter((p) => p.roles.includes(role)).map((p) => p.code) } };
+    },
+  },
+  validationLog: {
+    list: async (p) => mockPage(structuredClone(mockValidationLog), { ...p, code: undefined, user: undefined, since: undefined, before: undefined,
+      error_code: p.code, user_email: p.user }, ["message", "path", "user_email", "error_code"], "-at"),
+  },
+  users: {
+    list: async (p) => mockPage(structuredClone(mockUsers), p, ["email", "full_name"], "email"),
+    update: async (id, change) => {
+      await delay();
+      const u = mockUsers.find((x) => x.id === id);
+      if (!u) throw new ApiError("NOT_FOUND", "Not found.", 404);
+      const me = getSession()?.user.email;
+      if (change.active === false && u.email === me)
+        throw new ApiError("SELF_DEACTIVATION", "You can't deactivate your own account", 409, "Ask another owner to do it.", { active: "not for your own account" }, "LL012");
+      const next = { ...u, ...change };
+      const after = mockUsers.map((x) => (x.id === id ? next : x));
+      if (u.role === "owner" && u.active && !after.some((x) => x.role === "owner" && x.active))
+        throw new ApiError("LAST_OWNER", `${u.email} is the last active owner`, 409, "Make another user an active owner first: someone must always be able to manage users.", undefined, "LL011");
+      Object.assign(u, change);
+      return structuredClone(u);
     },
   },
   floor: {
@@ -183,6 +253,15 @@ export const mock: Api = {
     latestRejections: () => load<LatestRejections>(() => import("@mocks/quality_latest_rejections.json")),
     inspect: async (req) => {
       await delay();
+      if (req.lot_code.endsWith("-G")) {
+        const err = new ApiError("PHASE_SKIPPED", `QC inspects dyed rolls: ${req.lot_code} is greige, so dyeing was skipped`, 409,
+          "Dye the greige roll first; QC inspects the finished roll that comes out of the vat.", { missing_phase: "dyeing" }, "LL013");
+        const u = getSession()?.user;
+        mockValidationLog.unshift({ id: mockValidationLog.length + 1, at: new Date().toISOString(), user_email: u?.email ?? null,
+          role: u?.role ?? null, method: "POST", path: "/api/quality/inspections", status: 409, error_code: err.code,
+          sqlstate: "LL013", message: err.message, input_summary: { lot_code: req.lot_code, result: req.result } });
+        throw err;
+      }
       if (req.result !== "pass" && !req.defect_type) {
         throw new ApiError("VALIDATION_FAILED", "Choose a defect type for a failed roll.", 422, undefined, {
           defect_type: "Required when the roll does not pass",
@@ -196,6 +275,32 @@ export const mock: Api = {
       alertListeners.add(onAlert);
       setTimeout(() => onStatus?.("open"), 300);
       return () => void alertListeners.delete(onAlert);
+    },
+  },
+  lists: {
+    rolls: async (p) => {
+      const labels = await load<RollLabels>(() =>
+        recallApplied ? import("@mocks/roll_labels_after.json") : import("@mocks/roll_labels_before.json"),
+      );
+      const rows: RollListItem[] = labels.rolls.map((r) => ({
+        code: r.code, kind: r.code.endsWith("-G") ? "greige" : "finished", product: r.product, qty_m: r.qty_m,
+        status: "active", custody: r.custody, order_code: null, buyer: null, qc_result: null, defect_type: null,
+        inspected_at: null, created_at: "",
+      }));
+      return mockPage(rows, p, ["code", "product"], "code");
+    },
+    orders: async (p) => mockPage(await load<OrderSummary[]>(() => import("@mocks/orders.json")), p, ["code", "buyer", "product"], "promised_date"),
+    stock: async (p) => mockPage((await load<{ rows: StockRow[] }>(() => import("@mocks/inventory_stock_now.json"))).rows, p,
+      ["lot_code", "product_code", "location_code"], "location_code"),
+    qcQueue: async (p) => mockPage(await load<QualityQueueItem[]>(() => import("@mocks/quality_queue.json")), p, ["lot_code", "order_code"], "lot_code"),
+    rejections: async (p) => mockPage(await load<Rejection[]>(() => import("@mocks/quality_rejections.json")), p,
+      ["lot_code", "order_code", "inspector"], "-inspected_at"),
+    invoices: async (p) => mockPage<InvoiceRow>([], p, ["code"], "-issued_at"), // no invoice list in the mock files
+    workers: async (p) => {
+      const reg = await load<{ workers: { worker_code: string; full_name: string; skill: string | null }[] }>(
+        () => import("@mocks/workforce_attendance.json"));
+      const rows: WorkerRow[] = reg.workers.map((w) => ({ code: w.worker_code, full_name: w.full_name, skill: w.skill, hourly_wage: 0, active: true }));
+      return mockPage(rows, p, ["code", "full_name"], "code");
     },
   },
   rolls: {

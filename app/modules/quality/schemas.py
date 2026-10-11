@@ -34,7 +34,7 @@ class LatestRejections(BaseModel):
 
 
 class InspectionRequest(BaseModel):
-    lot_code: str = Field(pattern=r"^R-\d{3,}$")
+    lot_code: str = Field(pattern=r"^R-\d{3,}(-G)?$")    # greige too: the DB says PHASE_SKIPPED (018)
     result: QcResult
     defect_type: str | None = Field(default=None, max_length=60, validate_default=True)
     defect_meters: float | None = Field(default=None, ge=0, le=10_000)

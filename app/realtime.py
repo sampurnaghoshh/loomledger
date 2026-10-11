@@ -29,14 +29,14 @@ from psycopg import sql
 from psycopg_pool import ConnectionPool
 from starlette.concurrency import run_in_threadpool
 
-from app.auth import find_user, read_token
+from app.auth import find_user, has_permission, read_token
 from app.errors import ApiError
 
 log = logging.getLogger("loomledger.realtime")
 
 FLOOR_CHANNEL = "loomledger_floor"
 ALERTS_CHANNEL = "loomledger_alerts"
-ALERT_ROLES = frozenset({"owner", "qc"})
+ALERT_PERMISSION = "alerts.listen"      # 017 role_permission (owner, qc)
 WS_UNAUTHENTICATED = 4401      # app-defined close code (4000-4999): bad/missing/expired token
 WS_FORBIDDEN = 4403            # signed in, but this role may not listen here
 WS_TRY_AGAIN_LATER = 1013      # client too slow to keep up
@@ -144,7 +144,8 @@ class FloorListener:
 router = APIRouter(tags=["floor"])
 
 
-def _authenticate(pool: ConnectionPool, token: str | None) -> dict | None:
+def _authenticate(pool: ConnectionPool, token: str | None, permission: str | None = None) -> dict | None:
+    """The user behind the token (None = 4401); with `permission`, user["allowed"] says whether they hold it."""
     if not token:
         return None
     try:
@@ -152,7 +153,10 @@ def _authenticate(pool: ConnectionPool, token: str | None) -> dict | None:
     except ApiError:
         return None
     with pool.connection() as conn:
-        return find_user(conn, user_id)
+        user = find_user(conn, user_id)
+        if user is not None:
+            user["allowed"] = permission is None or has_permission(conn, user["role"], permission)
+        return user
 
 
 async def _pump(websocket: WebSocket, sub: Subscriber) -> None:
@@ -171,13 +175,13 @@ async def _wait_for_disconnect(websocket: WebSocket) -> None:
 
 
 async def _stream(websocket: WebSocket, token: str | None, broadcaster: Broadcaster,
-                  roles: frozenset[str] | None = None) -> None:
+                  permission: str | None = None) -> None:
     await websocket.accept()       # accept first so the browser actually receives the 4401 / 4403 close code
-    user = await run_in_threadpool(_authenticate, websocket.app.state.pool, token)
+    user = await run_in_threadpool(_authenticate, websocket.app.state.pool, token, permission)
     if user is None:
         await websocket.close(code=WS_UNAUTHENTICATED, reason="unauthenticated")
         return
-    if roles is not None and user["role"] not in roles:
+    if not user["allowed"]:
         await websocket.close(code=WS_FORBIDDEN, reason="forbidden")
         return
 
@@ -204,5 +208,5 @@ async def floor_events(websocket: WebSocket, token: str | None = None) -> None:
 
 @router.websocket("/ws/alerts")
 async def owner_alerts(websocket: WebSocket, token: str | None = None) -> None:
-    """Live owner alerts (016): committed recalls and breakdowns. Owner / qc only; nothing is replayed."""
-    await _stream(websocket, token, websocket.app.state.alerts_broadcaster, ALERT_ROLES)
+    """Live owner alerts (016): committed recalls and breakdowns. Needs alerts.listen (017); nothing is replayed."""
+    await _stream(websocket, token, websocket.app.state.alerts_broadcaster, ALERT_PERMISSION)

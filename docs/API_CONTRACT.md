@@ -38,6 +38,9 @@ regenerate, update `frontend/src/api/types.ts`, and tell the team in the group c
 | SQLSTATE `LL008` (attendance for an inactive worker) | 422 | `WORKER_INACTIVE` + `fields.marks` |
 | SQLSTATE `LL009` (payment above what is still outstanding on the invoice / yarn bill) | 422 | `OVERPAYMENT` + `fields.amount: "at most <outstanding>"` |
 | SQLSTATE `LL010` (gate entry for an order that is dispatched / cancelled) | 422 | `ORDER_CLOSED` + `fields.order_code` |
+| SQLSTATE `LL011` (would leave no active owner: deactivate / demote / delete the last one) | 409 | `LAST_OWNER` |
+| SQLSTATE `LL012` (deactivating your own account) | 409 | `SELF_DEACTIVATION` + `fields.active` |
+| SQLSTATE `LL013` (a production phase skipped: dyeing an unwoven / still-on-the-loom roll, QC on greige or a roll still in the vat) | 409 | `PHASE_SKIPPED` + `fields.missing_phase` (`yarn` / `weaving` / `dyeing`) |
 | SQLSTATE `LL006` (dispatch mixes dye batches, no `shade_override_reason`) | 409 | `SHADE_MISMATCH` + `fields: {batches: "DB-08, DB-14"}` |
 | bad login | 401 | `INVALID_CREDENTIALS` |
 | missing/expired token | 401 | `UNAUTHENTICATED` |
@@ -152,3 +155,29 @@ Password check happens in SQL: `SELECT ... FROM app_user WHERE email = %s AND pa
 For every GET above: seed, call the endpoint, compare with the mock file. Ignore only wall-clock fields
 (`applied_at`, `at` of events created during the test, `state_since` of rows the test changed). A red contract test means
 the frontend will break when mocks are switched off.
+
+## Paged lists (`app/listing.py`) — new endpoints, the originals above are unchanged
+
+Every list takes `page` (≥1, default 1), `page_size` (default 25; above 100 is **clamped** to 100 and the response
+says so), `q` (case-insensitive "contains" over the listed columns; LIKE wildcards are literal), `sort` (a
+whitelisted key, `-key` for descending; anything else → `422 VALIDATION_FAILED`, `fields.sort` lists the allowed
+keys) plus typed filters (a bad value → 422). Response: `{items, total, page, page_size}`; past the last page
+`items` is `[]` and `total` is still right. No column name ever comes from the request (whitelist → identifier).
+
+| Endpoint | Items | sort keys | filters | Roles |
+|---|---|---|---|---|
+| `GET /api/rolls` | physical rolls: code, kind, product, qty_m, status, custody, order_code, buyer, latest qc_result + defect_type + inspected_at, created_at | code, custody, status, qty_m, order_code, inspected_at, created_at | custody, status, kind, qc_result, order_code | any |
+| `GET /api/orders/list` | = `GET /api/orders` items | code, buyer, status, promised_date, revised_promise_date, delay_days, ordered_m | status, buyer, yarn_status, late (bool) | any |
+| `GET /api/inventory/stock/list` | = stock rows (now) | location_code, lot_code, product_code, qty, lot_kind | location_code, lot_kind, product_code | any |
+| `GET /api/quality/queue/list` | = queue items | lot_code, dyed_at, order_code, dye_batch | order_code, dyed_on | any |
+| `GET /api/quality/rejections/list` | = rejections (newest first) | inspected_at, lot_code, defect_type, inspector | defect_type, order_code, inspector | any |
+| `GET /api/finance/invoices` | code, order_code, buyer, dispatch_code, dispatched_at, rolls, amount, paid, outstanding, issued_at | issued_at, code, amount, outstanding, buyer | buyer, order_code, unpaid (bool) | accounts |
+| `GET /api/workforce/workers` | code, full_name, skill, hourly_wage, active | code, full_name, hourly_wage, skill | skill, active (bool) | floor_supervisor |
+| `GET /api/validation-log` | every write a business rule refused (018), newest first: at, user_email, role, method, path, status, error_code, sqlstate, message, input_summary (redacted, truncated) | at, error_code, user_email, status, path | code, sqlstate, user, since, before (timestamps) | owner, qc (`validation_log.view`) |
+
+**Validation log rules:** a write (POST/PUT/PATCH/DELETE) that ends 409/422 because of a business rule (an `LL0xx`
+SQLSTATE, or any 409/422 code except `VALIDATION_FAILED`) is recorded once, on a separate pooled autocommit connection
+after the refused transaction rolled back. Successful writes, malformed requests (`VALIDATION_FAILED`), 401/403/404 are
+not logged. Secrets (`password`, `token`, `secret`, `key`…) are redacted; the summary keeps ≤12 keys, ≤5 list items,
+strings ≤60 chars. A failure to record never changes the response.
+

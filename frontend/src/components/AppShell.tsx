@@ -12,23 +12,29 @@ import {
   QrCode,
   ReceiptIndianRupee,
   ShieldAlert,
+  Table2,
+  UserCog,
+  KeyRound,
+  ListX,
   Truck,
   X,
   Users,
 } from "lucide-react";
 import { USE_MOCKS } from "@/api/client";
 import { getSession, setSession } from "@/lib/auth";
+import { usePermissions } from "@/hooks/usePermissions";
 
-// Navigation. Add a page here AND in App.tsx routes.
-const NAV = [
+// Navigation. Add a page here AND in App.tsx routes. `perm`: shown only if the role holds one of these (017).
+type NavItem = { to: string; label: string; icon: typeof Activity; perm?: string[] };
+const NAV: { section: string; items: NavItem[] }[] = [
   {
     section: "Operations",
     items: [
       { to: "/floor", label: "Floor Board", icon: Activity },
       { to: "/inventory", label: "Inventory", icon: PackageSearch },
-      { to: "/gate", label: "Gate Entry", icon: Truck },
+      { to: "/gate", label: "Gate Entry", icon: Truck, perm: ["inventory.receive"] },
       { to: "/quality", label: "Quality", icon: ClipboardCheck },
-      { to: "/workforce", label: "Workforce", icon: Users },
+      { to: "/workforce", label: "Workforce", icon: Users, perm: ["workforce.register", "workforce.wages"] },
     ],
   },
   {
@@ -37,14 +43,23 @@ const NAV = [
       { to: "/trace", label: "Find Cause", icon: GitBranch },
       { to: "/recall/Y-112", label: "Recall", icon: ShieldAlert },
       { to: "/labels", label: "QR labels", icon: QrCode },
-      { to: "/alerts", label: "Owner alerts", icon: BellRing },
+      { to: "/alerts", label: "Owner alerts", icon: BellRing, perm: ["alerts.listen"] },
     ],
   },
   {
     section: "Business",
     items: [
       { to: "/orders", label: "Orders", icon: Factory },
-      { to: "/month-end", label: "Month-end", icon: ReceiptIndianRupee },
+      { to: "/month-end", label: "Month-end", icon: ReceiptIndianRupee, perm: ["finance.access"] },
+      { to: "/records", label: "Records", icon: Table2 },
+    ],
+  },
+  {
+    section: "Admin",
+    items: [
+      { to: "/admin/users", label: "Users & roles", icon: UserCog, perm: ["users.manage"] },
+      { to: "/admin/roles", label: "Roles & permissions", icon: KeyRound },
+      { to: "/admin/validation-log", label: "Validation log", icon: ListX, perm: ["validation_log.view"] },
     ],
   },
 ];
@@ -53,10 +68,13 @@ export function AppShell() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const user = getSession()?.user;
+  const { can } = usePermissions();
 
   const nav = (
     <nav className="flex flex-col gap-6 p-4">
-      {NAV.map((group) => (
+      {NAV.map((g) => ({ ...g, items: g.items.filter((i) => !i.perm || i.perm.some(can)) }))
+        .filter((g) => g.items.length > 0)
+        .map((group) => (
         <div key={group.section}>
           <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wide text-white/50">{group.section}</p>
           <ul className="flex flex-col gap-1">

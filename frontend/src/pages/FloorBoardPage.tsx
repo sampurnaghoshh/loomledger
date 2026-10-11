@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { api } from "@/api/client";
 import type { MachineNow, MachineState, FloorEvent, RunProgress } from "@/api/types";
 import { useApi, useAction } from "@/hooks/useApi";
+import { usePermissions } from "@/hooks/usePermissions";
 import { machineStateTone, runProgressTone } from "@/lib/tones";
 import { formatDate, formatDateTime, formatPct } from "@/lib/format";
 import { LowStockBadge } from "@/components/YarnLowStock";
@@ -113,6 +114,7 @@ function titleCase(value: string) {
 }
 
 export default function FloorBoardPage() {
+  const { can } = usePermissions();
   const machinesState = useApi(() => api.floor.machines(), []);
   const outputState = useApi(() => api.floor.output(), []);
   const availabilityState = useApi(() => api.floor.availability(), []);
@@ -329,7 +331,7 @@ export default function FloorBoardPage() {
                         }
                         subtitle={machine.code}
                         actions={
-                          <Button
+                          can("floor.change_state") && <Button
                             size="sm"
                             variant="secondary"
                             onClick={() => {

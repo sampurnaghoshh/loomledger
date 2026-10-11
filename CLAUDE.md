@@ -20,6 +20,13 @@ Everything else — inventory, traceability, defect root cause, recall, true cos
 
 Closing line: *"The factory knew it had a defect. LoomLedger knows where it came from, what it touched, what it cost, and what to do next."*
 
+**Built around the story** (each one derived in / guarded by the DB): live floor board with estimated run progress (015) ·
+owner alerts on a phone over our own WebSocket, sent at COMMIT (016) · QR roll passport + printable labels · yarn
+availability / low stock (014) · workforce register + wages (012) · monthly P&L with contingent recall exposure (013) ·
+paged / searchable / sortable lists for every record (`app/listing.py`) · role-based access from `role_permission` (017) ·
+production-order phase guard + validation log of every refused write (018) · evaluator dataset (`--profile eval`).
+Demo flow and words: `docs/DEMO_RUNBOOK.md`, `docs/DEMO_SCRIPT.md`; judges: `docs/EVALUATOR_GUIDE.md`.
+
 ## 2. Golden rules (non-negotiable)
 
 1. **`seed/scenario.py` is the single source of truth for every demo number.** Never hardcode 37.5, 600, 3, ₹1,23,640 etc. in code or UI — read them from the API. To change a number, change `scenario.py`, then fix the seed/tests.
@@ -42,17 +49,21 @@ docs/api-mocks/*.json           REAL responses exported from the seeded DB (the 
 docs/TEAM_PLAN.md               who does what, hour by hour, with starter prompts
 docs/FRONTEND_CONTEXT.md        compact rules pack for chat LLMs (ChatGPT/Sonnet) building screens
 docs/demo.sql                   the whole demo as raw SQL (and the psql "terminal moment")
+docs/DEMO_RUNBOOK.md            presenting: setup, hotspot + two phones, click path, recovery, evaluator playground
+docs/DEMO_SCRIPT.md             one line per click, who says what
+docs/EVALUATOR_GUIDE.md         one page for judges: playground, logins + what each role can do, things to try
 db/migrations/00N_*.sql         schema; applied in order by db/migrate.py
 db/migrate.py                   python -m db.migrate [--reset]
 seed/scenario.py                canonical numbers + independent expected values
-seed/seed.py                    deterministic seed (python -m seed.seed [--anchor YYYY-MM-DD])
+seed/seed.py                    deterministic seed (python -m seed.seed [--anchor YYYY-MM-DD] [--profile demo|eval])
+seed/eval_profile.py            --profile eval: the story + ~300 rolls of history before it (loomledger_eval)
 scripts/export_mocks.py         regenerate docs/api-mocks from the DB
 scripts/reset_demo.sh / .ps1    wipe + reseed (run before every rehearsal); --smoke / -Smoke = reset → demo smoke → reset
-scripts/demo_smoke.py           walks the whole demo story over HTTP + ws against a running backend (✓/✗ per step)
+scripts/demo_smoke.py           walks the whole demo story over HTTP + ws against a running backend (39 checks, ✓/✗ per step)
 scripts/benchmark.py            EXPLAIN (ANALYZE, BUFFERS) of the demo queries, read-only → docs/BENCHMARK.md
-tests/                          DB tests: golden chain + invariants (pytest)
-app/                            FastAPI backend (to be built — §6)
-frontend/                       React + Vite + TS + Tailwind v4 (skeleton built — §7)
+tests/                          DB tests: golden chain + invariants + eval profile; tests/api: every endpoint (pytest)
+app/                            FastAPI backend (§6); app/listing.py = the shared paged-list helper
+frontend/                       React + Vite + TS + Tailwind v4 (§7)
 ```
 
 ## 4. Commands
@@ -66,7 +77,7 @@ docker compose up -d                                   # Postgres 16 on :5432 (l
 export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledger
 export TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/loomledger_test
 ./scripts/reset_demo.sh                                # migrate from scratch + seed
-./scripts/reset_demo.sh --smoke [URL]                  # REHEARSAL: reset → walk Acts 1–4 + close over HTTP/ws → reset
+./scripts/reset_demo.sh --smoke [URL]                  # REHEARSAL: reset → walk Acts 1–4 + close over HTTP/ws (39 checks) → reset
                                                        #   (backend must be running; exit ≠ 0 = the demo is broken)
 python -m scripts.demo_smoke [URL]                     # just the walk-through; refuses (exit 2) unless the DB is fresh
 ./scripts/reset_demo.sh --rehearsal                    # PRIVATE rehearsal: loomledger_rehearsal (auto-created) + own backend on :8001
@@ -126,6 +137,8 @@ PostgreSQL 16 (14+ works). Extensions: `btree_gist`, `pgcrypto`. Session timezon
 | 014_yarn_availability | `product.yarn_product_id` (fabric → its yarn, composite FK) + `reorder_level_kg`; `goods_receipt.order_id` (receipt for an open order only, `LL010`); **`order_yarn_requirement(order)`**; `v_yarn_on_hand` (usable vs quarantined), **`v_yarn_plan`** (open orders in due order against usable yarn), `v_yarn_availability`, **`v_yarn_low_stock`** |
 | 015_run_progress | **`run_progress(at)`**: each open run's estimated progress (running time ÷ planned m at rated speed; breakdowns pause it), ETA, `woven_to_plan_at` (due off the loom since) |
 | 016_owner_alerts | channel `loomledger_alerts` (→ `WS /ws/alerts`, owner/qc): **`recall_alert_payload(recall)`** sent by a deferred trigger at COMMIT of a recall (never on rollback, once per recall), `breakdown_alert_payload(...)` on state → breakdown |
+| 017_rbac | `permission` + **`role_permission`** (the matrix the API checks: `require_permission("area.action")`), `app_user.active` (deactivated = no login, tokens refused), last active owner guard (`LL011`), **`set_user_access(actor, user, role, active)`**: no self-deactivation (`LL012`) + audit with the acting user |
+| 018_phase_guard | production order guard: lineage (greige from yarn; dyeing only a woven greige roll that is off the loom) + QC only on a dyed roll out of the vat → `LL013 PHASE_SKIPPED` (DETAIL = missing phase); **`validation_log`**: every refused write, recorded by the API on a separate connection (`GET /api/validation-log`) |
 
 Conventions for new migrations:
 - File `db/migrations/00N_short_name.sql`, one concern per file, comment header explaining *why*.
@@ -162,6 +175,9 @@ Rules:
 - Validate input with Pydantic (`Field(gt=0)`, regex for codes like `^Y-\d{3,}$`, enums); return `422 VALIDATION_FAILED` with `fields`.
 - Idempotent writes: catch unique violation on `idempotency_key` → return the original result (200).
 - Roles: store → receipts; floor_supervisor → floor/production; qc → inspections, recalls; accounts → finance; owner → everything.
+  Since 017 these live in `role_permission`; routes use `require_permission(...)`, the UI asks `GET /api/auth/permissions`.
+- Never cast a query PARAMETER to an enum (`%s::user_role`): prepared statements keep the type OID and break after a
+  reset under a running backend. Compare as text (`role::text = %s`) or cast via text (`%s::text::user_role`).
 - Log one line per request with request id, method, path, status, ms. Never return SQL text or stack traces to the client.
 - Keep handlers thin; a service function should read like the business sentence it implements.
 

@@ -5,7 +5,7 @@ from typing import Annotated, Union
 
 from fastapi import APIRouter, Depends, Query, Response
 
-from app.auth import Conn, CurrentUser, require_role
+from app.auth import Conn, CurrentUser, require_permission
 from app.modules.recalls import service
 from app.modules.recalls.schemas import ApplyRecallRequest, RecallApplied, RecallPreview
 
@@ -19,7 +19,7 @@ def preview(conn: Conn, user: CurrentUser, lot_code: Annotated[str, Query(min_le
 
 @router.post("", response_model=RecallApplied, status_code=201)
 def apply(body: ApplyRecallRequest, conn: Conn, response: Response,
-          user: dict = Depends(require_role("qc"))):
+          user: dict = Depends(require_permission("recalls.apply"))):
     result, created = service.apply(conn, body.lot_code, body.reason, user)
     if not created:
         response.status_code = 200      # already recalled: the same recall, unchanged

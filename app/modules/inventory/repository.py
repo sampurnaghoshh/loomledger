@@ -5,6 +5,8 @@ from datetime import datetime
 
 import psycopg
 
+from app.listing import Filter, Listing
+
 SUPPLIER_LOCATION = "SUPPLIERS"
 YARN_STORE = "YARN-STORE"
 
@@ -102,3 +104,18 @@ def insert_receipt_move(conn: psycopg.Connection, lot_id: int, kg: float, goods_
              FROM location f, location t
             WHERE f.code = %s AND t.code = %s""",
         (lot_id, kg, goods_receipt_id, idempotency_key, user_id, SUPPLIER_LOCATION, YARN_STORE))
+
+
+STOCK_LIST = Listing(
+    source="""SELECT s.location_code, s.lot_code, s.lot_kind::text AS lot_kind, s.product_code, s.qty, s.uom::text AS uom,
+                     so.code AS order_code, s.location_code || ':' || s.lot_code AS row_key
+                FROM stock_on_hand('infinity') s
+                JOIN lot l                 ON l.code = s.lot_code
+                LEFT JOIN goods_receipt gr ON gr.id = l.goods_receipt_id
+                LEFT JOIN sales_order so   ON so.id = gr.order_id""",
+    sort={"location_code": "location_code", "lot_code": "lot_code", "product_code": "product_code", "qty": "qty",
+          "lot_kind": "lot_kind"},
+    default_sort="location_code", tiebreak="row_key",
+    search=("lot_code", "product_code", "location_code", "order_code"),
+    filters={"location_code": Filter("location_code"), "lot_kind": Filter("lot_kind"),
+             "product_code": Filter("product_code")})

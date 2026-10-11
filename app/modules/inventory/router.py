@@ -3,18 +3,30 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Response
+from typing import Annotated, Literal
 
-from app.auth import Conn, CurrentUser, require_role
+from fastapi import APIRouter, Depends, Query, Response
+
+from app.auth import Conn, CurrentUser, require_permission
+from app.listing import ListParams, Page
 from app.modules.inventory import service
-from app.modules.inventory.schemas import LowStock, Masters, ReceiptRequest, ReceiptResponse, StockSnapshot
+from app.modules.inventory.schemas import LowStock, Masters, ReceiptRequest, ReceiptResponse, StockRow, StockSnapshot
 
 router = APIRouter(prefix="/api/inventory", tags=["inventory"])
 
 
 @router.get("/masters", response_model=Masters)
-def masters(conn: Conn, user: dict = Depends(require_role("store"))):
+def masters(conn: Conn, user: dict = Depends(require_permission("inventory.receive"))):
     return service.masters(conn)
+
+
+@router.get("/stock/list", response_model=Page[StockRow])
+def stock_page(conn: Conn, user: CurrentUser, query: ListParams,
+               location_code: Annotated[str | None, Query(max_length=40)] = None,
+               lot_kind: Literal["yarn", "greige", "finished"] | None = None,
+               product_code: Annotated[str | None, Query(max_length=40)] = None):
+    """Stock now, paged: ?sort=(-)location_code|lot_code|product_code|qty|lot_kind"""
+    return service.page_stock(conn, query, {"location_code": location_code, "lot_kind": lot_kind, "product_code": product_code})
 
 
 @router.get("/stock", response_model=StockSnapshot)
@@ -29,7 +41,7 @@ def low_stock(conn: Conn, user: CurrentUser):
 
 @router.post("/receipts", response_model=ReceiptResponse, status_code=201)
 def receive(body: ReceiptRequest, conn: Conn, response: Response,
-            user: dict = Depends(require_role("store"))):
+            user: dict = Depends(require_permission("inventory.receive"))):
     result, created = service.receive_yarn(conn, body, user)
     if not created:
         response.status_code = 200      # idempotent replay: the original result

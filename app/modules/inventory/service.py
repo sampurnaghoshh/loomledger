@@ -70,3 +70,8 @@ def receive_yarn(conn: psycopg.Connection, req: ReceiptRequest, user: dict) -> t
         raise
     return {"receipt_code": receipt_code, "lot_code": req.lot_code, "kg": req.kg, "location": repo.YARN_STORE,
             "order_code": req.order_code}, True
+
+
+def page_stock(conn: psycopg.Connection, query, filters: dict) -> dict:
+    """Stock now (the ledger, 003 stock_on_hand), paged / searched / sorted / filtered."""
+    return repo.STOCK_LIST.fetch(conn, query, filters)

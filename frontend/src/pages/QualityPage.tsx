@@ -8,6 +8,9 @@ import type {
   Rejection,
 } from "@/api/types";
 import { useApi } from "@/hooks/useApi";
+import { usePermissions } from "@/hooks/usePermissions";
+import { InspectByCode } from "@/components/InspectByCode";
+import { ApiError } from "@/api/errors";
 import { formatDate, formatDateTime, formatQty } from "@/lib/format";
 import {
   Badge,
@@ -39,6 +42,7 @@ function defectLabel(value: string) {
 }
 
 export default function QualityPage() {
+  const { can } = usePermissions();
   const navigate = useNavigate();
 
   const queueState = useApi(() => api.quality.queue(), []);
@@ -131,9 +135,11 @@ export default function QualityPage() {
       await Promise.all([queueState.reload(), rejectionState.reload(), latestState.reload()]);
     } catch (error) {
       setFormError(
-        error instanceof Error
-          ? error.message
-          : "Inspection could not be saved. Please try again.",
+        error instanceof ApiError
+          ? [error.message, error.hint].filter(Boolean).join(" ")   // the database's rule + what to do
+          : error instanceof Error
+            ? error.message
+            : "Inspection could not be saved. Please try again.",
       );
     } finally {
       setSaving(false);
@@ -215,6 +221,10 @@ export default function QualityPage() {
         </section>
       )}
 
+      {can("quality.inspect") && (
+        <InspectByCode onRecorded={() => void Promise.all([queueState.reload(), rejectionState.reload(), latestState.reload()])} />
+      )}
+
       {queueState.error && (
         <ErrorBanner
           error={queueState.error}
@@ -279,9 +289,13 @@ export default function QualityPage() {
                       {lot.order_code ?? "—"}
                     </td>
                     <td className="px-3 py-3">
-                      <Button size="sm" onClick={() => openInspection(lot)}>
-                        Inspect
-                      </Button>
+                      {can("quality.inspect") ? (
+                        <Button size="sm" onClick={() => openInspection(lot)}>
+                          Inspect
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted">QC only</span>
+                      )}
                     </td>
                   </tr>
                 ))}

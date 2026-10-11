@@ -43,6 +43,16 @@ import type {
   RollLabels,
   RollPassport,
   OwnerAlert,
+  InvoiceRow,
+  ListQuery,
+  Page,
+  RollListItem,
+  StockRow,
+  WorkerRow,
+  PermissionsInfo,
+  Role,
+  UserRow,
+  ValidationLogRow,
 } from "./types";
 import { getSession } from "@/lib/auth";
 import { openFloorSocket, type SocketStatus } from "./floorSocket";
@@ -50,7 +60,7 @@ import { mock } from "./mocks";
 
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== "false";
 
-type Method = "GET" | "POST";
+type Method = "GET" | "POST" | "PATCH";
 
 async function request<T>(method: Method, path: string, body?: unknown, auth = true): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
@@ -81,6 +91,14 @@ const real = {
   auth: {
     login: (email: string, password: string) =>
       request<LoginResponse>("POST", "/api/auth/login", { email, password }, false),
+    permissions: () => request<PermissionsInfo>("GET", "/api/auth/permissions"),
+  },
+  validationLog: {
+    list: (p: ListQuery) => request<Page<ValidationLogRow>>("GET", `/api/validation-log${qs(p)}`), // validation_log.view
+  },
+  users: {
+    list: (p: ListQuery) => request<Page<UserRow>>("GET", `/api/users${qs(p)}`), // users.manage
+    update: (id: number, change: { role?: Role; active?: boolean }) => request<UserRow>("PATCH", `/api/users/${id}`, change),
   },
   floor: {
     machines: () => request<MachineNow[]>("GET", "/api/floor/machines"),
@@ -141,6 +159,16 @@ const real = {
         onEvent: onAlert,
         onStatus,
       }),
+  },
+  // Paged / searched / sorted / filtered lists (the original endpoints are unchanged)
+  lists: {
+    rolls: (p: ListQuery) => request<Page<RollListItem>>("GET", `/api/rolls${qs(p)}`),
+    orders: (p: ListQuery) => request<Page<OrderSummary>>("GET", `/api/orders/list${qs(p)}`),
+    stock: (p: ListQuery) => request<Page<StockRow>>("GET", `/api/inventory/stock/list${qs(p)}`),
+    qcQueue: (p: ListQuery) => request<Page<QualityQueueItem>>("GET", `/api/quality/queue/list${qs(p)}`),
+    rejections: (p: ListQuery) => request<Page<Rejection>>("GET", `/api/quality/rejections/list${qs(p)}`),
+    invoices: (p: ListQuery) => request<Page<InvoiceRow>>("GET", `/api/finance/invoices${qs(p)}`), // accounts
+    workers: (p: ListQuery) => request<Page<WorkerRow>>("GET", `/api/workforce/workers${qs(p)}`), // floor supervisor
   },
   rolls: {
     passport: (code: string) => request<RollPassport>("GET", `/api/rolls/${encodeURIComponent(code)}/passport`),

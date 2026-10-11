@@ -7,6 +7,8 @@ from decimal import Decimal
 
 import psycopg
 
+from app.listing import Filter, Listing
+
 
 def resolve_window(conn: psycopg.Connection, from_: datetime | None, to: datetime | None) -> dict:
     """Mill-time bounds; naive input is read as IST. Missing bounds stay null (= open-ended)."""
@@ -97,3 +99,18 @@ def payment(conn: psycopg.Connection, *, payment_id: int | None = None, key: str
                       AS outstanding_after
              FROM payment p JOIN invoice i ON i.id = p.invoice_id
             WHERE p.id = %s OR p.idempotency_key = %s""", (payment_id, key)).fetchone()
+
+
+INVOICE_LIST = Listing(
+    source="""SELECT ib.code, so.code AS order_code, b.name AS buyer, d.code AS dispatch_code, d.dispatched_at,
+                     (SELECT count(*) FROM dispatch_line dl WHERE dl.dispatch_id = d.id)::int AS rolls,
+                     ib.amount, ib.paid, ib.outstanding, ib.issued_at
+                FROM v_invoice_balance ib
+                JOIN invoice i      ON i.id = ib.invoice_id
+                JOIN dispatch d     ON d.id = i.dispatch_id
+                JOIN sales_order so ON so.id = ib.order_id
+                JOIN party b        ON b.id = so.buyer_id""",
+    sort={"issued_at": "issued_at", "code": "code", "amount": "amount", "outstanding": "outstanding", "buyer": "buyer"},
+    default_sort="-issued_at", tiebreak="code",
+    search=("code", "order_code", "buyer", "dispatch_code"),
+    filters={"buyer": Filter("buyer"), "order_code": Filter("order_code"), "unpaid": Filter("outstanding", "positive")})

@@ -117,6 +117,11 @@ def export(conn) -> None:
     ids = lambda codes: [r["id"] for r in q(conn, "SELECT id FROM lot WHERE code = ANY(%s)", (codes,))]  # noqa: E731
 
     # ---- auth
+    # role-based access (017): the matrix + what the owner may do (the UI hides what a role can't use)
+    from app.auth import ROLES, permission_matrix
+    matrix = permission_matrix(conn)
+    write("auth_permissions", {"roles": list(ROLES), "permissions": matrix,
+                               "me": {"role": "owner", "permissions": [p["code"] for p in matrix if "owner" in p["roles"]]}})
     write("auth_login", {"token": "<signed token>",
                          "user": q(conn, "SELECT id, email, full_name, role::text AS role FROM app_user WHERE role = 'owner'")[0]})
 

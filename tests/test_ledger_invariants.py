@@ -394,6 +394,63 @@ def test_downtime_pauses_run_progress(db):
         assert dict(db.execute(due, (at("13:00"),)).fetchall()) == {"LOOM-1": None, "LOOM-4": None}
 
 
+# ---------------------------------------------------------------- access (017)
+def test_the_last_active_owner_cannot_be_removed(db):
+    for sql in ("UPDATE app_user SET active = false WHERE role = 'owner'",
+                "UPDATE app_user SET role = 'qc' WHERE role = 'owner'",
+                "DELETE FROM app_user WHERE role = 'owner'"):
+        with pytest.raises(psycopg.Error) as e, db.transaction(force_rollback=True):
+            db.execute(sql)
+        assert e.value.sqlstate == "LL011", sql
+
+
+def test_nobody_deactivates_themselves_and_changes_are_audited(db):
+    owner = db.execute("SELECT id FROM app_user WHERE role = 'owner'").fetchone()[0]
+    store = db.execute("SELECT id FROM app_user WHERE role = 'store'").fetchone()[0]
+    with pytest.raises(psycopg.Error) as e, db.transaction(force_rollback=True):
+        db.execute("SELECT set_user_access(%s, %s, NULL, false)", (owner, owner))
+    assert e.value.sqlstate == "LL012"
+    with db.transaction(force_rollback=True):
+        db.execute("SELECT set_user_access(%s, %s, NULL, false)", (owner, store))
+        assert db.execute("SELECT active FROM app_user WHERE id = %s", (store,)).fetchone()[0] is False
+        assert db.execute("""SELECT changed_by FROM audit_log WHERE table_name = 'app_user' AND row_id = %s
+                              ORDER BY id DESC LIMIT 1""", (store,)).fetchone()[0] == "owner@everest.test"
+
+
+# ---------------------------------------------------------------- production order (018)
+LINEAGE = """INSERT INTO lot_lineage (parent_lot_id, child_lot_id, qty_consumed)
+             SELECT p.id, c.id, 1 FROM lot p, lot c WHERE p.code = %s AND c.code = %s"""
+QC = """INSERT INTO qc_inspection (lot_id, inspector_id, inspected_at, result)
+        SELECT l.id, w.id, now(), 'pass' FROM lot l, worker w WHERE l.code = %s AND w.code = 'Q-01'"""
+
+
+@pytest.mark.parametrize("parent,child,missing", [
+    ("Y-112", "R-1204", "weaving"),          # yarn straight into a finished roll: weaving skipped
+    ("R-1213-G", "R-1204", "weaving"),       # a greige roll still on the loom can't be dyed
+    ("R-1204", "R-1213-G", "yarn"),          # greige is woven from yarn, not from a finished roll
+])
+def test_a_phase_cannot_be_skipped_in_the_family_tree(db, parent, child, missing):
+    err = expect_sqlstate(db, "LL013", LINEAGE, (parent, child))
+    assert err.diag.message_detail == missing
+
+
+@pytest.mark.parametrize("code,missing", [("R-1213-G", "dyeing"), ("Y-112", "weaving")])
+def test_qc_needs_a_dyed_roll(db, code, missing):
+    err = expect_sqlstate(db, "LL013", QC, (code,))
+    assert err.diag.message_detail == missing
+
+
+def test_qc_waits_until_the_roll_is_out_of_the_vat(db):
+    with pytest.raises(psycopg.Error) as e, db.transaction(force_rollback=True):
+        run = db.execute("""INSERT INTO process_run (code, machine_id, stage, shift_id, operator_id, started_at)
+                            SELECT 'DB-TEST', m.id, 'dyeing', s.id, w.id, now() FROM machine m, shift s, worker w
+                             WHERE m.code = 'VAT-1' AND s.code = 'A' AND w.code = 'D-01' RETURNING id""").fetchone()[0]
+        db.execute("""INSERT INTO lot (code, kind, product_id, qty, produced_by_run_id, produced_by_stage)
+                      SELECT 'R-9001', 'finished', id, 50, %s, 'dyeing' FROM product WHERE code = 'FIN-TWL-NVY'""", (run,))
+        db.execute(QC, ("R-9001",))
+    assert (e.value.sqlstate, e.value.diag.message_detail) == ("LL013", "dyeing")
+
+
 def test_add_working_days_skips_sundays(db):
     # Sat 10 Oct 2026 + 1 working day = Mon 12 Oct
     assert db.execute("SELECT add_working_days('2026-10-10', 1)").fetchone()[0].isoformat() == "2026-10-12"

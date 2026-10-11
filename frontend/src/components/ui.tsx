@@ -1,6 +1,6 @@
 // LoomLedger UI kit. Build every screen from these; don't hand-roll buttons, cards, tables or badges.
-import { useEffect, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
-import { AlertTriangle, Loader2, X } from "lucide-react";
+import { useEffect, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Loader2, Search, X } from "lucide-react";
 import type { ApiError } from "@/api/errors";
 import type { Tone } from "@/lib/tones";
 
@@ -131,6 +131,8 @@ export type Column<T> = {
   align?: "left" | "right" | "center";
   render?: (row: T) => ReactNode;
   className?: string;
+  /** Server sort key (whitelisted by the endpoint). With DataTable's `onSort` the header becomes a sort button. */
+  sortKey?: string;
 };
 export function DataTable<T>({
   columns,
@@ -138,12 +140,18 @@ export function DataTable<T>({
   rowKey,
   emptyText = "Nothing here yet.",
   onRowClick,
+  sort,
+  onSort,
 }: {
   columns: Column<T>[];
   rows: T[];
   rowKey: (row: T) => string;
   emptyText?: string;
   onRowClick?: (row: T) => void;
+  /** Current sort, e.g. "code" or "-promised_date" (descending). */
+  sort?: string;
+  /** Called with the next sort for a clicked header: ascending first, then descending. */
+  onSort?: (next: string) => void;
 }) {
   if (rows.length === 0) return <EmptyState title={emptyText} />;
   const align = { left: "text-left", right: "text-right", center: "text-center" };
@@ -152,11 +160,31 @@ export function DataTable<T>({
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-line">
-            {columns.map((c) => (
-              <th key={c.key} className={cx("px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted", align[c.align ?? "left"])}>
-                {c.header}
-              </th>
-            ))}
+            {columns.map((c) => {
+              const active = c.sortKey && sort?.replace(/^-/, "") === c.sortKey;
+              const desc = active && sort?.startsWith("-");
+              return (
+                <th
+                  key={c.key}
+                  aria-sort={active ? (desc ? "descending" : "ascending") : undefined}
+                  className={cx("px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted", align[c.align ?? "left"])}
+                >
+                  {c.sortKey && onSort ? (
+                    <button
+                      type="button"
+                      onClick={() => onSort(active && !desc ? `-${c.sortKey}` : c.sortKey!)}
+                      className={cx("inline-flex items-center gap-1 uppercase hover:text-ink", active && "text-ink")}
+                    >
+                      {c.header}
+                      {active ? (desc ? <ArrowDown className="size-3.5" aria-hidden /> : <ArrowUp className="size-3.5" aria-hidden />)
+                        : <ArrowUpDown className="size-3.5 opacity-50" aria-hidden />}
+                    </button>
+                  ) : (
+                    c.header
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
@@ -176,6 +204,93 @@ export function DataTable<T>({
         </tbody>
       </table>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------- list controls (search, filters, pager)
+export type FilterDef = { key: string; label: string; options: { value: string; label: string }[] };
+
+/** Search box (debounced) + filter selects. Values come from / go to the URL via useListQuery. */
+export function ListToolbar({
+  q,
+  onSearch,
+  filters = [],
+  values = {},
+  onFilter,
+  placeholder = "Search",
+}: {
+  q: string;
+  onSearch: (q: string) => void;
+  filters?: FilterDef[];
+  values?: Record<string, string | undefined>;
+  onFilter?: (key: string, value: string | undefined) => void;
+  placeholder?: string;
+}) {
+  const [text, setText] = useState(q);
+  useEffect(() => setText(q), [q]);
+  useEffect(() => {
+    if (text === q) return;
+    const t = setTimeout(() => onSearch(text), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text]);
+  return (
+    <div className="flex flex-wrap items-end gap-3">
+      <label className="relative min-w-0 flex-1 basis-56">
+        <span className="sr-only">{placeholder}</span>
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" aria-hidden />
+        <input
+          type="search"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={placeholder}
+          maxLength={100}
+          className={cx(inputClass, "pl-9")}
+        />
+      </label>
+      {filters.map((f) => (
+        <label key={f.key} className="grid min-w-36 gap-1 text-xs font-medium text-muted">
+          {f.label}
+          <select
+            value={values[f.key] ?? ""}
+            onChange={(e) => onFilter?.(f.key, e.target.value || undefined)}
+            className={inputClass}
+          >
+            <option value="">All</option>
+            {f.options.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+/** "1–25 of 312" + previous / next. */
+export function Pager({ page, pageSize, total, onPage }: { page: number; pageSize: number; total: number; onPage: (page: number) => void }) {
+  const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const last = Math.min(total, page * pageSize);
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  return (
+    <nav className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted" aria-label="Pages">
+      <span className="num">
+        {first.toLocaleString("en-IN")}–{last.toLocaleString("en-IN")} of {total.toLocaleString("en-IN")}
+      </span>
+      <span className="flex items-center gap-2">
+        <Button variant="secondary" size="sm" icon={<ChevronLeft className="size-4" />} disabled={page <= 1} onClick={() => onPage(page - 1)}>
+          Prev
+        </Button>
+        <span className="num">
+          Page {page} of {pages}
+        </span>
+        <Button variant="secondary" size="sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>
+          Next <ChevronRight className="size-4" aria-hidden />
+        </Button>
+      </span>
+    </nav>
   );
 }
 

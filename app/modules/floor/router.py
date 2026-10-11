@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
 
-from app.auth import Conn, CurrentUser, require_role
+from app.auth import Conn, CurrentUser, require_permission
 from app.modules.floor import service
 from app.modules.floor.schemas import (FloorAvailability, FloorOutput, FloorProgress, MachineNow,
                                        StateChangeRequest, StateChangeResponse)
@@ -39,5 +39,5 @@ def progress(conn: Conn, user: CurrentUser, at: datetime | None = None):
 @router.post("/machines/{code}/state", response_model=StateChangeResponse)
 def change_state(body: StateChangeRequest, conn: Conn,
                  code: Annotated[str, Path(max_length=40)],
-                 user: dict = Depends(require_role("floor_supervisor"))):
+                 user: dict = Depends(require_permission("floor.change_state"))):
     return service.change_state(conn, code, body.state, body.reason)

@@ -5,13 +5,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Response
 
-from app.auth import Conn, require_role
+from app.auth import Conn, require_permission
 from app.modules.production import service
 from app.modules.production.schemas import (FinishWeavingRequest, FinishWeavingResponse, StartWeavingRequest,
                                             StartWeavingResponse)
 
 router = APIRouter(prefix="/api/production", tags=["production"])
-Supervisor = Annotated[dict, Depends(require_role("floor_supervisor"))]
+Supervisor = Annotated[dict, Depends(require_permission("production.start_run"))]
 
 
 @router.post("/weaving-runs", response_model=StartWeavingResponse, status_code=201)

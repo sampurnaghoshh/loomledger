@@ -60,3 +60,8 @@ def record_payment(conn: psycopg.Connection, req: PaymentRequest, user: dict) ->
         if is_idempotency_replay(exc) and (original := repo.payment(conn, key=req.idempotency_key)):
             return original, False
         raise
+
+
+def page_invoices(conn: psycopg.Connection, query, filters: dict) -> dict:
+    """Invoices with their dispatch and what is still outstanding (013 v_invoice_balance)."""
+    return repo.INVOICE_LIST.fetch(conn, query, filters)

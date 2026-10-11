@@ -45,3 +45,8 @@ def labels(conn: psycopg.Connection, root_code: str | None) -> dict:
     rolls = repo.scope_labels(conn, root_id) if root_id else []
     clean = repo.clean_label(conn, root_id)
     return {"root": root["code"] if root else None, "rolls": rolls + ([clean] if clean else [])}
+
+
+def page_rolls(conn: psycopg.Connection, query, filters: dict) -> dict:
+    """Every physical roll (greige on the loom / in store, finished), where it is, its order and latest QC."""
+    return repo.ROLL_LIST.fetch(conn, query, filters)

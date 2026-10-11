@@ -85,3 +85,11 @@ class Wages(BaseModel):
     to: date
     totals: WageTotals
     workers: list[WageRow]
+
+
+class WorkerRow(BaseModel):
+    code: str
+    full_name: str
+    skill: str | None
+    hourly_wage: float
+    active: bool

@@ -36,9 +36,9 @@ def inspect(conn: psycopg.Connection, req: InspectionRequest, user: dict) -> tup
             return original, False
     try:
         with write_tx(conn):
-            lot = repo.finished_lot(conn, req.lot_code)
+            lot = repo.roll_lot(conn, req.lot_code)
             if lot is None:
-                raise ApiError("NOT_FOUND", f"Finished roll {req.lot_code} not found.", 404,
+                raise ApiError("NOT_FOUND", f"Roll {req.lot_code} not found.", 404,
                                fields={"lot_code": "not found"})
             inspector = repo.inspector(conn, req.inspector_code)
             if inspector is None:
@@ -56,3 +56,11 @@ def inspect(conn: psycopg.Connection, req: InspectionRequest, user: dict) -> tup
             return original, False
         raise
     return {"inspection_id": inspection_id, "lot_code": lot["code"], "result": req.result}, True
+
+
+def page_queue(conn: psycopg.Connection, query, filters: dict) -> dict:
+    return repo.QUEUE_LIST.fetch(conn, query, filters)
+
+
+def page_rejections(conn: psycopg.Connection, query, filters: dict) -> dict:
+    return repo.REJECTION_LIST.fetch(conn, query, filters)

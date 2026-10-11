@@ -107,3 +107,18 @@ class Label(BaseModel):
 class RollLabels(BaseModel):
     root: str | None
     rolls: list[Label]
+
+
+class RollListItem(BaseModel):
+    code: str
+    kind: Literal["greige", "finished"]
+    product: str
+    qty_m: float
+    status: LotStatus
+    custody: Custody
+    order_code: str | None
+    buyer: str | None
+    qc_result: Literal["pass", "rework", "reject"] | None
+    defect_type: str | None
+    inspected_at: datetime | None
+    created_at: datetime
